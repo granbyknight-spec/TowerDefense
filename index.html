@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower Defense</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Segoe UI',Arial,sans-serif;overflow:hidden}
+canvas{border:2px solid #333;cursor:crosshair}
+</style>
+</head>
+<body>
+<canvas id="c" width="800" height="600"></canvas>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d'),W=800,H=600,GS=40,COLS=W/GS,ROWS=H/GS;
+let gold=100,lives=20,wave=0,maxWave=10,gameState='playing',score=0,selectedTower=null,placingTower=null,enemies=[],towers=[],projectiles=[],particles=[],waveEnemies=[],waveActive=false,waveTimer=0,spawnTimer=0,spawnIdx=0,interestRate=0.05,hoverCell=null;
+
+const PATH_POINTS=[{x:0,y:7},{x:3,y:7},{x:3,y:3},{x:7,y:3},{x:7,y:11},{x:11,y:11},{x:11,y:5},{x:14,y:5},{x:14,y:9},{x:17,y:9},{x:17,y:3},{x:19,y:3}];
+
+function getPathCells(){
+let cells=new Set();
+for(let i=0;i<PATH_POINTS.length-1;i++){
+let a=PATH_POINTS[i],b=PATH_POINTS[i+1];
+if(a.x===b.x){let mn=Math.min(a.y,b.y),mx=Math.max(a.y,b.y);for(let y=mn;y<=mx;y++)cells.add(a.x+','+y);}
+else{let mn=Math.min(a.x,b.x),mx=Math.max(a.x,b.x);for(let x=mn;x<=mx;x++)cells.add(x+','+a.y);}
+}
+return cells;
+}
+const pathCells=getPathCells();
+
+function getPathPixels(){
+let pts=[];
+for(let i=0;i<PATH_POINTS.length-1;i++){
+let a={x:PATH_POINTS[i].x*GS+GS/2,y:PATH_POINTS[i].y*GS+GS/2};
+let b={x:PATH_POINTS[i+1].x*GS+GS/2,y:PATH_POINTS[i+1].y*GS+GS/2};
+let dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy),steps=Math.ceil(dist/2);
+for(let s=0;s<=steps;s++){let t=s/steps;pts.push({x:a.x+dx*t,y:a.y+dy*t});}
+}
+return pts;
+}
+const pathPixels=getPathPixels();
+
+const TOWER_TYPES={
+arrow:{name:'Arrow',cost:50,range:120,damage:10,speed:1.2,color:'#8B4513',projColor:'#FFD700',projSpeed:6,splash:0,slow:0,dot:0,desc:'Fast single target'},
+cannon:{name:'Cannon',cost:100,range:100,damage:25,speed:0.6,color:'#444',projColor:'#FF4500',projSpeed:4,splash:50,slow:0,dot:0,desc:'Area splash damage'},
+ice:{name:'Ice',cost:75,range:110,damage:5,speed:0.8,color:'#00BFFF',projColor:'#ADD8E6',projSpeed:5,splash:0,slow:0.5,dot:0,desc:'Slows enemies'},
+fire:{name:'Fire',cost:125,range:100,damage:15,speed:0.7,color:'#FF4500',projColor:'#FF6347',projSpeed:5,splash:0,slow:0,dot:8,desc:'Burns over time'}
+};
+
+const UPGRADES=[
+{dmgMul:1,rangeMul:1,spdMul:1,costMul:1,label:'Base'},
+{dmgMul:1.5,rangeMul:1.1,spdMul:1.1,costMul:0.6,label:'Lvl 2'},
+{dmgMul:2.2,rangeMul:1.2,spdMul:1.2,costMul:0.8,label:'Lvl 3'}
+];
+
+const ENEMY_TYPES={
+runner:{name:'Runner',hp:40,speed:2.5,armor:0,color:'#FF3333',radius:8,gold:5,flying:false},
+soldier:{name:'Soldier',hp:80,speed:1.5,armor:1,color:'#FFAA00',radius:10,gold:8,flying:false},
+tank:{name:'Tank',hp:200,speed:1.0,armor:3,color:'#3366FF',radius:13,gold:15,flying:false},
+flyer:{name:'Flyer',hp:60,speed:2.0,armor:0,color:'#33FF33',radius:9,gold:10,flying:true},
+boss:{name:'Boss',hp:500,speed:0.8,armor:5,color:'#AA00FF',radius:16,gold:50,flying:false}
+};
+
+const WAVES=[
+[{type:'runner',count:8}],
+[{type:'runner',count:6},{type:'soldier',count:4}],
+[{type:'soldier',count:8},{type:'runner',count:4}],
+[{type:'tank',count:3},{type:'soldier',count:5}],
+[{type:'flyer',count:6},{type:'runner',count:4}],
+[{type:'tank',count:5},{type:'soldier',count:5}],
+[{type:'flyer',count:5},{type:'tank',count:3},{type:'runner',count:5}],
+[{type:'tank',count:6},{type:'flyer',count:4},{type:'soldier',count:4}],
+[{type:'boss',count:2},{type:'tank',count:4},{type:'flyer',count:4}],
+[{type:'boss',count:3},{type:'tank',count:5},{type:'flyer',count:5},{type:'runner',count:8}]
+];
+
+function waveScale(w){return 1+w*0.25;}
+
+function buildWaveEnemies(w){
+let list=[],comp=WAVES[w],sc=waveScale(w);
+for(let g of comp)for(let i=0;i<g.count;i++){
+let base=ENEMY_TYPES[g.type];
+list.push({type:g.type,hp:Math.round(base.hp*sc),maxHp:Math.round(base.hp*sc),speed:base.speed,armor:Math.round(base.armor*sc*0.5),color:base.color,radius:base.radius,gold:Math.round(base.gold*sc),flying:base.flying,pathIdx:0,x:pathPixels[0].x,y:pathPixels[0].y,slowTimer:0,slowFactor:1,dotTimer:0,dotDmg:0,alive:true});
+}
+for(let i=list.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}
+return list;
+}
+
+function dist(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
+
+function isOnPath(col,row){return pathCells.has(col+','+row);}
+
+function canPlace(col,row){
+if(col<0||col>=COLS||row<0||row>=ROWS)return false;
+if(isOnPath(col,row))return false;
+for(let t of towers)if(t.col===col&&t.row===row)return false;
+return true;
+}
+
+function getTowerAt(col,row){return towers.find(t=>t.col===col&&t.row===row)||null;}
+
+function placeTower(type,col,row){
+let base=TOWER_TYPES[type];
+if(gold<base.cost||!canPlace(col,row))return false;
+gold-=base.cost;
+towers.push({type:type,col:col,row:row,x:col*GS+GS/2,y:row*GS+GS/2,level:0,cooldown:0,kills:0});
+return true;
+}
+
+function upgradeTower(t){
+if(t.level>=2)return false;
+let base=TOWER_TYPES[t.type],cost=Math.round(base.cost*UPGRADES[t.level+1].costMul);
+if(gold<cost)return false;
+gold-=cost;
+t.level++;
+return true;
+}
+
+function sellTower(t){
+let base=TOWER_TYPES[t.type],total=base.cost;
+for(let i=1;i<=t.level;i++)total+=Math.round(base.cost*UPGRADES[i].costMul);
+gold+=Math.round(total*0.6);
+towers=towers.filter(tw=>tw!==t);
+if(selectedTower===t)selectedTower=null;
+}
+
+function getTowerStats(t){
+let base=TOWER_TYPES[t.type],up=UPGRADES[t.level];
+return{damage:Math.round(base.damage*up.dmgMul),range:Math.round(base.range*up.rangeMul),speed:base.speed*up.spdMul,splash:base.splash,slow:base.slow,dot:Math.round(base.dot*up.dmgMul)};
+}
+
+function getUpgradeCost(t){
+if(t.level>=2)return 0;
+return Math.round(TOWER_TYPES[t.type].cost*UPGRADES[t.level+1].costMul);
+}
+
+function fireProjectile(tower,enemy){
+let stats=getTowerStats(tower);
+projectiles.push({x:tower.x,y:tower.y,target:enemy,damage:stats.damage,speed:TOWER_TYPES[tower.type].projSpeed,color:TOWER_TYPES[tower.type].projColor,splash:stats.splash,slow:stats.slow>0?{factor:1-stats.slow,duration:90}:null,dot:stats.dot>0?{dmg:stats.dot,duration:120}:null,tower:tower});
+}
+
+function spawnParticles(x,y,color,count){
+for(let i=0;i<count;i++){
+let angle=Math.random()*Math.PI*2,spd=1+Math.random()*3;
+particles.push({x:x,y:y,vx:Math.cos(angle)*spd,vy:Math.sin(angle)*spd,life:20+Math.random()*20,maxLife:40,color:color,radius:2+Math.random()*2});
+}
+}
+
+function startWave(){
+if(waveActive||wave>=maxWave)return;
+let interest=Math.floor(gold*interestRate);
+gold+=interest;
+waveEnemies=buildWaveEnemies(wave);
+spawnIdx=0;spawnTimer=0;waveActive=true;
+}
+
+function updateEnemies(dt){
+for(let e of enemies){
+if(!e.alive)continue;
+if(e.dotTimer>0){e.dotTimer--;e.hp-=e.dotDmg/60;if(e.hp<=0){e.alive=false;gold+=e.gold;score+=e.gold;spawnParticles(e.x,e.y,e.color,8);continue;}}
+if(e.slowTimer>0){e.slowTimer--;} else{e.slowFactor=1;}
+let spd=e.speed*e.slowFactor;
+let steps=Math.round(spd*2);
+for(let s=0;s<steps;s++){
+if(e.pathIdx>=pathPixels.length-1){e.alive=false;lives--;if(lives<=0){gameState='lost';}break;}
+let next=pathPixels[e.pathIdx+1];
+let dx=next.x-e.x,dy=next.y-e.y,d=Math.sqrt(dx*dx+dy*dy);
+if(d<2){e.pathIdx++;} else{e.x+=dx/d;e.y+=dy/d;}
+}
+}
+enemies=enemies.filter(e=>e.alive);
+}
+
+function updateTowers(dt){
+for(let t of towers){
+if(t.cooldown>0){t.cooldown--;continue;}
+let stats=getTowerStats(t);
+let best=null,bestDist=Infinity;
+for(let e of enemies){
+if(!e.alive)continue;
+if(e.flying&&t.type!=='arrow'&&t.type!=='ice')continue;
+let d=dist(t,e);
+if(d<=stats.range&&d<bestDist){bestDist=d;best=e;}
+}
+if(best){fireProjectile(t,best);t.cooldown=Math.round(60/stats.speed);}
+}
+}
+
+function updateProjectiles(dt){
+for(let i=projectiles.length-1;i>=0;i--){
+let p=projectiles[i];
+if(!p.target.alive){projectiles.splice(i,1);continue;}
+let dx=p.target.x-p.x,dy=p.target.y-p.y,d=Math.sqrt(dx*dx+dy*dy);
+if(d<p.target.radius+4){
+let dmg=Math.max(1,p.damage-p.target.armor);
+p.target.hp-=dmg;
+if(p.target.hp<=0){p.target.alive=false;gold+=p.target.gold;score+=p.target.gold;p.tower.kills++;spawnParticles(p.target.x,p.target.y,p.target.color,10);}
+if(p.slow){p.target.slowTimer=p.slow.duration;p.target.slowFactor=p.slow.factor;}
+if(p.dot){p.target.dotTimer=p.dot.duration;p.target.dotDmg=p.dot.dmg;}
+if(p.splash>0){
+for(let e of enemies){
+if(e===p.target||!e.alive)continue;
+if(dist(p.target,e)<=p.splash){
+let sdmg=Math.max(1,Math.round(p.damage*0.5)-e.armor);
+e.hp-=sdmg;
+if(e.hp<=0){e.alive=false;gold+=e.gold;score+=e.gold;p.tower.kills++;spawnParticles(e.x,e.y,e.color,6);}
+}
+}
+spawnParticles(p.target.x,p.target.y,'#FF6600',5);
+}
+projectiles.splice(i,1);
+} else {
+p.x+=dx/d*p.speed;p.y+=dy/d*p.speed;
+}
+}
+}
+
+function updateParticles(){
+for(let i=particles.length-1;i>=0;i--){
+let p=particles[i];
+p.x+=p.vx;p.y+=p.vy;p.vx*=0.95;p.vy*=0.95;p.life--;
+if(p.life<=0)particles.splice(i,1);
+}
+}
+
+function updateSpawner(){
+if(!waveActive)return;
+if(spawnIdx<waveEnemies.length){
+spawnTimer++;
+if(spawnTimer>=30){spawnTimer=0;let e=waveEnemies[spawnIdx];enemies.push(e);spawnIdx++;}
+} else if(enemies.length===0){
+waveActive=false;wave++;
+if(wave>=maxWave&&lives>0)gameState='won';
+}
+}
+
+function drawPath(){
+X.fillStyle='#2d5a1e';X.fillRect(0,0,W,H);
+for(let i=0;i<COLS;i++)for(let j=0;j<ROWS;j++){
+if((i+j)%2===0){X.fillStyle='rgba(0,0,0,0.03)';X.fillRect(i*GS,j*GS,GS,GS);}
+}
+X.strokeStyle='rgba(0,0,0,0.06)';X.lineWidth=0.5;
+for(let i=0;i<=COLS;i++){X.beginPath();X.moveTo(i*GS,0);X.lineTo(i*GS,H);X.stroke();}
+for(let j=0;j<=ROWS;j++){X.beginPath();X.moveTo(0,j*GS);X.lineTo(W,j*GS);X.stroke();}
+X.lineWidth=GS*0.9;X.lineCap='round';X.lineJoin='round';
+X.strokeStyle='#8B7355';X.beginPath();X.moveTo(PATH_POINTS[0].x*GS+GS/2,PATH_POINTS[0].y*GS+GS/2);
+for(let i=1;i<PATH_POINTS.length;i++)X.lineTo(PATH_POINTS[i].x*GS+GS/2,PATH_POINTS[i].y*GS+GS/2);
+X.stroke();
+X.lineWidth=GS*0.7;X.strokeStyle='#A0926B';X.beginPath();X.moveTo(PATH_POINTS[0].x*GS+GS/2,PATH_POINTS[0].y*GS+GS/2);
+for(let i=1;i<PATH_POINTS.length;i++)X.lineTo(PATH_POINTS[i].x*GS+GS/2,PATH_POINTS[i].y*GS+GS/2);
+X.stroke();
+X.lineWidth=GS*0.15;X.strokeStyle='rgba(0,0,0,0.08)';X.setLineDash([4,8]);X.beginPath();X.moveTo(PATH_POINTS[0].x*GS+GS/2,PATH_POINTS[0].y*GS+GS/2);
+for(let i=1;i<PATH_POINTS.length;i++)X.lineTo(PATH_POINTS[i].x*GS+GS/2,PATH_POINTS[i].y*GS+GS/2);
+X.stroke();X.setLineDash([]);
+}
+
+function drawTowers(){
+for(let t of towers){
+let base=TOWER_TYPES[t.type],stats=getTowerStats(t);
+if(selectedTower===t){
+X.beginPath();X.arc(t.x,t.y,stats.range,0,Math.PI*2);X.fillStyle='rgba(255,255,255,0.08)';X.fill();X.strokeStyle='rgba(255,255,255,0.2)';X.lineWidth=1;X.stroke();
+}
+X.fillStyle='#555';X.fillRect(t.x-GS*0.4,t.y-GS*0.4,GS*0.8,GS*0.8);
+X.fillStyle=base.color;X.fillRect(t.x-GS*0.35,t.y-GS*0.35,GS*0.7,GS*0.7);
+let inner=base.color;
+X.fillStyle='rgba(255,255,255,0.15)';X.fillRect(t.x-GS*0.25,t.y-GS*0.35,GS*0.5,GS*0.35);
+if(t.type==='arrow'){
+X.fillStyle='#FFD700';X.beginPath();X.moveTo(t.x,t.y-10);X.lineTo(t.x+6,t.y+6);X.lineTo(t.x-6,t.y+6);X.closePath();X.fill();
+} else if(t.type==='cannon'){
+X.fillStyle='#222';X.beginPath();X.arc(t.x,t.y,8,0,Math.PI*2);X.fill();
+X.fillStyle='#666';X.beginPath();X.arc(t.x,t.y,5,0,Math.PI*2);X.fill();
+} else if(t.type==='ice'){
+X.fillStyle='#FFF';X.font='16px Arial';X.textAlign='center';X.textBaseline='middle';X.fillText('*',t.x,t.y+1);
+} else if(t.type==='fire'){
+X.fillStyle='#FF0';X.beginPath();X.moveTo(t.x,t.y-10);X.lineTo(t.x+5,t.y);X.lineTo(t.x+3,t.y+2);X.lineTo(t.x+7,t.y+8);X.lineTo(t.x,t.y+3);X.lineTo(t.x-7,t.y+8);X.lineTo(t.x-3,t.y+2);X.lineTo(t.x-5,t.y);X.closePath();X.fill();
+}
+if(t.level>0){
+for(let s=0;s<t.level;s++){
+X.fillStyle='#FFD700';X.beginPath();
+let sx=t.x-GS*0.3+s*10,sy=t.y+GS*0.3;
+X.moveTo(sx,sy-4);X.lineTo(sx+2,sy-1);X.lineTo(sx+5,sy-1);X.lineTo(sx+3,sy+1);X.lineTo(sx+4,sy+4);X.lineTo(sx,sy+2);X.lineTo(sx-4,sy+4);X.lineTo(sx-3,sy+1);X.lineTo(sx-5,sy-1);X.lineTo(sx-2,sy-1);X.closePath();X.fill();
+}
+}
+}
+}
+
+function drawEnemies(){
+for(let e of enemies){
+if(!e.alive)continue;
+let r=e.radius;
+if(e.flying){
+X.globalAlpha=0.3;X.fillStyle='#000';X.beginPath();X.ellipse(e.x+3,e.y+5,r*0.8,r*0.4,0,0,Math.PI*2);X.fill();X.globalAlpha=1;
+}
+X.fillStyle=e.color;X.beginPath();X.arc(e.x,e.y,r,0,Math.PI*2);X.fill();
+X.strokeStyle='rgba(0,0,0,0.5)';X.lineWidth=1.5;X.stroke();
+X.fillStyle='rgba(255,255,255,0.3)';X.beginPath();X.arc(e.x-r*0.25,e.y-r*0.25,r*0.35,0,Math.PI*2);X.fill();
+if(e.slowTimer>0){X.strokeStyle='#00FFFF';X.lineWidth=2;X.beginPath();X.arc(e.x,e.y,r+3,0,Math.PI*2);X.stroke();}
+if(e.dotTimer>0){X.strokeStyle='#FF4500';X.lineWidth=2;X.beginPath();X.arc(e.x,e.y,r+3,0,Math.PI*2);X.stroke();}
+if(e.flying){
+X.strokeStyle=e.color;X.lineWidth=1.5;
+X.beginPath();X.moveTo(e.x-r-4,e.y);X.quadraticCurveTo(e.x-r,e.y-8,e.x,e.y);X.stroke();
+X.beginPath();X.moveTo(e.x+r+4,e.y);X.quadraticCurveTo(e.x+r,e.y-8,e.x,e.y);X.stroke();
+}
+let bw=r*2.2,bh=4,bx=e.x-bw/2,by=e.y-r-8;
+X.fillStyle='#300';X.fillRect(bx,by,bw,bh);
+let hp=Math.max(0,e.hp/e.maxHp);
+X.fillStyle=hp>0.5?'#0F0':hp>0.25?'#FF0':'#F00';X.fillRect(bx,by,bw*hp,bh);
+X.strokeStyle='#000';X.lineWidth=0.5;X.strokeRect(bx,by,bw,bh);
+}
+}
+
+function drawProjectiles(){
+for(let p of projectiles){
+X.fillStyle=p.color;X.beginPath();X.arc(p.x,p.y,3,0,Math.PI*2);X.fill();
+X.fillStyle='rgba(255,255,255,0.6)';X.beginPath();X.arc(p.x,p.y,1.5,0,Math.PI*2);X.fill();
+}
+}
+
+function drawParticles(){
+for(let p of particles){
+let a=p.life/p.maxLife;
+X.globalAlpha=a;X.fillStyle=p.color;X.beginPath();X.arc(p.x,p.y,p.radius*a,0,Math.PI*2);X.fill();
+}
+X.globalAlpha=1;
+}
+
+function drawUI(){
+X.fillStyle='rgba(0,0,0,0.75)';X.fillRect(0,0,W,36);
+X.font='bold 15px "Segoe UI",Arial,sans-serif';X.textBaseline='middle';
+X.fillStyle='#FFD700';X.fillText('Gold: '+gold,12,18);
+X.fillStyle='#FF4444';X.fillText('Lives: '+lives,140,18);
+X.fillStyle='#AAF';X.fillText('Wave: '+(wave+1)+'/'+maxWave,260,18);
+X.fillStyle='#AFA';X.fillText('Score: '+score,380,18);
+if(!waveActive&&wave<maxWave&&gameState==='playing'){
+X.fillStyle='#4CAF50';
+let bx=540,by=4,bw=110,bh=28;
+X.fillRect(bx,by,bw,bh);
+X.fillStyle='#FFF';X.font='bold 14px "Segoe UI",Arial,sans-serif';X.textAlign='center';X.textBaseline='middle';
+X.fillText(wave===0?'Start Game':'Next Wave',bx+bw/2,by+bh/2);
+X.textAlign='left';
+startBtn={x:bx,y:by,w:bw,h:bh};
+} else {startBtn=null;}
+
+let tTypes=['arrow','cannon','ice','fire'];
+let panelY=H-56;
+X.fillStyle='rgba(0,0,0,0.75)';X.fillRect(0,panelY,W,56);
+for(let i=0;i<tTypes.length;i++){
+let tt=TOWER_TYPES[tTypes[i]],bx=10+i*130,by=panelY+6,bw=120,bh=44;
+let canAfford=gold>=tt.cost;
+X.fillStyle=placingTower===tTypes[i]?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.05)';
+X.fillRect(bx,by,bw,bh);
+X.strokeStyle=canAfford?tt.color:'#555';X.lineWidth=2;X.strokeRect(bx,by,bw,bh);
+X.fillStyle=canAfford?'#FFF':'#666';X.font='bold 12px "Segoe UI",Arial,sans-serif';X.textAlign='left';X.textBaseline='top';
+X.fillText(tt.name+' ($'+tt.cost+')',bx+6,by+6);
+X.fillStyle=canAfford?'#AAA':'#555';X.font='11px "Segoe UI",Arial,sans-serif';
+X.fillText(tt.desc,bx+6,by+24);
+}
+towerBtns=tTypes.map((t,i)=>({type:t,x:10+i*130,y:panelY+6,w:120,h:44}));
+
+if(selectedTower&&!placingTower){
+let t=selectedTower,base=TOWER_TYPES[t.type],stats=getTowerStats(t);
+let px=660,py=42;
+X.fillStyle='rgba(0,0,0,0.85)';X.fillRect(px,py,135,145);
+X.strokeStyle=base.color;X.lineWidth=2;X.strokeRect(px,py,135,145);
+X.fillStyle='#FFF';X.font='bold 13px "Segoe UI",Arial,sans-serif';X.textAlign='left';X.textBaseline='top';
+X.fillText(base.name+' (Lv'+(t.level+1)+')',px+8,py+8);
+X.fillStyle='#CCC';X.font='11px "Segoe UI",Arial,sans-serif';
+X.fillText('DMG: '+stats.damage,px+8,py+28);
+X.fillText('Range: '+stats.range,px+8,py+42);
+X.fillText('Speed: '+stats.speed.toFixed(1),px+8,py+56);
+X.fillText('Kills: '+t.kills,px+8,py+70);
+if(t.level<2){
+let uc=getUpgradeCost(t);
+X.fillStyle=gold>=uc?'#4CAF50':'#666';X.fillRect(px+8,py+90,55,24);
+X.fillStyle='#FFF';X.font='bold 11px "Segoe UI",Arial,sans-serif';X.textAlign='center';
+X.fillText('Up $'+uc,px+35,py+97);
+upgBtn={x:px+8,y:py+90,w:55,h:24};
+} else {upgBtn=null;}
+X.fillStyle='#F44336';X.fillRect(px+70,py+90,55,24);
+X.fillStyle='#FFF';X.textAlign='center';
+let sv=Math.round((base.cost+[0,1,2].slice(0,t.level+1).reduce((a,i)=>a+(i>0?Math.round(base.cost*UPGRADES[i].costMul):0),0))*0.6);
+X.fillText('Sell $'+sv,px+97,py+97);
+sellBtn={x:px+70,y:py+90,w:55,h:24};
+X.fillStyle='#888';X.font='10px "Segoe UI",Arial,sans-serif';X.textAlign='center';
+X.fillText('[Click elsewhere',px+67,py+122);
+X.fillText('to deselect]',px+67,py+134);
+X.textAlign='left';
+}
+
+if(placingTower&&hoverCell){
+let col=hoverCell.col,row=hoverCell.row;
+let ok=canPlace(col,row);
+X.fillStyle=ok?'rgba(0,255,0,0.2)':'rgba(255,0,0,0.2)';
+X.fillRect(col*GS,row*GS,GS,GS);
+X.strokeStyle=ok?'#0F0':'#F00';X.lineWidth=2;X.strokeRect(col*GS,row*GS,GS,GS);
+if(ok){
+let base=TOWER_TYPES[placingTower];
+X.beginPath();X.arc(col*GS+GS/2,row*GS+GS/2,base.range,0,Math.PI*2);X.strokeStyle='rgba(255,255,255,0.15)';X.lineWidth=1;X.stroke();
+}
+}
+}
+
+let startBtn=null,towerBtns=[],upgBtn=null,sellBtn=null;
+
+function drawOverlay(){
+if(gameState==='won'){
+X.fillStyle='rgba(0,0,0,0.7)';X.fillRect(0,0,W,H);
+X.fillStyle='#FFD700';X.font='bold 48px "Segoe UI",Arial,sans-serif';X.textAlign='center';X.textBaseline='middle';
+X.fillText('VICTORY!',W/2,H/2-40);
+X.fillStyle='#FFF';X.font='24px "Segoe UI",Arial,sans-serif';
+X.fillText('Score: '+score+'  |  Lives: '+lives,W/2,H/2+20);
+X.fillStyle='#4CAF50';X.fillRect(W/2-60,H/2+60,120,40);
+X.fillStyle='#FFF';X.font='bold 16px "Segoe UI",Arial,sans-serif';
+X.fillText('Play Again',W/2,H/2+80);
+restartBtn={x:W/2-60,y:H/2+60,w:120,h:40};
+} else if(gameState==='lost'){
+X.fillStyle='rgba(0,0,0,0.7)';X.fillRect(0,0,W,H);
+X.fillStyle='#FF4444';X.font='bold 48px "Segoe UI",Arial,sans-serif';X.textAlign='center';X.textBaseline='middle';
+X.fillText('DEFEAT',W/2,H/2-40);
+X.fillStyle='#FFF';X.font='24px "Segoe UI",Arial,sans-serif';
+X.fillText('Reached Wave '+(wave+1)+' | Score: '+score,W/2,H/2+20);
+X.fillStyle='#F44336';X.fillRect(W/2-60,H/2+60,120,40);
+X.fillStyle='#FFF';X.font='bold 16px "Segoe UI",Arial,sans-serif';
+X.fillText('Try Again',W/2,H/2+80);
+restartBtn={x:W/2-60,y:H/2+60,w:120,h:40};
+} else {restartBtn=null;}
+}
+
+let restartBtn=null;
+
+function resetGame(){
+gold=100;lives=20;wave=0;score=0;gameState='playing';selectedTower=null;placingTower=null;
+enemies=[];towers=[];projectiles=[];particles=[];waveEnemies=[];waveActive=false;spawnTimer=0;spawnIdx=0;
+}
+
+function inRect(mx,my,r){return r&&mx>=r.x&&mx<=r.x+r.w&&my>=r.y&&my<=r.y+r.h;}
+
+C.addEventListener('mousemove',function(ev){
+let rect=C.getBoundingClientRect();
+let scaleX=W/rect.width,scaleY=H/rect.height;
+let mx=(ev.clientX-rect.left)*scaleX,my=(ev.clientY-rect.top)*scaleY;
+hoverCell={col:Math.floor(mx/GS),row:Math.floor(my/GS)};
+});
+
+C.addEventListener('click',function(ev){
+let rect=C.getBoundingClientRect();
+let scaleX=W/rect.width,scaleY=H/rect.height;
+let mx=(ev.clientX-rect.left)*scaleX,my=(ev.clientY-rect.top)*scaleY;
+let col=Math.floor(mx/GS),row=Math.floor(my/GS);
+
+if(gameState!=='playing'){
+if(inRect(mx,my,restartBtn))resetGame();
+return;
+}
+if(inRect(mx,my,startBtn)){startWave();return;}
+if(upgBtn&&inRect(mx,my,upgBtn)&&selectedTower){upgradeTower(selectedTower);return;}
+if(sellBtn&&inRect(mx,my,sellBtn)&&selectedTower){sellTower(selectedTower);return;}
+for(let b of towerBtns){
+if(inRect(mx,my,b)){
+if(placingTower===b.type){placingTower=null;}
+else{placingTower=b.type;selectedTower=null;}
+return;
+}
+}
+if(my>H-56)return;
+if(placingTower){
+if(canPlace(col,row)&&gold>=TOWER_TYPES[placingTower].cost){
+placeTower(placingTower,col,row);
+if(gold<TOWER_TYPES[placingTower].cost)placingTower=null;
+}
+return;
+}
+let tw=getTowerAt(col,row);
+if(tw){selectedTower=tw;placingTower=null;}
+else{selectedTower=null;}
+});
+
+C.addEventListener('contextmenu',function(ev){
+ev.preventDefault();
+placingTower=null;
+});
+
+document.addEventListener('keydown',function(ev){
+if(ev.key==='Escape'){placingTower=null;selectedTower=null;}
+if(ev.key==='1')placingTower='arrow';
+if(ev.key==='2')placingTower='cannon';
+if(ev.key==='3')placingTower='ice';
+if(ev.key==='4')placingTower='fire';
+if(ev.key===' '||ev.key==='Enter'){ev.preventDefault();startWave();}
+});
+
+function gameLoop(){
+if(gameState==='playing'){
+updateSpawner();
+updateEnemies(1);
+updateTowers(1);
+updateProjectiles(1);
+updateParticles();
+}
+drawPath();
+drawTowers();
+drawEnemies();
+drawProjectiles();
+drawParticles();
+drawUI();
+drawOverlay();
+requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
