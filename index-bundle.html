@@ -561,39 +561,47 @@ function pixelToGrid(x, y, tileSize) {
 
 // === js/audio.js ===
 // Procedural sound effects using Web Audio API
-// Persistent unlock: retries on every gesture until context is running
+// Robust unlock: lazily creates context on first user gesture, retries resume on every play
 
 const GameAudio = (() => {
     let ctx = null;
     let muted = false;
     let volume = 0.4;
     let unlockBound = false;
+    let resumed = false;
 
-    function getCtx() {
-        if (!ctx) {
-            const AC = window.AudioContext || window.webkitAudioContext;
-            if (!AC) return null;
-            try { ctx = new AC(); } catch(e) { return null; }
+    function _createCtx() {
+        if (ctx) return ctx;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        try {
+            ctx = new AC();
+            // If it starts running (e.g. Firefox), we're good
+            if (ctx.state === 'running') resumed = true;
+        } catch(e) {
+            return null;
         }
         return ctx;
     }
 
-    // Tries to unlock on EVERY user gesture until the context is running.
-    // Does NOT remove the listeners after one attempt.
     function _tryUnlock() {
-        const c = getCtx();
+        const c = _createCtx();
         if (!c) return;
         if (c.state === 'running') {
-            // Already good — remove listeners to save perf
+            resumed = true;
             _removeUnlockListeners();
             return;
         }
-        // Resume + play silent buffer (Safari needs both)
+        // Resume — must happen within a user gesture call stack
         try {
             c.resume().then(() => {
-                if (c.state === 'running') _removeUnlockListeners();
+                if (c.state === 'running') {
+                    resumed = true;
+                    _removeUnlockListeners();
+                }
             }).catch(() => {});
         } catch(e) {}
+        // Safari also needs a silent buffer played from a user gesture
         try {
             const buf = c.createBuffer(1, 1, c.sampleRate);
             const src = c.createBufferSource();
@@ -603,7 +611,7 @@ const GameAudio = (() => {
         } catch(e) {}
     }
 
-    const _unlockEvents = ['touchstart', 'touchend', 'mousedown', 'click', 'keydown'];
+    const _unlockEvents = ['touchstart', 'touchend', 'mousedown', 'mouseup', 'click', 'keydown', 'pointerdown'];
 
     function _removeUnlockListeners() {
         _unlockEvents.forEach(e => document.removeEventListener(e, _tryUnlock, true));
@@ -613,12 +621,15 @@ const GameAudio = (() => {
     function init() {
         if (unlockBound) return;
         unlockBound = true;
+        // Register unlock on ALL user gesture types (capture phase fires first)
         _unlockEvents.forEach(e => document.addEventListener(e, _tryUnlock, true));
     }
 
-    function _ensureRunning() {
-        const c = getCtx();
+    // Called by every play function — tries to get audio working
+    function _getReady() {
+        const c = _createCtx();
         if (!c) return null;
+        // Always try to resume if not running
         if (c.state !== 'running') {
             try { c.resume(); } catch(e) {}
         }
@@ -627,10 +638,11 @@ const GameAudio = (() => {
 
     function playTone(freq, type, duration, volMult, freqEnd) {
         if (muted) return;
-        const c = _ensureRunning();
+        const c = _getReady();
         if (!c) return;
         try {
-            const now = c.currentTime;
+            // Use a tiny future offset so sounds queued while resuming still play
+            const now = c.currentTime + 0.015;
             const osc = c.createOscillator();
             const gain = c.createGain();
             osc.type = type;
@@ -652,10 +664,10 @@ const GameAudio = (() => {
 
     function playNoise(duration, volMult) {
         if (muted) return;
-        const c = _ensureRunning();
+        const c = _getReady();
         if (!c) return;
         try {
-            const now = c.currentTime;
+            const now = c.currentTime + 0.015;
             const len = Math.max(1, Math.floor(c.sampleRate * duration));
             const buffer = c.createBuffer(1, len, c.sampleRate);
             const data = buffer.getChannelData(0);
@@ -2030,10 +2042,11 @@ class UI {
             });
         }
 
-        // Start button
+        // Start button — also explicitly unlocks audio on first click
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
+                GameAudio.init(); // re-init ensures unlock listeners fire
                 GameAudio.buttonClick();
                 this.game.startGame();
             });

@@ -35,10 +35,11 @@ class UI {
             });
         }
 
-        // Start button
+        // Start button — also explicitly unlocks audio on first click
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
+                GameAudio.init(); // re-init ensures unlock listeners fire
                 GameAudio.buttonClick();
                 this.game.startGame();
             });
