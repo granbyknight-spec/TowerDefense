@@ -287,6 +287,13 @@ body {
     margin: 10px 0;
 }
 
+.sound-hint {
+    font-size: 11px;
+    color: #8d6e63;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+}
+
 .screen-btn {
     padding: 14px 40px;
     font-size: 18px;

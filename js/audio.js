@@ -1,88 +1,49 @@
 // Procedural sound effects using Web Audio API
-// Robust unlock: lazily creates context on first user gesture, retries resume on every play
+// Audio context is created + resumed directly inside user click handlers via unlock()
 
 const GameAudio = (() => {
     let ctx = null;
     let muted = false;
-    let volume = 0.4;
-    let unlockBound = false;
-    let resumed = false;
+    let volume = 0.6;
+    let unlocked = false;
 
-    function _createCtx() {
-        if (ctx) return ctx;
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return null;
+    // MUST be called directly from a user gesture (click/tap handler)
+    function unlock() {
+        if (unlocked && ctx && ctx.state === 'running') return;
         try {
-            ctx = new AC();
-            // If it starts running (e.g. Firefox), we're good
-            if (ctx.state === 'running') resumed = true;
-        } catch(e) {
-            return null;
-        }
-        return ctx;
-    }
-
-    function _tryUnlock() {
-        const c = _createCtx();
-        if (!c) return;
-        if (c.state === 'running') {
-            resumed = true;
-            _removeUnlockListeners();
-            return;
-        }
-        // Resume — must happen within a user gesture call stack
-        try {
-            c.resume().then(() => {
-                if (c.state === 'running') {
-                    resumed = true;
-                    _removeUnlockListeners();
-                }
-            }).catch(() => {});
-        } catch(e) {}
-        // Safari also needs a silent buffer played from a user gesture
-        try {
-            const buf = c.createBuffer(1, 1, c.sampleRate);
-            const src = c.createBufferSource();
+            if (!ctx) {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return;
+                ctx = new AC();
+            }
+            // Resume — this MUST be in the synchronous call stack of a user gesture
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+            // Play silent buffer (Safari requires actual audio output from gesture)
+            const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+            const src = ctx.createBufferSource();
             src.buffer = buf;
-            src.connect(c.destination);
+            src.connect(ctx.destination);
             src.start(0);
+            unlocked = true;
         } catch(e) {}
-    }
-
-    const _unlockEvents = ['touchstart', 'touchend', 'mousedown', 'mouseup', 'click', 'keydown', 'pointerdown'];
-
-    function _removeUnlockListeners() {
-        _unlockEvents.forEach(e => document.removeEventListener(e, _tryUnlock, true));
-        unlockBound = false;
     }
 
     function init() {
-        if (unlockBound) return;
-        unlockBound = true;
-        // Register unlock on ALL user gesture types (capture phase fires first)
-        _unlockEvents.forEach(e => document.addEventListener(e, _tryUnlock, true));
-    }
-
-    // Called by every play function — tries to get audio working
-    function _getReady() {
-        const c = _createCtx();
-        if (!c) return null;
-        // Always try to resume if not running
-        if (c.state !== 'running') {
-            try { c.resume(); } catch(e) {}
-        }
-        return c;
+        // No-op — unlock is done explicitly via unlock() calls in button handlers
     }
 
     function playTone(freq, type, duration, volMult, freqEnd) {
-        if (muted) return;
-        const c = _getReady();
-        if (!c) return;
+        if (muted || !ctx) return;
+        // Try to resume every time (belt and suspenders)
+        if (ctx.state === 'suspended') {
+            try { ctx.resume(); } catch(e) {}
+        }
         try {
-            // Use a tiny future offset so sounds queued while resuming still play
-            const now = c.currentTime + 0.015;
-            const osc = c.createOscillator();
-            const gain = c.createGain();
+            const now = ctx.currentTime + 0.01;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
             osc.type = type;
             osc.frequency.setValueAtTime(freq, now);
             if (freqEnd != null) {
@@ -94,108 +55,115 @@ const GameAudio = (() => {
             gain.gain.setValueAtTime(vol, now);
             gain.gain.linearRampToValueAtTime(0, now + duration);
             osc.connect(gain);
-            gain.connect(c.destination);
+            gain.connect(ctx.destination);
             osc.start(now);
             osc.stop(now + duration + 0.02);
         } catch(e) {}
     }
 
     function playNoise(duration, volMult) {
-        if (muted) return;
-        const c = _getReady();
-        if (!c) return;
+        if (muted || !ctx) return;
+        if (ctx.state === 'suspended') {
+            try { ctx.resume(); } catch(e) {}
+        }
         try {
-            const now = c.currentTime + 0.015;
-            const len = Math.max(1, Math.floor(c.sampleRate * duration));
-            const buffer = c.createBuffer(1, len, c.sampleRate);
+            const now = ctx.currentTime + 0.01;
+            const len = Math.max(1, Math.floor(ctx.sampleRate * duration));
+            const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < len; i++) {
                 data[i] = (Math.random() * 2 - 1) * (1 - i / len);
             }
-            const source = c.createBufferSource();
+            const source = ctx.createBufferSource();
             source.buffer = buffer;
-            const gain = c.createGain();
+            const gain = ctx.createGain();
             const vol = volume * (volMult || 0.3);
             gain.gain.setValueAtTime(vol, now);
             gain.gain.linearRampToValueAtTime(0, now + duration);
-            const filter = c.createBiquadFilter();
+            const filter = ctx.createBiquadFilter();
             filter.type = 'bandpass';
             filter.frequency.value = 1000;
             filter.Q.value = 0.5;
             source.connect(filter);
             filter.connect(gain);
-            gain.connect(c.destination);
+            gain.connect(ctx.destination);
             source.start(now);
         } catch(e) {}
     }
 
     // === SOUND EFFECTS ===
     function shootBarker() {
-        playTone(400, 'square', 0.1, 0.25, 200);
-        playTone(350, 'sawtooth', 0.08, 0.1, 180);
+        playTone(400, 'square', 0.1, 0.4, 200);
+        playTone(350, 'sawtooth', 0.08, 0.2, 180);
     }
     function shootBigBoi() {
-        playTone(180, 'sawtooth', 0.18, 0.3, 80);
-        playTone(140, 'square', 0.15, 0.15, 60);
+        playTone(180, 'sawtooth', 0.18, 0.5, 80);
+        playTone(140, 'square', 0.15, 0.25, 60);
     }
     function shootPoodle() {
-        playTone(700, 'sine', 0.08, 0.2, 500);
-        playTone(900, 'triangle', 0.06, 0.1, 600);
+        playTone(700, 'sine', 0.08, 0.35, 500);
+        playTone(900, 'triangle', 0.06, 0.2, 600);
+    }
+    function shootHusky() {
+        // Icy howl — low whoosh with high shimmer
+        playTone(250, 'sine', 0.2, 0.35, 120);
+        playTone(1200, 'triangle', 0.1, 0.15, 800);
     }
     function shoot(towerType) {
         if (towerType === 'barker') shootBarker();
         else if (towerType === 'bigboi') shootBigBoi();
         else if (towerType === 'poodle') shootPoodle();
+        else if (towerType === 'husky') shootHusky();
     }
     function enemyDeath() {
-        playTone(600, 'sine', 0.12, 0.3, 150);
-        playNoise(0.08, 0.15);
+        playTone(600, 'sine', 0.12, 0.5, 150);
+        playNoise(0.08, 0.3);
     }
     function enemyEscape() {
-        playTone(400, 'triangle', 0.15, 0.2);
-        setTimeout(() => playTone(250, 'triangle', 0.2, 0.2), 120);
+        playTone(400, 'triangle', 0.15, 0.35);
+        setTimeout(() => playTone(250, 'triangle', 0.2, 0.35), 120);
     }
     function waveStart() {
-        playTone(500, 'sine', 0.12, 0.2, 700);
-        setTimeout(() => playTone(700, 'sine', 0.15, 0.25, 900), 130);
+        playTone(500, 'sine', 0.12, 0.35, 700);
+        setTimeout(() => playTone(700, 'sine', 0.15, 0.4, 900), 130);
     }
     function placeTower() {
-        playTone(200, 'sine', 0.1, 0.3, 100);
-        playTone(500, 'triangle', 0.08, 0.15);
+        playTone(200, 'sine', 0.1, 0.5, 100);
+        playTone(500, 'triangle', 0.08, 0.3);
     }
     function upgradeTower() {
-        playTone(400, 'sine', 0.1, 0.2);
-        setTimeout(() => playTone(550, 'sine', 0.1, 0.2), 80);
-        setTimeout(() => playTone(700, 'sine', 0.15, 0.25), 160);
+        playTone(400, 'sine', 0.1, 0.35);
+        setTimeout(() => playTone(550, 'sine', 0.1, 0.35), 80);
+        setTimeout(() => playTone(700, 'sine', 0.15, 0.4), 160);
     }
     function sellTower() {
-        playTone(1200, 'sine', 0.06, 0.15);
-        setTimeout(() => playTone(1500, 'sine', 0.08, 0.15), 60);
+        playTone(1200, 'sine', 0.06, 0.3);
+        setTimeout(() => playTone(1500, 'sine', 0.08, 0.3), 60);
     }
     function splash() {
-        playTone(150, 'sawtooth', 0.15, 0.2, 40);
-        playNoise(0.12, 0.25);
+        playTone(150, 'sawtooth', 0.15, 0.35, 40);
+        playNoise(0.12, 0.4);
     }
     function gameOver() {
         [400, 350, 300, 200].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'triangle', 0.25, 0.25), i * 200);
+            setTimeout(() => playTone(freq, 'triangle', 0.25, 0.4), i * 200);
         });
     }
     function victory() {
         [523, 659, 784, 1047].forEach((freq, i) => {
             setTimeout(() => {
-                playTone(freq, 'sine', 0.2, 0.25);
-                playTone(freq * 0.5, 'triangle', 0.2, 0.1);
+                playTone(freq, 'sine', 0.2, 0.4);
+                playTone(freq * 0.5, 'triangle', 0.2, 0.2);
             }, i * 150);
         });
     }
-    function buttonClick() { playTone(800, 'sine', 0.04, 0.1); }
-    function goldEarned() { playTone(1000, 'sine', 0.07, 0.12); }
+    function buttonClick() { playTone(800, 'sine', 0.04, 0.25); }
+    function goldEarned() { playTone(1000, 'sine', 0.07, 0.25); }
     function toggleMute() { muted = !muted; return muted; }
     function isMuted() { return muted; }
 
     return {
-        init, shoot, enemyDeath, enemyEscape, waveStart,
+        init, unlock, shoot, enemyDeath, enemyEscape, waveStart,
         placeTower, upgradeTower, sellTower, splash,
         gameOver, victory, buttonClick, goldEarned,
         toggleMute, isMuted

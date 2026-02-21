@@ -15,6 +15,11 @@ const CONFIG = {
     SEND_EARLY_BONUS: 30,
     SELL_REFUND: 0.5,
 
+    // Upgrade system — 3 upgrade tiers (level 1 → 2 → 3 → 4)
+    MAX_TOWER_LEVEL: 4,
+    UPGRADE_COST_MULT: 1.0,   // Lv2 cost = base * 1.0
+    UPGRADE_STAT_MULT: 1.4,   // stats multiplied per upgrade
+
     // Tower definitions
     TOWERS: {
         barker: {
@@ -23,7 +28,7 @@ const CONFIG = {
             cost: 50,
             range: 3,
             damage: 8,
-            fireRate: 0.8, // seconds between shots
+            fireRate: 0.8,
             color: '#D2691E',
             projectileColor: '#F5DEB3',
             projectileSpeed: 6,
@@ -41,7 +46,7 @@ const CONFIG = {
             color: '#8B4513',
             projectileColor: '#FF6347',
             projectileSpeed: 4,
-            splash: 1.5, // splash radius in tiles
+            splash: 1.5,
             slow: 0,
             description: 'Splash damage WOOF'
         },
@@ -56,14 +61,26 @@ const CONFIG = {
             projectileColor: '#DA70D6',
             projectileSpeed: 5,
             splash: 0,
-            slow: 0.5, // slow factor (0.5 = 50% speed for 2 sec)
+            slow: 0.5,
             slowDuration: 2,
             description: 'Slows enemies'
+        },
+        husky: {
+            name: 'Husky',
+            emoji: '🐺',
+            cost: 90,
+            range: 2.5,
+            damage: 2,
+            fireRate: 1.2,
+            color: '#4FC3F7',
+            projectileColor: '#B3E5FC',
+            projectileSpeed: 5,
+            splash: 1.2,
+            slow: 0.35,
+            slowDuration: 3,
+            description: 'AoE freeze howl'
         }
     },
-
-    UPGRADE_COST_MULT: 1.0, // upgrade cost = base cost * this
-    UPGRADE_STAT_MULT: 1.5, // stats multiplied by this on upgrade
 
     // Enemy definitions
     ENEMIES: {
@@ -94,15 +111,15 @@ const CONFIG = {
             speed: 1.0,
             gold: 50,
             color: '#4A4A4A',
-            armor: 5, // flat damage reduction
+            armor: 5,
             size: 0.45
         }
     },
 
     // Wave system
     TOTAL_WAVES: 20,
-    WAVE_DELAY: 5, // seconds between waves (planning time)
-    SPAWN_INTERVAL: 0.6, // seconds between enemy spawns within a wave
+    WAVE_DELAY: 5,
+    SPAWN_INTERVAL: 0.6,
 
     // Visual
     GRASS_COLOR: '#4A7C2E',

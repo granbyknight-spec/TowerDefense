@@ -365,18 +365,51 @@ class Renderer {
             ctx.stroke();
         }
 
-        ctx.restore();
-
-        // Level star with glow
-        if (tower.level > 1) {
-            ctx.save();
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 6;
-            ctx.fillStyle = '#FFD700';
-            ctx.font = `bold ${ts * 0.28}px Arial`;
+        if (tower.type === 'husky') {
+            // Icy blue collar
+            ctx.strokeStyle = '#0288D1';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, size * 0.05, size * 0.85, 0.4, Math.PI - 0.4);
+            ctx.stroke();
+            // Snowflake tag
+            ctx.fillStyle = '#E1F5FE';
+            ctx.font = `bold ${size * 0.4}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('★', x + size * 0.9, y - size * 0.9);
+            ctx.fillText('*', 0, size * 0.72);
+        }
+
+        ctx.restore();
+
+        // Husky frost aura (animated particles around tower)
+        if (tower.type === 'husky') {
+            ctx.save();
+            for (let i = 0; i < 4; i++) {
+                const angle = (Date.now() / 1200 + i * 1.57) % (Math.PI * 2);
+                const r = size * (1.1 + Math.sin(Date.now() / 500 + i) * 0.15);
+                const fx = x + Math.cos(angle) * r;
+                const fy = y + Math.sin(angle) * r * 0.7;
+                ctx.fillStyle = 'rgba(179,229,252,0.5)';
+                ctx.beginPath();
+                ctx.arc(fx, fy, size * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // Level stars (1 star per upgrade, up to 3)
+        const stars = tower.level - 1;
+        if (stars > 0) {
+            ctx.save();
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 4;
+            ctx.fillStyle = '#FFD700';
+            ctx.font = `bold ${ts * 0.2}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const starStr = '★'.repeat(stars);
+            ctx.fillText(starStr, x, y - size * 1.2);
             ctx.restore();
         }
 

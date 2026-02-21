@@ -36,17 +36,30 @@ class Tower {
     }
 
     upgrade() {
-        const upgradeCost = Math.floor(this.cost * CONFIG.UPGRADE_COST_MULT);
-        this.level = 2;
+        const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
+        if (this.level >= maxLevel) return 0;
+
+        const upgradeCost = this.getUpgradeCost();
+        this.level++;
         this.totalInvested += upgradeCost;
-        this.range *= CONFIG.UPGRADE_STAT_MULT;
-        this.damage = Math.floor(this.damage * CONFIG.UPGRADE_STAT_MULT);
-        this.fireRate *= 0.8; // fires faster
+
+        const mult = CONFIG.UPGRADE_STAT_MULT;
+        this.range *= mult;
+        this.damage = Math.floor(this.damage * mult);
+        this.fireRate *= 0.85; // fires faster each level
+
+        // Slow towers get better slow at higher levels
+        if (this.slow > 0 && this.slowDuration > 0) {
+            this.slowDuration += 0.3;
+            this.slow = Math.max(0.2, this.slow - 0.05);
+        }
+
         return upgradeCost;
     }
 
     getUpgradeCost() {
-        return Math.floor(this.cost * CONFIG.UPGRADE_COST_MULT);
+        // Cost scales with level: base * mult * level
+        return Math.floor(this.cost * CONFIG.UPGRADE_COST_MULT * this.level);
     }
 
     getSellValue() {

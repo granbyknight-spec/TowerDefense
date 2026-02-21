@@ -28,6 +28,7 @@ class UI {
         const sendBtn = document.getElementById('send-early-btn');
         if (sendBtn) {
             sendBtn.addEventListener('click', () => {
+                GameAudio.unlock();
                 GameAudio.buttonClick();
                 if (this.game.waveManager.sendEarly()) {
                     this.game.gold += CONFIG.SEND_EARLY_BONUS;
@@ -35,11 +36,11 @@ class UI {
             });
         }
 
-        // Start button — also explicitly unlocks audio on first click
+        // Start button — creates AudioContext directly in this click handler
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
-                GameAudio.init(); // re-init ensures unlock listeners fire
+                GameAudio.unlock();
                 GameAudio.buttonClick();
                 this.game.startGame();
             });
@@ -48,17 +49,23 @@ class UI {
         // Restart buttons
         document.querySelectorAll('.restart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                GameAudio.unlock();
                 GameAudio.buttonClick();
                 this.game.restart();
             });
         });
 
-        // Mute button
+        // Mute button — also unlocks audio on first click
         const muteBtn = document.getElementById('mute-btn');
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
+                GameAudio.unlock();
                 const muted = GameAudio.toggleMute();
                 muteBtn.textContent = muted ? '🔇' : '🔊';
+                if (!muted) {
+                    // Play a confirmation beep so user knows sound works
+                    GameAudio.buttonClick();
+                }
             });
         }
 
@@ -69,6 +76,7 @@ class UI {
             const labels = ['1x', '2x', '½x'];
             let speedIdx = 0;
             speedBtn.addEventListener('click', () => {
+                GameAudio.unlock();
                 GameAudio.buttonClick();
                 speedIdx = (speedIdx + 1) % speeds.length;
                 this.game.gameSpeed = speeds[speedIdx];
@@ -93,6 +101,7 @@ class UI {
                 <span class="tower-btn-cost">${def.cost}g</span>
             `;
             btn.addEventListener('click', () => {
+                GameAudio.unlock();
                 this.selectTowerType(key);
             });
             bar.appendChild(btn);
@@ -123,6 +132,9 @@ class UI {
 
     onPointerDown(e) {
         if (this.game.state !== 'playing') return;
+
+        // Unlock audio on any canvas tap too
+        GameAudio.unlock();
 
         const rect = this.game.canvas.getBoundingClientRect();
         const scaleX = this.game.canvas.width / rect.width;
@@ -174,7 +186,8 @@ class UI {
         const panel = document.getElementById('upgrade-panel');
         if (!panel) return;
 
-        const canUpgrade = tower.level < 2;
+        const maxLevel = CONFIG.MAX_TOWER_LEVEL || 2;
+        const canUpgrade = tower.level < maxLevel;
         const upgradeCost = tower.getUpgradeCost();
         const sellValue = tower.getSellValue();
 
