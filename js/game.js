@@ -24,7 +24,7 @@ class Game {
         this.lastTime = performance.now();
         this.gameSpeed = 1; // 1 = normal, 0.5 = slow, 2 = fast
 
-        Audio.init();
+        GameAudio.init();
 
         // Start render loop (renders title screen too)
         requestAnimationFrame((t) => this.loop(t));
@@ -101,7 +101,7 @@ class Game {
         const cost = CONFIG.TOWERS[type].cost;
         this.gold -= cost;
         this.grid.placeTower(col, row);
-        Audio.placeTower();
+        GameAudio.placeTower();
 
         const tower = new Tower(type, col, row, this.tileSize);
         this.towers.push(tower);
@@ -119,14 +119,14 @@ class Game {
         const cost = tower.getUpgradeCost();
         if (this.gold >= cost && tower.level < 2) {
             this.gold -= tower.upgrade();
-            Audio.upgradeTower();
+            GameAudio.upgradeTower();
         }
     }
 
     sellTower(tower) {
         const refund = tower.getSellValue();
         this.gold += refund;
-        Audio.sellTower();
+        GameAudio.sellTower();
         this.grid.removeTower(tower.col, tower.row);
         this.towers = this.towers.filter(t => t !== tower);
 
@@ -155,7 +155,7 @@ class Game {
             if (enemy.reachedEnd && enemy.alive) {
                 enemy.alive = false;
                 this.lives--;
-                Audio.enemyEscape();
+                GameAudio.enemyEscape();
                 if (this.lives <= 0) {
                     this.lives = 0;
                     this.gameOver();
@@ -167,7 +167,7 @@ class Game {
             if (!enemy.alive && enemy.hp <= 0 && !enemy._deathHandled) {
                 enemy._deathHandled = true;
                 this.gold += enemy.gold;
-                Audio.enemyDeath();
+                GameAudio.enemyDeath();
                 for (let i = 0; i < 6; i++) {
                     const angle = Math.random() * Math.PI * 2;
                     const speed = 30 + Math.random() * 50;
@@ -278,7 +278,7 @@ class Game {
 
     gameOver() {
         this.state = 'lost';
-        Audio.gameOver();
+        GameAudio.gameOver();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
@@ -290,7 +290,7 @@ class Game {
 
     victory() {
         this.state = 'won';
-        Audio.victory();
+        GameAudio.victory();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';

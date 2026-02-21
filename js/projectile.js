@@ -49,7 +49,7 @@ class Projectile {
                         }
                     }
                 }
-                Audio.splash();
+                GameAudio.splash();
                 // Splash particle
                 if (particles) {
                     for (let i = 0; i < 8; i++) {

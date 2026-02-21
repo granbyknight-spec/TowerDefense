@@ -560,7 +560,7 @@ function pixelToGrid(x, y, tileSize) {
 // === js/audio.js ===
 // Procedural sound effects using Web Audio API
 
-const Audio = (() => {
+const GameAudio = (() => {
     let ctx = null;
     let muted = false;
     let volume = 0.4;
@@ -1116,7 +1116,7 @@ class Tower {
         if (target && this.fireCooldown <= 0) {
             this.fireCooldown = this.fireRate;
             this.attackAnim = 1;
-            Audio.shoot(this.type);
+            GameAudio.shoot(this.type);
 
             projectiles.push(new Projectile(
                 this.x, this.y,
@@ -1185,7 +1185,7 @@ class Projectile {
                         }
                     }
                 }
-                Audio.splash();
+                GameAudio.splash();
                 // Splash particle
                 if (particles) {
                     for (let i = 0; i < 8; i++) {
@@ -1289,7 +1289,7 @@ class WaveManager {
         this.waveInProgress = true;
         this.betweenWaves = false;
         this.currentWave++;
-        Audio.waveStart();
+        GameAudio.waveStart();
 
         return waveDef;
     }
@@ -1727,7 +1727,7 @@ class UI {
         const sendBtn = document.getElementById('send-early-btn');
         if (sendBtn) {
             sendBtn.addEventListener('click', () => {
-                Audio.buttonClick();
+                GameAudio.buttonClick();
                 if (this.game.waveManager.sendEarly()) {
                     this.game.gold += CONFIG.SEND_EARLY_BONUS;
                 }
@@ -1738,7 +1738,7 @@ class UI {
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
-                Audio.buttonClick();
+                GameAudio.buttonClick();
                 this.game.startGame();
             });
         }
@@ -1746,7 +1746,7 @@ class UI {
         // Restart buttons
         document.querySelectorAll('.restart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                Audio.buttonClick();
+                GameAudio.buttonClick();
                 this.game.restart();
             });
         });
@@ -1755,7 +1755,7 @@ class UI {
         const muteBtn = document.getElementById('mute-btn');
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
-                const muted = Audio.toggleMute();
+                const muted = GameAudio.toggleMute();
                 muteBtn.textContent = muted ? '🔇' : '🔊';
             });
         }
@@ -1767,7 +1767,7 @@ class UI {
             const labels = ['1x', '2x', '½x'];
             let speedIdx = 0;
             speedBtn.addEventListener('click', () => {
-                Audio.buttonClick();
+                GameAudio.buttonClick();
                 speedIdx = (speedIdx + 1) % speeds.length;
                 this.game.gameSpeed = speeds[speedIdx];
                 speedBtn.textContent = labels[speedIdx];
@@ -1960,7 +1960,7 @@ class Game {
         this.lastTime = performance.now();
         this.gameSpeed = 1; // 1 = normal, 0.5 = slow, 2 = fast
 
-        Audio.init();
+        GameAudio.init();
 
         // Start render loop (renders title screen too)
         requestAnimationFrame((t) => this.loop(t));
@@ -2037,7 +2037,7 @@ class Game {
         const cost = CONFIG.TOWERS[type].cost;
         this.gold -= cost;
         this.grid.placeTower(col, row);
-        Audio.placeTower();
+        GameAudio.placeTower();
 
         const tower = new Tower(type, col, row, this.tileSize);
         this.towers.push(tower);
@@ -2055,14 +2055,14 @@ class Game {
         const cost = tower.getUpgradeCost();
         if (this.gold >= cost && tower.level < 2) {
             this.gold -= tower.upgrade();
-            Audio.upgradeTower();
+            GameAudio.upgradeTower();
         }
     }
 
     sellTower(tower) {
         const refund = tower.getSellValue();
         this.gold += refund;
-        Audio.sellTower();
+        GameAudio.sellTower();
         this.grid.removeTower(tower.col, tower.row);
         this.towers = this.towers.filter(t => t !== tower);
 
@@ -2091,7 +2091,7 @@ class Game {
             if (enemy.reachedEnd && enemy.alive) {
                 enemy.alive = false;
                 this.lives--;
-                Audio.enemyEscape();
+                GameAudio.enemyEscape();
                 if (this.lives <= 0) {
                     this.lives = 0;
                     this.gameOver();
@@ -2103,7 +2103,7 @@ class Game {
             if (!enemy.alive && enemy.hp <= 0 && !enemy._deathHandled) {
                 enemy._deathHandled = true;
                 this.gold += enemy.gold;
-                Audio.enemyDeath();
+                GameAudio.enemyDeath();
                 for (let i = 0; i < 6; i++) {
                     const angle = Math.random() * Math.PI * 2;
                     const speed = 30 + Math.random() * 50;
@@ -2214,7 +2214,7 @@ class Game {
 
     gameOver() {
         this.state = 'lost';
-        Audio.gameOver();
+        GameAudio.gameOver();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
@@ -2226,7 +2226,7 @@ class Game {
 
     victory() {
         this.state = 'won';
-        Audio.victory();
+        GameAudio.victory();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';

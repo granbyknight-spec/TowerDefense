@@ -79,7 +79,7 @@ class Tower {
         if (target && this.fireCooldown <= 0) {
             this.fireCooldown = this.fireRate;
             this.attackAnim = 1;
-            Audio.shoot(this.type);
+            GameAudio.shoot(this.type);
 
             projectiles.push(new Projectile(
                 this.x, this.y,

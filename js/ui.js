@@ -28,7 +28,7 @@ class UI {
         const sendBtn = document.getElementById('send-early-btn');
         if (sendBtn) {
             sendBtn.addEventListener('click', () => {
-                Audio.buttonClick();
+                GameAudio.buttonClick();
                 if (this.game.waveManager.sendEarly()) {
                     this.game.gold += CONFIG.SEND_EARLY_BONUS;
                 }
@@ -39,7 +39,7 @@ class UI {
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
-                Audio.buttonClick();
+                GameAudio.buttonClick();
                 this.game.startGame();
             });
         }
@@ -47,7 +47,7 @@ class UI {
         // Restart buttons
         document.querySelectorAll('.restart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                Audio.buttonClick();
+                GameAudio.buttonClick();
                 this.game.restart();
             });
         });
@@ -56,7 +56,7 @@ class UI {
         const muteBtn = document.getElementById('mute-btn');
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
-                const muted = Audio.toggleMute();
+                const muted = GameAudio.toggleMute();
                 muteBtn.textContent = muted ? '🔇' : '🔊';
             });
         }
@@ -68,7 +68,7 @@ class UI {
             const labels = ['1x', '2x', '½x'];
             let speedIdx = 0;
             speedBtn.addEventListener('click', () => {
-                Audio.buttonClick();
+                GameAudio.buttonClick();
                 speedIdx = (speedIdx + 1) % speeds.length;
                 this.game.gameSpeed = speeds[speedIdx];
                 speedBtn.textContent = labels[speedIdx];

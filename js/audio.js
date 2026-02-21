@@ -1,6 +1,6 @@
 // Procedural sound effects using Web Audio API
 
-const Audio = (() => {
+const GameAudio = (() => {
     let ctx = null;
     let muted = false;
     let volume = 0.4;
