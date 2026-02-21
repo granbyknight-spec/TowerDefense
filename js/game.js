@@ -3,9 +3,8 @@
 class Game {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
-        this.state = 'title'; // title, playing, won, lost
+        this.state = 'title'; // title, playing, level_complete, won, lost
 
-        // Calculate tile size to fit screen
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
@@ -22,11 +21,20 @@ class Game {
         this.lives = CONFIG.START_LIVES;
 
         this.lastTime = performance.now();
-        this.gameSpeed = 1; // 1 = normal, 0.5 = slow, 2 = fast
+        this.gameSpeed = 1;
+
+        // Trivia state
+        this.triviaActive = false;
+        this.triviaTimer = 0;
+        this.triviaQuestion = null;
+        this.triviaAnswered = false;
+        this.triviaResultTimer = 0;
+        this.triviaCorrect = false;
+        this.triviaUsed = []; // indices of used questions
+        this._triviaShownForWave = -1;
 
         GameAudio.init();
 
-        // Start render loop (renders title screen too)
         requestAnimationFrame((t) => this.loop(t));
     }
 
@@ -35,8 +43,6 @@ class Game {
         const maxW = container.clientWidth;
         const maxH = container.clientHeight;
 
-        // Calculate tile size to fit grid in available space
-        // Leave room for UI bars (top HUD ~50px, bottom bar ~80px)
         const uiHeight = 130;
         const availH = maxH - uiHeight;
         const availW = maxW;
@@ -52,7 +58,6 @@ class Game {
             this.renderer.tileSize = this.tileSize;
         }
 
-        // Update tower/enemy positions if tile size changed
         for (const tower of (this.towers || [])) {
             tower.tileSize = this.tileSize;
             const pos = gridToPixel(tower.col, tower.row, this.tileSize);
@@ -85,9 +90,15 @@ class Game {
         this.ui.hideUpgradePanel();
         this.resize();
 
+        this.triviaActive = false;
+        this.triviaUsed = [];
+        this._triviaShownForWave = -1;
+        this._hideTrivia();
+
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'none';
+        document.getElementById('level-complete-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('tower-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
@@ -106,7 +117,6 @@ class Game {
         const tower = new Tower(type, col, row, this.tileSize);
         this.towers.push(tower);
 
-        // Recalculate paths for all living enemies
         const newPath = this.grid.currentPath;
         for (const enemy of this.enemies) {
             if (enemy.alive && !enemy.reachedEnd) {
@@ -116,8 +126,9 @@ class Game {
     }
 
     upgradeTower(tower) {
+        const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
         const cost = tower.getUpgradeCost();
-        if (this.gold >= cost && tower.level < 2) {
+        if (this.gold >= cost && tower.level < maxLevel) {
             this.gold -= tower.upgrade();
             GameAudio.upgradeTower();
         }
@@ -130,7 +141,6 @@ class Game {
         this.grid.removeTower(tower.col, tower.row);
         this.towers = this.towers.filter(t => t !== tower);
 
-        // Recalculate paths
         const newPath = this.grid.currentPath;
         for (const enemy of this.enemies) {
             if (enemy.alive && !enemy.reachedEnd) {
@@ -139,14 +149,171 @@ class Game {
         }
     }
 
+    // === TRIVIA SYSTEM ===
+    _pickTrivia() {
+        const pool = CONFIG.TRIVIA;
+        // Reset used list if we've been through all
+        if (this.triviaUsed.length >= pool.length) {
+            this.triviaUsed = [];
+        }
+        // Pick unused question
+        let idx;
+        do {
+            idx = Math.floor(Math.random() * pool.length);
+        } while (this.triviaUsed.includes(idx));
+        this.triviaUsed.push(idx);
+
+        const q = pool[idx];
+        // Shuffle answers but track correct index
+        const indices = [0, 1, 2, 3];
+        for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        return {
+            question: q.q,
+            answers: indices.map(i => q.a[i]),
+            correctIdx: indices.indexOf(q.c)
+        };
+    }
+
+    _showTrivia() {
+        this.triviaQuestion = this._pickTrivia();
+        this.triviaActive = true;
+        this.triviaAnswered = false;
+        this.triviaCorrect = false;
+        this.triviaTimer = CONFIG.TRIVIA_TIME;
+        this.triviaResultTimer = 0;
+
+        const panel = document.getElementById('trivia-panel');
+        if (!panel) return;
+
+        const q = this.triviaQuestion;
+        document.getElementById('trivia-question').textContent = q.question;
+        const btns = panel.querySelectorAll('.trivia-btn');
+        btns.forEach((btn, i) => {
+            btn.textContent = q.answers[i];
+            btn.className = 'trivia-btn';
+            btn.onclick = () => this._answerTrivia(i);
+        });
+        document.getElementById('trivia-result').textContent = '';
+        document.getElementById('trivia-timer-fill').style.width = '100%';
+        panel.style.display = 'flex';
+    }
+
+    _answerTrivia(idx) {
+        if (this.triviaAnswered) return;
+        this.triviaAnswered = true;
+
+        const correct = idx === this.triviaQuestion.correctIdx;
+        this.triviaCorrect = correct;
+        this.triviaResultTimer = 1.2;
+
+        const panel = document.getElementById('trivia-panel');
+        const btns = panel.querySelectorAll('.trivia-btn');
+        const resultEl = document.getElementById('trivia-result');
+
+        // Highlight correct/wrong
+        btns[this.triviaQuestion.correctIdx].classList.add('correct');
+        if (!correct) {
+            btns[idx].classList.add('wrong');
+            resultEl.textContent = 'Nope!';
+            resultEl.style.color = '#f44336';
+        } else {
+            this.gold += CONFIG.TRIVIA_REWARD;
+            resultEl.textContent = '+' + CONFIG.TRIVIA_REWARD + 'g!';
+            resultEl.style.color = '#4CAF50';
+            GameAudio.goldEarned();
+        }
+    }
+
+    _hideTrivia() {
+        const panel = document.getElementById('trivia-panel');
+        if (panel) panel.style.display = 'none';
+        this.triviaActive = false;
+    }
+
+    _updateTrivia(dt) {
+        if (!this.triviaActive) return;
+
+        if (this.triviaAnswered) {
+            this.triviaResultTimer -= dt;
+            if (this.triviaResultTimer <= 0) {
+                this._hideTrivia();
+            }
+            return;
+        }
+
+        this.triviaTimer -= dt;
+
+        // Update timer bar
+        const fill = document.getElementById('trivia-timer-fill');
+        if (fill) {
+            const pct = Math.max(0, this.triviaTimer / CONFIG.TRIVIA_TIME) * 100;
+            fill.style.width = pct + '%';
+        }
+
+        if (this.triviaTimer <= 0) {
+            // Time's up
+            this.triviaAnswered = true;
+            this.triviaResultTimer = 1.0;
+            const resultEl = document.getElementById('trivia-result');
+            if (resultEl) {
+                resultEl.textContent = "Time's up!";
+                resultEl.style.color = '#FF9800';
+            }
+            // Highlight correct answer
+            const panel = document.getElementById('trivia-panel');
+            if (panel) {
+                const btns = panel.querySelectorAll('.trivia-btn');
+                btns[this.triviaQuestion.correctIdx].classList.add('correct');
+            }
+        }
+    }
+
+    // === LEVEL TRANSITIONS ===
+    _showLevelComplete() {
+        this.state = 'level_complete';
+        const screen = document.getElementById('level-complete-screen');
+        const lvl = this.waveManager.currentLevel + 1;
+        document.getElementById('lc-level').textContent = lvl;
+        const nextLevel = CONFIG.LEVELS[this.waveManager.currentLevel + 1];
+        document.getElementById('lc-next').textContent = nextLevel ? nextLevel.name : '';
+        screen.style.display = 'flex';
+    }
+
+    nextLevel() {
+        document.getElementById('level-complete-screen').style.display = 'none';
+        this.waveManager.startNextLevel();
+        this.state = 'playing';
+        this._triviaShownForWave = -1;
+        this.ui.updateHUD();
+    }
+
     update(dt) {
         if (this.state !== 'playing') return;
 
-        // Cap dt to prevent huge jumps
         dt = Math.min(dt, 0.1);
+
+        // Trivia update
+        this._updateTrivia(dt);
 
         // Spawn enemies via wave manager
         this.waveManager.update(dt, this.grid.currentPath, this.tileSize, this.enemies);
+
+        // Show trivia between waves (once per wave gap)
+        if (this.waveManager.betweenWaves && !this.triviaActive
+            && this._triviaShownForWave !== this.waveManager.currentWave
+            && this.waveManager.currentWave > 0) {
+            this._triviaShownForWave = this.waveManager.currentWave;
+            this._showTrivia();
+        }
+
+        // Level complete check
+        if (this.waveManager.levelComplete) {
+            this._showLevelComplete();
+            return;
+        }
 
         // Update enemies
         for (const enemy of this.enemies) {
@@ -163,7 +330,6 @@ class Game {
                 }
             }
 
-            // Death particles
             if (!enemy.alive && enemy.hp <= 0 && !enemy._deathHandled) {
                 enemy._deathHandled = true;
                 this.gold += enemy.gold;
@@ -172,34 +338,27 @@ class Game {
                     const angle = Math.random() * Math.PI * 2;
                     const speed = 30 + Math.random() * 50;
                     this.particles.push({
-                        x: enemy.x,
-                        y: enemy.y,
+                        x: enemy.x, y: enemy.y,
                         vx: Math.cos(angle) * speed,
                         vy: Math.sin(angle) * speed,
-                        life: 0.5,
-                        maxLife: 0.5,
-                        color: enemy.color,
-                        size: 4
+                        life: 0.5, maxLife: 0.5,
+                        color: enemy.color, size: 4
                     });
                 }
             }
         }
 
-        // Clean up dead/escaped enemies
         this.enemies = this.enemies.filter(e => e.alive && !e.reachedEnd);
 
-        // Update towers
         for (const tower of this.towers) {
             tower.update(dt, this.enemies, this.projectiles);
         }
 
-        // Update projectiles
         for (const proj of this.projectiles) {
             proj.update(dt, this.enemies, this.particles);
         }
         this.projectiles = this.projectiles.filter(p => p.alive);
 
-        // Update particles
         for (const p of this.particles) {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
@@ -207,7 +366,7 @@ class Game {
         }
         this.particles = this.particles.filter(p => p.life > 0);
 
-        // Wave income when transitioning between waves
+        // Wave income
         if (this.waveManager.betweenWaves && !this.waveManager._incomeGiven) {
             this.waveManager._incomeGiven = true;
             this.gold += CONFIG.WAVE_INCOME;
@@ -227,11 +386,8 @@ class Game {
     render() {
         this.renderer.clear();
         this.renderer.drawGrid(this.grid);
-
-        // Draw path preview
         this.renderer.drawPath(this.grid.currentPath);
 
-        // Draw placement preview
         if (this.ui.selectedTowerType && this.state === 'playing') {
             const canPlace = this.grid.canPlace(this.ui.hoverCol, this.ui.hoverRow);
             this.renderer.drawPlacementPreview(
@@ -240,27 +396,22 @@ class Game {
             );
         }
 
-        // Draw selected tower range
         if (this.ui.selectedTower) {
             this.renderer.drawTowerRange(this.ui.selectedTower);
         }
 
-        // Draw towers
         for (const tower of this.towers) {
             this.renderer.drawTower(tower);
         }
 
-        // Draw enemies
         for (const enemy of this.enemies) {
             this.renderer.drawEnemy(enemy);
         }
 
-        // Draw projectiles
         for (const proj of this.projectiles) {
             this.renderer.drawProjectile(proj);
         }
 
-        // Draw particles
         for (const p of this.particles) {
             this.renderer.drawParticle(p);
         }
@@ -278,6 +429,7 @@ class Game {
 
     gameOver() {
         this.state = 'lost';
+        this._hideTrivia();
         GameAudio.gameOver();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
@@ -290,6 +442,7 @@ class Game {
 
     victory() {
         this.state = 'won';
+        this._hideTrivia();
         GameAudio.victory();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';

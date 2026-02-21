@@ -1,63 +1,81 @@
-// Wave spawning system
+// Wave spawning system with level support
 
 class WaveManager {
     constructor() {
-        this.currentWave = 0;
-        this.waveDefs = this.generateWaves();
+        this.currentLevel = 0;
+        this.currentWave = 0; // wave within current level
+        this.waveDefs = this._generateWavesForLevel(0);
         this.spawnQueue = [];
         this.spawnTimer = 0;
         this.waveInProgress = false;
         this.allWavesComplete = false;
+        this.levelComplete = false;
         this.betweenWaves = true;
         this.betweenWaveTimer = CONFIG.WAVE_DELAY;
     }
 
-    generateWaves() {
-        const waves = [];
-        for (let i = 1; i <= CONFIG.TOTAL_WAVES; i++) {
-            const wave = [];
-            // Base count scales with wave number
-            const baseCount = 3 + Math.floor(i * 1.5);
+    _getLevelDef() {
+        return CONFIG.LEVELS[this.currentLevel] || CONFIG.LEVELS[CONFIG.LEVELS.length - 1];
+    }
 
-            if (i <= 5) {
+    _generateWavesForLevel(levelIdx) {
+        const level = CONFIG.LEVELS[levelIdx] || CONFIG.LEVELS[0];
+        const waves = [];
+
+        for (let i = 1; i <= level.waves; i++) {
+            const wave = [];
+            const baseCount = 3 + Math.floor(i * 1.3) + levelIdx * 2;
+            const progress = i / level.waves; // 0→1 within level
+
+            if (progress <= 0.4) {
                 // Early: mostly kittens
                 for (let j = 0; j < baseCount; j++) wave.push('kitten');
-                if (i >= 3) {
-                    for (let j = 0; j < Math.floor(i / 2); j++) wave.push('tabby');
+                if (progress > 0.2) {
+                    for (let j = 0; j < Math.floor(i * 0.5); j++) wave.push('tabby');
                 }
-            } else if (i <= 12) {
-                // Mid: mix of kitten and tabby, some fat cats
+            } else if (progress <= 0.75) {
+                // Mid: mix
                 for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('kitten');
                 for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('tabby');
-                if (i >= 8) {
-                    for (let j = 0; j < Math.floor((i - 7) * 0.8); j++) wave.push('fatcat');
+                if (levelIdx >= 1) {
+                    for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('fatcat');
                 }
             } else {
-                // Late: heavy tabbies and fat cats
+                // Late: heavy
                 for (let j = 0; j < Math.floor(baseCount * 0.2); j++) wave.push('kitten');
                 for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('tabby');
-                for (let j = 0; j < Math.floor(baseCount * 0.3); j++) wave.push('fatcat');
+                for (let j = 0; j < Math.floor(baseCount * 0.25); j++) wave.push('fatcat');
             }
 
-            // Final wave: fat cat swarm
-            if (i === CONFIG.TOTAL_WAVES) {
-                wave.length = 0;
-                for (let j = 0; j < 15; j++) wave.push('fatcat');
-                for (let j = 0; j < 10; j++) wave.push('tabby');
+            // Final wave of level: boss wave
+            if (i === level.waves) {
+                const bossCount = 3 + levelIdx * 4;
+                for (let j = 0; j < bossCount; j++) wave.push('fatcat');
+                for (let j = 0; j < bossCount; j++) wave.push('tabby');
             }
 
-            // Scale HP with wave number
             waves.push({
                 enemies: wave,
-                hpMultiplier: 1 + (i - 1) * 0.12
+                hpMultiplier: level.hpScale * (1 + (i - 1) * 0.1),
+                speedMultiplier: level.speedScale
             });
         }
         return waves;
     }
 
+    getTotalWavesThisLevel() {
+        return this._getLevelDef().waves;
+    }
+
     startNextWave() {
-        if (this.currentWave >= CONFIG.TOTAL_WAVES) {
-            this.allWavesComplete = true;
+        const totalWaves = this.getTotalWavesThisLevel();
+        if (this.currentWave >= totalWaves) {
+            // Level done
+            if (this.currentLevel < CONFIG.LEVELS.length - 1) {
+                this.levelComplete = true;
+            } else {
+                this.allWavesComplete = true;
+            }
             return null;
         }
 
@@ -72,6 +90,16 @@ class WaveManager {
         return waveDef;
     }
 
+    startNextLevel() {
+        this.currentLevel++;
+        this.currentWave = 0;
+        this.waveDefs = this._generateWavesForLevel(this.currentLevel);
+        this.levelComplete = false;
+        this.allWavesComplete = false;
+        this.betweenWaves = true;
+        this.betweenWaveTimer = CONFIG.WAVE_DELAY;
+    }
+
     sendEarly() {
         if (this.betweenWaves) {
             this.betweenWaveTimer = 0;
@@ -81,7 +109,7 @@ class WaveManager {
     }
 
     update(dt, path, tileSize, enemies) {
-        if (this.allWavesComplete) return;
+        if (this.allWavesComplete || this.levelComplete) return;
 
         if (this.betweenWaves) {
             this.betweenWaveTimer -= dt;
@@ -98,22 +126,28 @@ class WaveManager {
                 const type = this.spawnQueue.shift();
                 if (path && path.length > 0) {
                     const enemy = new Enemy(type, path, tileSize);
-                    // Apply wave HP scaling
-                    const mult = this.waveDefs[this.currentWave - 1].hpMultiplier;
-                    enemy.maxHp = Math.floor(enemy.maxHp * mult);
+                    const waveDef = this.waveDefs[this.currentWave - 1];
+                    enemy.maxHp = Math.floor(enemy.maxHp * waveDef.hpMultiplier);
                     enemy.hp = enemy.maxHp;
+                    enemy.baseSpeed *= waveDef.speedMultiplier;
+                    enemy.speed = enemy.baseSpeed;
                     enemies.push(enemy);
                 }
             }
         }
 
-        // Check if wave is done (no queue and no alive enemies)
+        // Check if wave is done
         if (this.spawnQueue.length === 0 && this.waveInProgress) {
             const anyAlive = enemies.some(e => e.alive && !e.reachedEnd);
             if (!anyAlive) {
                 this.waveInProgress = false;
-                if (this.currentWave >= CONFIG.TOTAL_WAVES) {
-                    this.allWavesComplete = true;
+                const totalWaves = this.getTotalWavesThisLevel();
+                if (this.currentWave >= totalWaves) {
+                    if (this.currentLevel < CONFIG.LEVELS.length - 1) {
+                        this.levelComplete = true;
+                    } else {
+                        this.allWavesComplete = true;
+                    }
                 } else {
                     this.betweenWaves = true;
                     this.betweenWaveTimer = CONFIG.WAVE_DELAY;
@@ -123,7 +157,13 @@ class WaveManager {
     }
 
     getWaveDisplay() {
-        return this.currentWave + ' / ' + CONFIG.TOTAL_WAVES;
+        const total = this.getTotalWavesThisLevel();
+        return this.currentWave + ' / ' + total;
+    }
+
+    getLevelDisplay() {
+        const level = this._getLevelDef();
+        return 'Lv' + (this.currentLevel + 1) + ': ' + level.name;
     }
 
     getTimerDisplay() {

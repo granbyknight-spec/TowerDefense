@@ -29,10 +29,11 @@
                 <span class="hud-icon">💰</span>
                 <span id="gold-display">200</span>
             </div>
+            <div id="level-display" class="hud-level"></div>
             <div id="timer-display"></div>
             <div class="hud-item">
                 <span class="hud-icon">🐾</span>
-                Wave <span id="wave-display">0 / 20</span>
+                <span id="wave-display">0 / 7</span>
             </div>
             <div class="hud-item">
                 <span class="hud-icon">❤️</span>
@@ -49,6 +50,19 @@
         <!-- Game Canvas -->
         <canvas id="game-canvas"></canvas>
 
+        <!-- Trivia Panel (between waves) -->
+        <div id="trivia-panel">
+            <div class="trivia-timer-bar"><div id="trivia-timer-fill" class="trivia-timer-fill"></div></div>
+            <div id="trivia-question" class="trivia-question"></div>
+            <div class="trivia-answers">
+                <button class="trivia-btn"></button>
+                <button class="trivia-btn"></button>
+                <button class="trivia-btn"></button>
+                <button class="trivia-btn"></button>
+            </div>
+            <div id="trivia-result" class="trivia-result"></div>
+        </div>
+
         <!-- Send Early Button -->
         <button id="send-early-btn">Send Early (+30g)</button>
 
@@ -57,6 +71,14 @@
 
         <!-- Tower Selection Bar -->
         <div id="tower-bar"></div>
+
+        <!-- Level Complete Screen -->
+        <div id="level-complete-screen" class="overlay-screen">
+            <div style="font-size:48px;">🎉🐕🎉</div>
+            <div class="end-title" style="color:#4CAF50;">LEVEL <span id="lc-level">1</span> COMPLETE!</div>
+            <div class="end-subtitle">Next up: <span id="lc-next"></span></div>
+            <button id="next-level-btn" class="screen-btn">NEXT LEVEL</button>
+        </div>
 
         <!-- Game Over Screen -->
         <div id="game-over-screen" class="overlay-screen">

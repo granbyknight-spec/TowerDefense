@@ -45,35 +45,47 @@ body {
 #hud {
     display: none;
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 8px;
     background: linear-gradient(180deg, #3e2723 0%, #4e342e 100%);
     justify-content: space-between;
     align-items: center;
-    font-size: 14px;
-    gap: 6px;
+    font-size: 13px;
+    gap: 4px;
     z-index: 10;
     border-bottom: 2px solid #6d4c41;
+    flex-wrap: wrap;
 }
 
 .hud-item {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     background: rgba(0,0,0,0.3);
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 12px;
     font-weight: 600;
+    font-size: 12px;
 }
 
 .hud-icon {
-    font-size: 16px;
+    font-size: 14px;
+}
+
+.hud-level {
+    font-size: 11px;
+    color: #ffcc80;
+    font-weight: 700;
+    text-align: center;
+    width: 100%;
+    order: -1;
+    padding: 2px 0;
 }
 
 #timer-display {
-    font-size: 12px;
+    font-size: 11px;
     color: #ffcc80;
     text-align: center;
-    min-width: 90px;
+    min-width: 60px;
 }
 
 /* === Canvas === */
@@ -90,28 +102,28 @@ body {
 #tower-bar {
     display: none;
     width: 100%;
-    padding: 6px 8px;
+    padding: 4px 4px;
     background: linear-gradient(0deg, #3e2723 0%, #4e342e 100%);
     justify-content: center;
     align-items: stretch;
-    gap: 8px;
+    gap: 4px;
     z-index: 10;
     border-top: 2px solid #6d4c41;
 }
 
 .tower-btn {
     flex: 1;
-    max-width: 120px;
+    max-width: 110px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 8px 4px;
+    gap: 1px;
+    padding: 5px 2px;
     background: rgba(255,255,255,0.1);
     border: 2px solid rgba(255,255,255,0.2);
-    border-radius: 10px;
+    border-radius: 8px;
     color: #fff;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.15s;
 }
@@ -131,40 +143,46 @@ body {
 }
 
 .tower-btn-icon {
-    font-size: 24px;
+    font-size: 20px;
 }
 
 .tower-btn-name {
     font-weight: 600;
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .tower-btn-cost {
     color: #FFD700;
     font-weight: 700;
-    font-size: 12px;
+    font-size: 11px;
+}
+
+.tower-btn-dps {
+    color: #a5d6a7;
+    font-size: 9px;
+    font-weight: 600;
 }
 
 /* === Upgrade Panel === */
 #upgrade-panel {
     display: none;
     position: absolute;
-    bottom: 90px;
+    bottom: 80px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(30, 20, 15, 0.95);
     border: 2px solid #6d4c41;
     border-radius: 12px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     z-index: 20;
     min-width: 220px;
 }
 
 .upgrade-header {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
 }
 
@@ -197,6 +215,91 @@ body {
     background: #555;
     cursor: not-allowed;
     opacity: 0.6;
+}
+
+/* === Trivia Panel === */
+#trivia-panel {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 380px;
+    background: rgba(20, 14, 10, 0.96);
+    border: 2px solid #FFD700;
+    border-radius: 14px;
+    padding: 14px;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 50;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.15);
+}
+
+.trivia-timer-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.trivia-timer-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #FF9800, #FFD700);
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
+
+.trivia-question {
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    color: #fff;
+    line-height: 1.3;
+    min-height: 36px;
+}
+
+.trivia-answers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+}
+
+.trivia-btn {
+    padding: 10px 8px;
+    background: rgba(255,255,255,0.12);
+    border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+}
+
+.trivia-btn:active {
+    transform: scale(0.96);
+}
+
+.trivia-btn.correct {
+    background: rgba(76, 175, 80, 0.5);
+    border-color: #4CAF50;
+}
+
+.trivia-btn.wrong {
+    background: rgba(244, 67, 54, 0.5);
+    border-color: #f44336;
+}
+
+.trivia-result {
+    font-size: 18px;
+    font-weight: 900;
+    min-height: 24px;
 }
 
 /* === Send Early Button === */
@@ -258,7 +361,7 @@ body {
     transform: translateX(-50%) scale(0.95);
 }
 
-/* === Screens (Title, Game Over, Victory) === */
+/* === Screens (Title, Game Over, Victory, Level Complete) === */
 .overlay-screen {
     display: none;
     position: absolute;
@@ -367,10 +470,11 @@ body {
                 <span class="hud-icon">💰</span>
                 <span id="gold-display">200</span>
             </div>
+            <div id="level-display" class="hud-level"></div>
             <div id="timer-display"></div>
             <div class="hud-item">
                 <span class="hud-icon">🐾</span>
-                Wave <span id="wave-display">0 / 20</span>
+                <span id="wave-display">0 / 7</span>
             </div>
             <div class="hud-item">
                 <span class="hud-icon">❤️</span>
@@ -387,6 +491,19 @@ body {
         <!-- Game Canvas -->
         <canvas id="game-canvas"></canvas>
 
+        <!-- Trivia Panel (between waves) -->
+        <div id="trivia-panel">
+            <div class="trivia-timer-bar"><div id="trivia-timer-fill" class="trivia-timer-fill"></div></div>
+            <div id="trivia-question" class="trivia-question"></div>
+            <div class="trivia-answers">
+                <button class="trivia-btn"></button>
+                <button class="trivia-btn"></button>
+                <button class="trivia-btn"></button>
+                <button class="trivia-btn"></button>
+            </div>
+            <div id="trivia-result" class="trivia-result"></div>
+        </div>
+
         <!-- Send Early Button -->
         <button id="send-early-btn">Send Early (+30g)</button>
 
@@ -395,6 +512,14 @@ body {
 
         <!-- Tower Selection Bar -->
         <div id="tower-bar"></div>
+
+        <!-- Level Complete Screen -->
+        <div id="level-complete-screen" class="overlay-screen">
+            <div style="font-size:48px;">🎉🐕🎉</div>
+            <div class="end-title" style="color:#4CAF50;">LEVEL <span id="lc-level">1</span> COMPLETE!</div>
+            <div class="end-subtitle">Next up: <span id="lc-next"></span></div>
+            <button id="next-level-btn" class="screen-btn">NEXT LEVEL</button>
+        </div>
 
         <!-- Game Over Screen -->
         <div id="game-over-screen" class="overlay-screen">
@@ -437,10 +562,18 @@ const CONFIG = {
 
     // Upgrade system — 3 upgrade tiers (level 1 → 2 → 3 → 4)
     MAX_TOWER_LEVEL: 4,
-    UPGRADE_COST_MULT: 1.0,   // Lv2 cost = base * 1.0
-    UPGRADE_STAT_MULT: 1.4,   // stats multiplied per upgrade
+    UPGRADE_COST_MULT: 1.0,
+    UPGRADE_STAT_MULT: 1.4,
+
+    // Levels (stages)
+    LEVELS: [
+        { name: 'The Backyard', waves: 7, hpScale: 1.0, speedScale: 1.0 },
+        { name: 'The Park', waves: 10, hpScale: 1.6, speedScale: 1.1 },
+        { name: 'Cat Central', waves: 13, hpScale: 2.4, speedScale: 1.2 }
+    ],
 
     // Tower definitions
+    // DPS = damage / fireRate
     TOWERS: {
         barker: {
             name: 'Barker',
@@ -448,42 +581,28 @@ const CONFIG = {
             cost: 50,
             range: 3,
             damage: 8,
-            fireRate: 0.8,
+            fireRate: 0.8, // 10 DPS
             color: '#D2691E',
             projectileColor: '#F5DEB3',
             projectileSpeed: 6,
             splash: 0,
             slow: 0,
-            description: 'Fast single-target bark'
-        },
-        bigboi: {
-            name: 'Big Boi',
-            emoji: '🐶',
-            cost: 100,
-            range: 2,
-            damage: 25,
-            fireRate: 1.8,
-            color: '#8B4513',
-            projectileColor: '#FF6347',
-            projectileSpeed: 4,
-            splash: 1.5,
-            slow: 0,
-            description: 'Splash damage WOOF'
+            description: 'Fast single-target'
         },
         poodle: {
             name: 'Poodle',
             emoji: '🐩',
-            cost: 75,
+            cost: 60,
             range: 2.5,
-            damage: 3,
-            fireRate: 1.0,
+            damage: 5,
+            fireRate: 0.6, // 8.3 DPS + slow
             color: '#FFB6C1',
             projectileColor: '#DA70D6',
             projectileSpeed: 5,
             splash: 0,
             slow: 0.5,
             slowDuration: 2,
-            description: 'Slows enemies'
+            description: 'Rapid fire + slow'
         },
         husky: {
             name: 'Husky',
@@ -491,7 +610,7 @@ const CONFIG = {
             cost: 90,
             range: 2.5,
             damage: 2,
-            fireRate: 1.2,
+            fireRate: 1.2, // 1.7 DPS (support)
             color: '#4FC3F7',
             projectileColor: '#B3E5FC',
             projectileSpeed: 5,
@@ -499,6 +618,20 @@ const CONFIG = {
             slow: 0.35,
             slowDuration: 3,
             description: 'AoE freeze howl'
+        },
+        bigboi: {
+            name: 'Big Boi',
+            emoji: '🐶',
+            cost: 100,
+            range: 2,
+            damage: 25,
+            fireRate: 1.8, // 13.9 DPS + splash
+            color: '#8B4513',
+            projectileColor: '#FF6347',
+            projectileSpeed: 4,
+            splash: 1.5,
+            slow: 0,
+            description: 'Splash damage WOOF'
         }
     },
 
@@ -537,9 +670,39 @@ const CONFIG = {
     },
 
     // Wave system
-    TOTAL_WAVES: 20,
     WAVE_DELAY: 5,
     SPAWN_INTERVAL: 0.6,
+
+    // Trivia
+    TRIVIA_TIME: 3,     // seconds to answer
+    TRIVIA_REWARD: 100,  // gold for correct answer
+    TRIVIA: [
+        { q: "What breed is the world's fastest dog?", a: ['Greyhound', 'Whippet', 'Saluki', 'Dalmatian'], c: 0 },
+        { q: "How many teeth does an adult dog have?", a: ['42', '36', '28', '48'], c: 0 },
+        { q: "What is a group of puppies called?", a: ['A litter', 'A pack', 'A herd', 'A pod'], c: 0 },
+        { q: "Which breed is the smallest?", a: ['Chihuahua', 'Yorkie', 'Pomeranian', 'Papillon'], c: 0 },
+        { q: "What breed was Lassie?", a: ['Rough Collie', 'Sheltie', 'Golden Retriever', 'Beagle'], c: 0 },
+        { q: "How many eyelids does a dog have per eye?", a: ['Three', 'Two', 'One', 'Four'], c: 0 },
+        { q: "Which sense is strongest in dogs?", a: ['Smell', 'Hearing', 'Sight', 'Taste'], c: 0 },
+        { q: "What breed is known as the 'Wiener Dog'?", a: ['Dachshund', 'Corgi', 'Basset Hound', 'Beagle'], c: 0 },
+        { q: "Dalmatian puppies are born what color?", a: ['White', 'Spotted', 'Black', 'Gray'], c: 0 },
+        { q: "Which breed has a blue-black tongue?", a: ['Chow Chow', 'Akita', 'Shar Pei', 'Husky'], c: 0 },
+        { q: "Which breed can't bark?", a: ['Basenji', 'Shiba Inu', 'Whippet', 'Borzoi'], c: 0 },
+        { q: "Which breed is the tallest?", a: ['Great Dane', 'Irish Wolfhound', 'Mastiff', 'St. Bernard'], c: 0 },
+        { q: "Which breed is the heaviest?", a: ['English Mastiff', 'Great Dane', 'St. Bernard', 'Newfoundland'], c: 0 },
+        { q: "Dogs can see which colors best?", a: ['Blue & yellow', 'Red & green', 'All colors', 'Only gray'], c: 0 },
+        { q: "Which breed was bred for Alpine rescue?", a: ['St. Bernard', 'Bernese Mountain', 'Husky', 'Malamute'], c: 0 },
+        { q: "How many muscles control a dog's ear?", a: ['18', '6', '12', '24'], c: 0 },
+        { q: "What breed is Scooby-Doo?", a: ['Great Dane', 'Bloodhound', 'Mastiff', 'Boxer'], c: 0 },
+        { q: "Dogs sweat mainly through their...?", a: ['Paw pads', 'Tongue', 'Nose', 'Belly'], c: 0 },
+        { q: "Which is the 'Firehouse Dog' breed?", a: ['Dalmatian', 'Lab', 'German Shepherd', 'Boxer'], c: 0 },
+        { q: "A dog's nose print is unique like a...?", a: ['Fingerprint', 'Snowflake', 'DNA strand', 'Retina'], c: 0 },
+        { q: "How many bones does a dog have?", a: ['~320', '~200', '~400', '~260'], c: 0 },
+        { q: "Which breed is the most popular in the US?", a: ['Labrador Retriever', 'German Shepherd', 'Golden Retriever', 'Bulldog'], c: 0 },
+        { q: "What is a female dog called?", a: ['A dam', 'A queen', 'A hen', 'A mare'], c: 0 },
+        { q: "Puppies are born deaf and...?", a: ['Blind', 'Hairless', 'Toothless', 'Tailless'], c: 0 },
+        { q: "Which breed is known for herding sheep?", a: ['Border Collie', 'Poodle', 'Beagle', 'Boxer'], c: 0 },
+    ],
 
     // Visual
     GRASS_COLOR: '#4A7C2E',
@@ -1267,66 +1430,84 @@ class Projectile {
 
 
 // === js/wave.js ===
-// Wave spawning system
+// Wave spawning system with level support
 
 class WaveManager {
     constructor() {
-        this.currentWave = 0;
-        this.waveDefs = this.generateWaves();
+        this.currentLevel = 0;
+        this.currentWave = 0; // wave within current level
+        this.waveDefs = this._generateWavesForLevel(0);
         this.spawnQueue = [];
         this.spawnTimer = 0;
         this.waveInProgress = false;
         this.allWavesComplete = false;
+        this.levelComplete = false;
         this.betweenWaves = true;
         this.betweenWaveTimer = CONFIG.WAVE_DELAY;
     }
 
-    generateWaves() {
-        const waves = [];
-        for (let i = 1; i <= CONFIG.TOTAL_WAVES; i++) {
-            const wave = [];
-            // Base count scales with wave number
-            const baseCount = 3 + Math.floor(i * 1.5);
+    _getLevelDef() {
+        return CONFIG.LEVELS[this.currentLevel] || CONFIG.LEVELS[CONFIG.LEVELS.length - 1];
+    }
 
-            if (i <= 5) {
+    _generateWavesForLevel(levelIdx) {
+        const level = CONFIG.LEVELS[levelIdx] || CONFIG.LEVELS[0];
+        const waves = [];
+
+        for (let i = 1; i <= level.waves; i++) {
+            const wave = [];
+            const baseCount = 3 + Math.floor(i * 1.3) + levelIdx * 2;
+            const progress = i / level.waves; // 0→1 within level
+
+            if (progress <= 0.4) {
                 // Early: mostly kittens
                 for (let j = 0; j < baseCount; j++) wave.push('kitten');
-                if (i >= 3) {
-                    for (let j = 0; j < Math.floor(i / 2); j++) wave.push('tabby');
+                if (progress > 0.2) {
+                    for (let j = 0; j < Math.floor(i * 0.5); j++) wave.push('tabby');
                 }
-            } else if (i <= 12) {
-                // Mid: mix of kitten and tabby, some fat cats
+            } else if (progress <= 0.75) {
+                // Mid: mix
                 for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('kitten');
                 for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('tabby');
-                if (i >= 8) {
-                    for (let j = 0; j < Math.floor((i - 7) * 0.8); j++) wave.push('fatcat');
+                if (levelIdx >= 1) {
+                    for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('fatcat');
                 }
             } else {
-                // Late: heavy tabbies and fat cats
+                // Late: heavy
                 for (let j = 0; j < Math.floor(baseCount * 0.2); j++) wave.push('kitten');
                 for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('tabby');
-                for (let j = 0; j < Math.floor(baseCount * 0.3); j++) wave.push('fatcat');
+                for (let j = 0; j < Math.floor(baseCount * 0.25); j++) wave.push('fatcat');
             }
 
-            // Final wave: fat cat swarm
-            if (i === CONFIG.TOTAL_WAVES) {
-                wave.length = 0;
-                for (let j = 0; j < 15; j++) wave.push('fatcat');
-                for (let j = 0; j < 10; j++) wave.push('tabby');
+            // Final wave of level: boss wave
+            if (i === level.waves) {
+                const bossCount = 3 + levelIdx * 4;
+                for (let j = 0; j < bossCount; j++) wave.push('fatcat');
+                for (let j = 0; j < bossCount; j++) wave.push('tabby');
             }
 
-            // Scale HP with wave number
             waves.push({
                 enemies: wave,
-                hpMultiplier: 1 + (i - 1) * 0.12
+                hpMultiplier: level.hpScale * (1 + (i - 1) * 0.1),
+                speedMultiplier: level.speedScale
             });
         }
         return waves;
     }
 
+    getTotalWavesThisLevel() {
+        return this._getLevelDef().waves;
+    }
+
     startNextWave() {
-        if (this.currentWave >= CONFIG.TOTAL_WAVES) {
-            this.allWavesComplete = true;
+        const totalWaves = this.getTotalWavesThisLevel();
+        if (this.currentWave >= totalWaves) {
+            // Level done
+            if (this.currentLevel < CONFIG.LEVELS.length - 1) {
+                this.levelComplete = true;
+            } else {
+                this.allWavesComplete = true;
+            }
             return null;
         }
 
@@ -1341,6 +1522,16 @@ class WaveManager {
         return waveDef;
     }
 
+    startNextLevel() {
+        this.currentLevel++;
+        this.currentWave = 0;
+        this.waveDefs = this._generateWavesForLevel(this.currentLevel);
+        this.levelComplete = false;
+        this.allWavesComplete = false;
+        this.betweenWaves = true;
+        this.betweenWaveTimer = CONFIG.WAVE_DELAY;
+    }
+
     sendEarly() {
         if (this.betweenWaves) {
             this.betweenWaveTimer = 0;
@@ -1350,7 +1541,7 @@ class WaveManager {
     }
 
     update(dt, path, tileSize, enemies) {
-        if (this.allWavesComplete) return;
+        if (this.allWavesComplete || this.levelComplete) return;
 
         if (this.betweenWaves) {
             this.betweenWaveTimer -= dt;
@@ -1367,22 +1558,28 @@ class WaveManager {
                 const type = this.spawnQueue.shift();
                 if (path && path.length > 0) {
                     const enemy = new Enemy(type, path, tileSize);
-                    // Apply wave HP scaling
-                    const mult = this.waveDefs[this.currentWave - 1].hpMultiplier;
-                    enemy.maxHp = Math.floor(enemy.maxHp * mult);
+                    const waveDef = this.waveDefs[this.currentWave - 1];
+                    enemy.maxHp = Math.floor(enemy.maxHp * waveDef.hpMultiplier);
                     enemy.hp = enemy.maxHp;
+                    enemy.baseSpeed *= waveDef.speedMultiplier;
+                    enemy.speed = enemy.baseSpeed;
                     enemies.push(enemy);
                 }
             }
         }
 
-        // Check if wave is done (no queue and no alive enemies)
+        // Check if wave is done
         if (this.spawnQueue.length === 0 && this.waveInProgress) {
             const anyAlive = enemies.some(e => e.alive && !e.reachedEnd);
             if (!anyAlive) {
                 this.waveInProgress = false;
-                if (this.currentWave >= CONFIG.TOTAL_WAVES) {
-                    this.allWavesComplete = true;
+                const totalWaves = this.getTotalWavesThisLevel();
+                if (this.currentWave >= totalWaves) {
+                    if (this.currentLevel < CONFIG.LEVELS.length - 1) {
+                        this.levelComplete = true;
+                    } else {
+                        this.allWavesComplete = true;
+                    }
                 } else {
                     this.betweenWaves = true;
                     this.betweenWaveTimer = CONFIG.WAVE_DELAY;
@@ -1392,7 +1589,13 @@ class WaveManager {
     }
 
     getWaveDisplay() {
-        return this.currentWave + ' / ' + CONFIG.TOTAL_WAVES;
+        const total = this.getTotalWavesThisLevel();
+        return this.currentWave + ' / ' + total;
+    }
+
+    getLevelDisplay() {
+        const level = this._getLevelDef();
+        return 'Lv' + (this.currentLevel + 1) + ': ' + level.name;
     }
 
     getTimerDisplay() {
@@ -2089,7 +2292,7 @@ class UI {
     constructor(game) {
         this.game = game;
         this.selectedTowerType = null;
-        this.selectedTower = null; // existing tower tapped for upgrade/sell
+        this.selectedTower = null;
         this.hoverCol = -1;
         this.hoverRow = -1;
 
@@ -2099,14 +2302,10 @@ class UI {
     setupEventListeners() {
         const canvas = this.game.canvas;
 
-        // Unified pointer events for mouse + touch
         canvas.addEventListener('pointerdown', (e) => this.onPointerDown(e));
         canvas.addEventListener('pointermove', (e) => this.onPointerMove(e));
-
-        // Prevent context menu on long press
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Tower selection buttons (set up after DOM ready)
         this.setupTowerButtons();
 
         // Send Early button
@@ -2121,7 +2320,7 @@ class UI {
             });
         }
 
-        // Start button — creates AudioContext directly in this click handler
+        // Start button
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
@@ -2140,17 +2339,24 @@ class UI {
             });
         });
 
-        // Mute button — also unlocks audio on first click
+        // Next Level button
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        if (nextLevelBtn) {
+            nextLevelBtn.addEventListener('click', () => {
+                GameAudio.unlock();
+                GameAudio.buttonClick();
+                this.game.nextLevel();
+            });
+        }
+
+        // Mute button
         const muteBtn = document.getElementById('mute-btn');
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
                 GameAudio.unlock();
                 const muted = GameAudio.toggleMute();
                 muteBtn.textContent = muted ? '🔇' : '🔊';
-                if (!muted) {
-                    // Play a confirmation beep so user knows sound works
-                    GameAudio.buttonClick();
-                }
+                if (!muted) GameAudio.buttonClick();
             });
         }
 
@@ -2173,10 +2379,10 @@ class UI {
     setupTowerButtons() {
         const bar = document.getElementById('tower-bar');
         if (!bar) return;
-
         bar.innerHTML = '';
 
         for (const [key, def] of Object.entries(CONFIG.TOWERS)) {
+            const dps = (def.damage / def.fireRate).toFixed(1);
             const btn = document.createElement('button');
             btn.className = 'tower-btn';
             btn.dataset.tower = key;
@@ -2184,6 +2390,7 @@ class UI {
                 <span class="tower-btn-icon">${def.emoji}</span>
                 <span class="tower-btn-name">${def.name}</span>
                 <span class="tower-btn-cost">${def.cost}g</span>
+                <span class="tower-btn-dps">${dps} DPS</span>
             `;
             btn.addEventListener('click', () => {
                 GameAudio.unlock();
@@ -2209,7 +2416,6 @@ class UI {
         document.querySelectorAll('.tower-btn').forEach(btn => {
             const type = btn.dataset.tower;
             btn.classList.toggle('selected', type === this.selectedTowerType);
-
             const cost = CONFIG.TOWERS[type].cost;
             btn.classList.toggle('too-expensive', cost > this.game.gold);
         });
@@ -2217,8 +2423,6 @@ class UI {
 
     onPointerDown(e) {
         if (this.game.state !== 'playing') return;
-
-        // Unlock audio on any canvas tap too
         GameAudio.unlock();
 
         const rect = this.game.canvas.getBoundingClientRect();
@@ -2226,14 +2430,11 @@ class UI {
         const scaleY = this.game.canvas.height / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
-
         const { col, row } = pixelToGrid(x, y, this.game.tileSize);
 
         if (col < 0 || col >= CONFIG.GRID_COLS || row < 0 || row >= CONFIG.GRID_ROWS) return;
 
-        // Check if tapped an existing tower
         const existingTower = this.game.towers.find(t => t.col === col && t.row === row);
-
         if (existingTower) {
             this.selectedTowerType = null;
             this.updateTowerButtons();
@@ -2242,14 +2443,12 @@ class UI {
             return;
         }
 
-        // Place new tower
         if (this.selectedTowerType) {
             const cost = CONFIG.TOWERS[this.selectedTowerType].cost;
             if (this.game.gold >= cost && this.game.grid.canPlace(col, row)) {
                 this.game.placeTower(this.selectedTowerType, col, row);
             }
         } else {
-            // Tapped empty space, deselect
             this.selectedTower = null;
             this.hideUpgradePanel();
         }
@@ -2261,7 +2460,6 @@ class UI {
         const scaleY = this.game.canvas.height / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
-
         const { col, row } = pixelToGrid(x, y, this.game.tileSize);
         this.hoverCol = col;
         this.hoverRow = row;
@@ -2271,14 +2469,16 @@ class UI {
         const panel = document.getElementById('upgrade-panel');
         if (!panel) return;
 
-        const maxLevel = CONFIG.MAX_TOWER_LEVEL || 2;
+        const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
         const canUpgrade = tower.level < maxLevel;
         const upgradeCost = tower.getUpgradeCost();
         const sellValue = tower.getSellValue();
+        const dps = (tower.damage / tower.fireRate).toFixed(1);
 
         panel.innerHTML = `
             <div class="upgrade-header">${tower.emoji} ${tower.name} Lv.${tower.level}</div>
-            <div class="upgrade-stats">DMG: ${tower.damage} | RNG: ${tower.range.toFixed(1)} | SPD: ${tower.fireRate.toFixed(1)}s</div>
+            <div class="upgrade-stats">DPS: ${dps} | DMG: ${tower.damage} | SPD: ${tower.fireRate.toFixed(2)}s</div>
+            <div class="upgrade-stats">RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}</div>
             <div class="upgrade-actions">
                 ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : '<button class="disabled">MAX</button>'}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
@@ -2290,7 +2490,7 @@ class UI {
         if (upgradeBtn && canUpgrade && upgradeCost <= this.game.gold) {
             upgradeBtn.addEventListener('click', () => {
                 this.game.upgradeTower(tower);
-                this.showUpgradePanel(tower); // refresh
+                this.showUpgradePanel(tower);
             });
         }
 
@@ -2315,14 +2515,16 @@ class UI {
         const waveEl = document.getElementById('wave-display');
         const timerEl = document.getElementById('timer-display');
         const sendBtn = document.getElementById('send-early-btn');
+        const levelEl = document.getElementById('level-display');
 
         if (goldEl) goldEl.textContent = this.game.gold;
         if (livesEl) livesEl.textContent = this.game.lives;
         if (waveEl) waveEl.textContent = this.game.waveManager.getWaveDisplay();
+        if (levelEl) levelEl.textContent = this.game.waveManager.getLevelDisplay();
 
         const timer = this.game.waveManager.getTimerDisplay();
         if (timerEl) {
-            timerEl.textContent = timer !== null ? `Next wave: ${timer}s` : '';
+            timerEl.textContent = timer !== null ? `Next: ${timer}s` : '';
         }
         if (sendBtn) {
             sendBtn.style.display = this.game.waveManager.betweenWaves ? 'block' : 'none';
@@ -2339,9 +2541,8 @@ class UI {
 class Game {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
-        this.state = 'title'; // title, playing, won, lost
+        this.state = 'title'; // title, playing, level_complete, won, lost
 
-        // Calculate tile size to fit screen
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
@@ -2358,11 +2559,20 @@ class Game {
         this.lives = CONFIG.START_LIVES;
 
         this.lastTime = performance.now();
-        this.gameSpeed = 1; // 1 = normal, 0.5 = slow, 2 = fast
+        this.gameSpeed = 1;
+
+        // Trivia state
+        this.triviaActive = false;
+        this.triviaTimer = 0;
+        this.triviaQuestion = null;
+        this.triviaAnswered = false;
+        this.triviaResultTimer = 0;
+        this.triviaCorrect = false;
+        this.triviaUsed = []; // indices of used questions
+        this._triviaShownForWave = -1;
 
         GameAudio.init();
 
-        // Start render loop (renders title screen too)
         requestAnimationFrame((t) => this.loop(t));
     }
 
@@ -2371,8 +2581,6 @@ class Game {
         const maxW = container.clientWidth;
         const maxH = container.clientHeight;
 
-        // Calculate tile size to fit grid in available space
-        // Leave room for UI bars (top HUD ~50px, bottom bar ~80px)
         const uiHeight = 130;
         const availH = maxH - uiHeight;
         const availW = maxW;
@@ -2388,7 +2596,6 @@ class Game {
             this.renderer.tileSize = this.tileSize;
         }
 
-        // Update tower/enemy positions if tile size changed
         for (const tower of (this.towers || [])) {
             tower.tileSize = this.tileSize;
             const pos = gridToPixel(tower.col, tower.row, this.tileSize);
@@ -2421,9 +2628,15 @@ class Game {
         this.ui.hideUpgradePanel();
         this.resize();
 
+        this.triviaActive = false;
+        this.triviaUsed = [];
+        this._triviaShownForWave = -1;
+        this._hideTrivia();
+
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'none';
+        document.getElementById('level-complete-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('tower-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
@@ -2442,7 +2655,6 @@ class Game {
         const tower = new Tower(type, col, row, this.tileSize);
         this.towers.push(tower);
 
-        // Recalculate paths for all living enemies
         const newPath = this.grid.currentPath;
         for (const enemy of this.enemies) {
             if (enemy.alive && !enemy.reachedEnd) {
@@ -2452,8 +2664,9 @@ class Game {
     }
 
     upgradeTower(tower) {
+        const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
         const cost = tower.getUpgradeCost();
-        if (this.gold >= cost && tower.level < 2) {
+        if (this.gold >= cost && tower.level < maxLevel) {
             this.gold -= tower.upgrade();
             GameAudio.upgradeTower();
         }
@@ -2466,7 +2679,6 @@ class Game {
         this.grid.removeTower(tower.col, tower.row);
         this.towers = this.towers.filter(t => t !== tower);
 
-        // Recalculate paths
         const newPath = this.grid.currentPath;
         for (const enemy of this.enemies) {
             if (enemy.alive && !enemy.reachedEnd) {
@@ -2475,14 +2687,171 @@ class Game {
         }
     }
 
+    // === TRIVIA SYSTEM ===
+    _pickTrivia() {
+        const pool = CONFIG.TRIVIA;
+        // Reset used list if we've been through all
+        if (this.triviaUsed.length >= pool.length) {
+            this.triviaUsed = [];
+        }
+        // Pick unused question
+        let idx;
+        do {
+            idx = Math.floor(Math.random() * pool.length);
+        } while (this.triviaUsed.includes(idx));
+        this.triviaUsed.push(idx);
+
+        const q = pool[idx];
+        // Shuffle answers but track correct index
+        const indices = [0, 1, 2, 3];
+        for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        return {
+            question: q.q,
+            answers: indices.map(i => q.a[i]),
+            correctIdx: indices.indexOf(q.c)
+        };
+    }
+
+    _showTrivia() {
+        this.triviaQuestion = this._pickTrivia();
+        this.triviaActive = true;
+        this.triviaAnswered = false;
+        this.triviaCorrect = false;
+        this.triviaTimer = CONFIG.TRIVIA_TIME;
+        this.triviaResultTimer = 0;
+
+        const panel = document.getElementById('trivia-panel');
+        if (!panel) return;
+
+        const q = this.triviaQuestion;
+        document.getElementById('trivia-question').textContent = q.question;
+        const btns = panel.querySelectorAll('.trivia-btn');
+        btns.forEach((btn, i) => {
+            btn.textContent = q.answers[i];
+            btn.className = 'trivia-btn';
+            btn.onclick = () => this._answerTrivia(i);
+        });
+        document.getElementById('trivia-result').textContent = '';
+        document.getElementById('trivia-timer-fill').style.width = '100%';
+        panel.style.display = 'flex';
+    }
+
+    _answerTrivia(idx) {
+        if (this.triviaAnswered) return;
+        this.triviaAnswered = true;
+
+        const correct = idx === this.triviaQuestion.correctIdx;
+        this.triviaCorrect = correct;
+        this.triviaResultTimer = 1.2;
+
+        const panel = document.getElementById('trivia-panel');
+        const btns = panel.querySelectorAll('.trivia-btn');
+        const resultEl = document.getElementById('trivia-result');
+
+        // Highlight correct/wrong
+        btns[this.triviaQuestion.correctIdx].classList.add('correct');
+        if (!correct) {
+            btns[idx].classList.add('wrong');
+            resultEl.textContent = 'Nope!';
+            resultEl.style.color = '#f44336';
+        } else {
+            this.gold += CONFIG.TRIVIA_REWARD;
+            resultEl.textContent = '+' + CONFIG.TRIVIA_REWARD + 'g!';
+            resultEl.style.color = '#4CAF50';
+            GameAudio.goldEarned();
+        }
+    }
+
+    _hideTrivia() {
+        const panel = document.getElementById('trivia-panel');
+        if (panel) panel.style.display = 'none';
+        this.triviaActive = false;
+    }
+
+    _updateTrivia(dt) {
+        if (!this.triviaActive) return;
+
+        if (this.triviaAnswered) {
+            this.triviaResultTimer -= dt;
+            if (this.triviaResultTimer <= 0) {
+                this._hideTrivia();
+            }
+            return;
+        }
+
+        this.triviaTimer -= dt;
+
+        // Update timer bar
+        const fill = document.getElementById('trivia-timer-fill');
+        if (fill) {
+            const pct = Math.max(0, this.triviaTimer / CONFIG.TRIVIA_TIME) * 100;
+            fill.style.width = pct + '%';
+        }
+
+        if (this.triviaTimer <= 0) {
+            // Time's up
+            this.triviaAnswered = true;
+            this.triviaResultTimer = 1.0;
+            const resultEl = document.getElementById('trivia-result');
+            if (resultEl) {
+                resultEl.textContent = "Time's up!";
+                resultEl.style.color = '#FF9800';
+            }
+            // Highlight correct answer
+            const panel = document.getElementById('trivia-panel');
+            if (panel) {
+                const btns = panel.querySelectorAll('.trivia-btn');
+                btns[this.triviaQuestion.correctIdx].classList.add('correct');
+            }
+        }
+    }
+
+    // === LEVEL TRANSITIONS ===
+    _showLevelComplete() {
+        this.state = 'level_complete';
+        const screen = document.getElementById('level-complete-screen');
+        const lvl = this.waveManager.currentLevel + 1;
+        document.getElementById('lc-level').textContent = lvl;
+        const nextLevel = CONFIG.LEVELS[this.waveManager.currentLevel + 1];
+        document.getElementById('lc-next').textContent = nextLevel ? nextLevel.name : '';
+        screen.style.display = 'flex';
+    }
+
+    nextLevel() {
+        document.getElementById('level-complete-screen').style.display = 'none';
+        this.waveManager.startNextLevel();
+        this.state = 'playing';
+        this._triviaShownForWave = -1;
+        this.ui.updateHUD();
+    }
+
     update(dt) {
         if (this.state !== 'playing') return;
 
-        // Cap dt to prevent huge jumps
         dt = Math.min(dt, 0.1);
+
+        // Trivia update
+        this._updateTrivia(dt);
 
         // Spawn enemies via wave manager
         this.waveManager.update(dt, this.grid.currentPath, this.tileSize, this.enemies);
+
+        // Show trivia between waves (once per wave gap)
+        if (this.waveManager.betweenWaves && !this.triviaActive
+            && this._triviaShownForWave !== this.waveManager.currentWave
+            && this.waveManager.currentWave > 0) {
+            this._triviaShownForWave = this.waveManager.currentWave;
+            this._showTrivia();
+        }
+
+        // Level complete check
+        if (this.waveManager.levelComplete) {
+            this._showLevelComplete();
+            return;
+        }
 
         // Update enemies
         for (const enemy of this.enemies) {
@@ -2499,7 +2868,6 @@ class Game {
                 }
             }
 
-            // Death particles
             if (!enemy.alive && enemy.hp <= 0 && !enemy._deathHandled) {
                 enemy._deathHandled = true;
                 this.gold += enemy.gold;
@@ -2508,34 +2876,27 @@ class Game {
                     const angle = Math.random() * Math.PI * 2;
                     const speed = 30 + Math.random() * 50;
                     this.particles.push({
-                        x: enemy.x,
-                        y: enemy.y,
+                        x: enemy.x, y: enemy.y,
                         vx: Math.cos(angle) * speed,
                         vy: Math.sin(angle) * speed,
-                        life: 0.5,
-                        maxLife: 0.5,
-                        color: enemy.color,
-                        size: 4
+                        life: 0.5, maxLife: 0.5,
+                        color: enemy.color, size: 4
                     });
                 }
             }
         }
 
-        // Clean up dead/escaped enemies
         this.enemies = this.enemies.filter(e => e.alive && !e.reachedEnd);
 
-        // Update towers
         for (const tower of this.towers) {
             tower.update(dt, this.enemies, this.projectiles);
         }
 
-        // Update projectiles
         for (const proj of this.projectiles) {
             proj.update(dt, this.enemies, this.particles);
         }
         this.projectiles = this.projectiles.filter(p => p.alive);
 
-        // Update particles
         for (const p of this.particles) {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
@@ -2543,7 +2904,7 @@ class Game {
         }
         this.particles = this.particles.filter(p => p.life > 0);
 
-        // Wave income when transitioning between waves
+        // Wave income
         if (this.waveManager.betweenWaves && !this.waveManager._incomeGiven) {
             this.waveManager._incomeGiven = true;
             this.gold += CONFIG.WAVE_INCOME;
@@ -2563,11 +2924,8 @@ class Game {
     render() {
         this.renderer.clear();
         this.renderer.drawGrid(this.grid);
-
-        // Draw path preview
         this.renderer.drawPath(this.grid.currentPath);
 
-        // Draw placement preview
         if (this.ui.selectedTowerType && this.state === 'playing') {
             const canPlace = this.grid.canPlace(this.ui.hoverCol, this.ui.hoverRow);
             this.renderer.drawPlacementPreview(
@@ -2576,27 +2934,22 @@ class Game {
             );
         }
 
-        // Draw selected tower range
         if (this.ui.selectedTower) {
             this.renderer.drawTowerRange(this.ui.selectedTower);
         }
 
-        // Draw towers
         for (const tower of this.towers) {
             this.renderer.drawTower(tower);
         }
 
-        // Draw enemies
         for (const enemy of this.enemies) {
             this.renderer.drawEnemy(enemy);
         }
 
-        // Draw projectiles
         for (const proj of this.projectiles) {
             this.renderer.drawProjectile(proj);
         }
 
-        // Draw particles
         for (const p of this.particles) {
             this.renderer.drawParticle(p);
         }
@@ -2614,6 +2967,7 @@ class Game {
 
     gameOver() {
         this.state = 'lost';
+        this._hideTrivia();
         GameAudio.gameOver();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
@@ -2626,6 +2980,7 @@ class Game {
 
     victory() {
         this.state = 'won';
+        this._hideTrivia();
         GameAudio.victory();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';

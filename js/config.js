@@ -17,10 +17,18 @@ const CONFIG = {
 
     // Upgrade system — 3 upgrade tiers (level 1 → 2 → 3 → 4)
     MAX_TOWER_LEVEL: 4,
-    UPGRADE_COST_MULT: 1.0,   // Lv2 cost = base * 1.0
-    UPGRADE_STAT_MULT: 1.4,   // stats multiplied per upgrade
+    UPGRADE_COST_MULT: 1.0,
+    UPGRADE_STAT_MULT: 1.4,
+
+    // Levels (stages)
+    LEVELS: [
+        { name: 'The Backyard', waves: 7, hpScale: 1.0, speedScale: 1.0 },
+        { name: 'The Park', waves: 10, hpScale: 1.6, speedScale: 1.1 },
+        { name: 'Cat Central', waves: 13, hpScale: 2.4, speedScale: 1.2 }
+    ],
 
     // Tower definitions
+    // DPS = damage / fireRate
     TOWERS: {
         barker: {
             name: 'Barker',
@@ -28,42 +36,28 @@ const CONFIG = {
             cost: 50,
             range: 3,
             damage: 8,
-            fireRate: 0.8,
+            fireRate: 0.8, // 10 DPS
             color: '#D2691E',
             projectileColor: '#F5DEB3',
             projectileSpeed: 6,
             splash: 0,
             slow: 0,
-            description: 'Fast single-target bark'
-        },
-        bigboi: {
-            name: 'Big Boi',
-            emoji: '🐶',
-            cost: 100,
-            range: 2,
-            damage: 25,
-            fireRate: 1.8,
-            color: '#8B4513',
-            projectileColor: '#FF6347',
-            projectileSpeed: 4,
-            splash: 1.5,
-            slow: 0,
-            description: 'Splash damage WOOF'
+            description: 'Fast single-target'
         },
         poodle: {
             name: 'Poodle',
             emoji: '🐩',
-            cost: 75,
+            cost: 60,
             range: 2.5,
-            damage: 3,
-            fireRate: 1.0,
+            damage: 5,
+            fireRate: 0.6, // 8.3 DPS + slow
             color: '#FFB6C1',
             projectileColor: '#DA70D6',
             projectileSpeed: 5,
             splash: 0,
             slow: 0.5,
             slowDuration: 2,
-            description: 'Slows enemies'
+            description: 'Rapid fire + slow'
         },
         husky: {
             name: 'Husky',
@@ -71,7 +65,7 @@ const CONFIG = {
             cost: 90,
             range: 2.5,
             damage: 2,
-            fireRate: 1.2,
+            fireRate: 1.2, // 1.7 DPS (support)
             color: '#4FC3F7',
             projectileColor: '#B3E5FC',
             projectileSpeed: 5,
@@ -79,6 +73,20 @@ const CONFIG = {
             slow: 0.35,
             slowDuration: 3,
             description: 'AoE freeze howl'
+        },
+        bigboi: {
+            name: 'Big Boi',
+            emoji: '🐶',
+            cost: 100,
+            range: 2,
+            damage: 25,
+            fireRate: 1.8, // 13.9 DPS + splash
+            color: '#8B4513',
+            projectileColor: '#FF6347',
+            projectileSpeed: 4,
+            splash: 1.5,
+            slow: 0,
+            description: 'Splash damage WOOF'
         }
     },
 
@@ -117,9 +125,39 @@ const CONFIG = {
     },
 
     // Wave system
-    TOTAL_WAVES: 20,
     WAVE_DELAY: 5,
     SPAWN_INTERVAL: 0.6,
+
+    // Trivia
+    TRIVIA_TIME: 3,     // seconds to answer
+    TRIVIA_REWARD: 100,  // gold for correct answer
+    TRIVIA: [
+        { q: "What breed is the world's fastest dog?", a: ['Greyhound', 'Whippet', 'Saluki', 'Dalmatian'], c: 0 },
+        { q: "How many teeth does an adult dog have?", a: ['42', '36', '28', '48'], c: 0 },
+        { q: "What is a group of puppies called?", a: ['A litter', 'A pack', 'A herd', 'A pod'], c: 0 },
+        { q: "Which breed is the smallest?", a: ['Chihuahua', 'Yorkie', 'Pomeranian', 'Papillon'], c: 0 },
+        { q: "What breed was Lassie?", a: ['Rough Collie', 'Sheltie', 'Golden Retriever', 'Beagle'], c: 0 },
+        { q: "How many eyelids does a dog have per eye?", a: ['Three', 'Two', 'One', 'Four'], c: 0 },
+        { q: "Which sense is strongest in dogs?", a: ['Smell', 'Hearing', 'Sight', 'Taste'], c: 0 },
+        { q: "What breed is known as the 'Wiener Dog'?", a: ['Dachshund', 'Corgi', 'Basset Hound', 'Beagle'], c: 0 },
+        { q: "Dalmatian puppies are born what color?", a: ['White', 'Spotted', 'Black', 'Gray'], c: 0 },
+        { q: "Which breed has a blue-black tongue?", a: ['Chow Chow', 'Akita', 'Shar Pei', 'Husky'], c: 0 },
+        { q: "Which breed can't bark?", a: ['Basenji', 'Shiba Inu', 'Whippet', 'Borzoi'], c: 0 },
+        { q: "Which breed is the tallest?", a: ['Great Dane', 'Irish Wolfhound', 'Mastiff', 'St. Bernard'], c: 0 },
+        { q: "Which breed is the heaviest?", a: ['English Mastiff', 'Great Dane', 'St. Bernard', 'Newfoundland'], c: 0 },
+        { q: "Dogs can see which colors best?", a: ['Blue & yellow', 'Red & green', 'All colors', 'Only gray'], c: 0 },
+        { q: "Which breed was bred for Alpine rescue?", a: ['St. Bernard', 'Bernese Mountain', 'Husky', 'Malamute'], c: 0 },
+        { q: "How many muscles control a dog's ear?", a: ['18', '6', '12', '24'], c: 0 },
+        { q: "What breed is Scooby-Doo?", a: ['Great Dane', 'Bloodhound', 'Mastiff', 'Boxer'], c: 0 },
+        { q: "Dogs sweat mainly through their...?", a: ['Paw pads', 'Tongue', 'Nose', 'Belly'], c: 0 },
+        { q: "Which is the 'Firehouse Dog' breed?", a: ['Dalmatian', 'Lab', 'German Shepherd', 'Boxer'], c: 0 },
+        { q: "A dog's nose print is unique like a...?", a: ['Fingerprint', 'Snowflake', 'DNA strand', 'Retina'], c: 0 },
+        { q: "How many bones does a dog have?", a: ['~320', '~200', '~400', '~260'], c: 0 },
+        { q: "Which breed is the most popular in the US?", a: ['Labrador Retriever', 'German Shepherd', 'Golden Retriever', 'Bulldog'], c: 0 },
+        { q: "What is a female dog called?", a: ['A dam', 'A queen', 'A hen', 'A mare'], c: 0 },
+        { q: "Puppies are born deaf and...?", a: ['Blind', 'Hairless', 'Toothless', 'Tailless'], c: 0 },
+        { q: "Which breed is known for herding sheep?", a: ['Border Collie', 'Poodle', 'Beagle', 'Boxer'], c: 0 },
+    ],
 
     // Visual
     GRASS_COLOR: '#4A7C2E',

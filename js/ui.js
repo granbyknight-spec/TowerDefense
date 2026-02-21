@@ -4,7 +4,7 @@ class UI {
     constructor(game) {
         this.game = game;
         this.selectedTowerType = null;
-        this.selectedTower = null; // existing tower tapped for upgrade/sell
+        this.selectedTower = null;
         this.hoverCol = -1;
         this.hoverRow = -1;
 
@@ -14,14 +14,10 @@ class UI {
     setupEventListeners() {
         const canvas = this.game.canvas;
 
-        // Unified pointer events for mouse + touch
         canvas.addEventListener('pointerdown', (e) => this.onPointerDown(e));
         canvas.addEventListener('pointermove', (e) => this.onPointerMove(e));
-
-        // Prevent context menu on long press
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Tower selection buttons (set up after DOM ready)
         this.setupTowerButtons();
 
         // Send Early button
@@ -36,7 +32,7 @@ class UI {
             });
         }
 
-        // Start button — creates AudioContext directly in this click handler
+        // Start button
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
@@ -55,17 +51,24 @@ class UI {
             });
         });
 
-        // Mute button — also unlocks audio on first click
+        // Next Level button
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        if (nextLevelBtn) {
+            nextLevelBtn.addEventListener('click', () => {
+                GameAudio.unlock();
+                GameAudio.buttonClick();
+                this.game.nextLevel();
+            });
+        }
+
+        // Mute button
         const muteBtn = document.getElementById('mute-btn');
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
                 GameAudio.unlock();
                 const muted = GameAudio.toggleMute();
                 muteBtn.textContent = muted ? '🔇' : '🔊';
-                if (!muted) {
-                    // Play a confirmation beep so user knows sound works
-                    GameAudio.buttonClick();
-                }
+                if (!muted) GameAudio.buttonClick();
             });
         }
 
@@ -88,10 +91,10 @@ class UI {
     setupTowerButtons() {
         const bar = document.getElementById('tower-bar');
         if (!bar) return;
-
         bar.innerHTML = '';
 
         for (const [key, def] of Object.entries(CONFIG.TOWERS)) {
+            const dps = (def.damage / def.fireRate).toFixed(1);
             const btn = document.createElement('button');
             btn.className = 'tower-btn';
             btn.dataset.tower = key;
@@ -99,6 +102,7 @@ class UI {
                 <span class="tower-btn-icon">${def.emoji}</span>
                 <span class="tower-btn-name">${def.name}</span>
                 <span class="tower-btn-cost">${def.cost}g</span>
+                <span class="tower-btn-dps">${dps} DPS</span>
             `;
             btn.addEventListener('click', () => {
                 GameAudio.unlock();
@@ -124,7 +128,6 @@ class UI {
         document.querySelectorAll('.tower-btn').forEach(btn => {
             const type = btn.dataset.tower;
             btn.classList.toggle('selected', type === this.selectedTowerType);
-
             const cost = CONFIG.TOWERS[type].cost;
             btn.classList.toggle('too-expensive', cost > this.game.gold);
         });
@@ -132,8 +135,6 @@ class UI {
 
     onPointerDown(e) {
         if (this.game.state !== 'playing') return;
-
-        // Unlock audio on any canvas tap too
         GameAudio.unlock();
 
         const rect = this.game.canvas.getBoundingClientRect();
@@ -141,14 +142,11 @@ class UI {
         const scaleY = this.game.canvas.height / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
-
         const { col, row } = pixelToGrid(x, y, this.game.tileSize);
 
         if (col < 0 || col >= CONFIG.GRID_COLS || row < 0 || row >= CONFIG.GRID_ROWS) return;
 
-        // Check if tapped an existing tower
         const existingTower = this.game.towers.find(t => t.col === col && t.row === row);
-
         if (existingTower) {
             this.selectedTowerType = null;
             this.updateTowerButtons();
@@ -157,14 +155,12 @@ class UI {
             return;
         }
 
-        // Place new tower
         if (this.selectedTowerType) {
             const cost = CONFIG.TOWERS[this.selectedTowerType].cost;
             if (this.game.gold >= cost && this.game.grid.canPlace(col, row)) {
                 this.game.placeTower(this.selectedTowerType, col, row);
             }
         } else {
-            // Tapped empty space, deselect
             this.selectedTower = null;
             this.hideUpgradePanel();
         }
@@ -176,7 +172,6 @@ class UI {
         const scaleY = this.game.canvas.height / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
-
         const { col, row } = pixelToGrid(x, y, this.game.tileSize);
         this.hoverCol = col;
         this.hoverRow = row;
@@ -186,14 +181,16 @@ class UI {
         const panel = document.getElementById('upgrade-panel');
         if (!panel) return;
 
-        const maxLevel = CONFIG.MAX_TOWER_LEVEL || 2;
+        const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
         const canUpgrade = tower.level < maxLevel;
         const upgradeCost = tower.getUpgradeCost();
         const sellValue = tower.getSellValue();
+        const dps = (tower.damage / tower.fireRate).toFixed(1);
 
         panel.innerHTML = `
             <div class="upgrade-header">${tower.emoji} ${tower.name} Lv.${tower.level}</div>
-            <div class="upgrade-stats">DMG: ${tower.damage} | RNG: ${tower.range.toFixed(1)} | SPD: ${tower.fireRate.toFixed(1)}s</div>
+            <div class="upgrade-stats">DPS: ${dps} | DMG: ${tower.damage} | SPD: ${tower.fireRate.toFixed(2)}s</div>
+            <div class="upgrade-stats">RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}</div>
             <div class="upgrade-actions">
                 ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : '<button class="disabled">MAX</button>'}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
@@ -205,7 +202,7 @@ class UI {
         if (upgradeBtn && canUpgrade && upgradeCost <= this.game.gold) {
             upgradeBtn.addEventListener('click', () => {
                 this.game.upgradeTower(tower);
-                this.showUpgradePanel(tower); // refresh
+                this.showUpgradePanel(tower);
             });
         }
 
@@ -230,14 +227,16 @@ class UI {
         const waveEl = document.getElementById('wave-display');
         const timerEl = document.getElementById('timer-display');
         const sendBtn = document.getElementById('send-early-btn');
+        const levelEl = document.getElementById('level-display');
 
         if (goldEl) goldEl.textContent = this.game.gold;
         if (livesEl) livesEl.textContent = this.game.lives;
         if (waveEl) waveEl.textContent = this.game.waveManager.getWaveDisplay();
+        if (levelEl) levelEl.textContent = this.game.waveManager.getLevelDisplay();
 
         const timer = this.game.waveManager.getTimerDisplay();
         if (timerEl) {
-            timerEl.textContent = timer !== null ? `Next wave: ${timer}s` : '';
+            timerEl.textContent = timer !== null ? `Next: ${timer}s` : '';
         }
         if (sendBtn) {
             sendBtn.style.display = this.game.waveManager.betweenWaves ? 'block' : 'none';
