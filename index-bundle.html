@@ -559,11 +559,10 @@ function pixelToGrid(x, y, tileSize) {
 
 // === js/audio.js ===
 // Procedural sound effects using Web Audio API
-// Safari-compatible: unlocks audio on first user touch/click
+// Safari/iOS compatible
 
 const GameAudio = (() => {
     let ctx = null;
-    let unlocked = false;
     let muted = false;
     let volume = 0.4;
 
@@ -573,99 +572,95 @@ const GameAudio = (() => {
             if (!AC) return null;
             ctx = new AC();
         }
+        // Always try to resume - this is a no-op if already running
+        if (ctx.state !== 'running') {
+            try { ctx.resume(); } catch(e) {}
+        }
         return ctx;
     }
 
-    // Safari requires playing a buffer inside a user gesture to unlock audio.
-    // We attach to touchstart + click (not just pointerdown) for max compatibility.
-    function unlock() {
-        const c = getCtx();
-        if (!c || unlocked) return;
-
-        // Resume if suspended
-        if (c.state === 'suspended') {
-            c.resume();
-        }
-
-        // Play a tiny silent buffer to unlock on Safari/iOS
-        const buf = c.createBuffer(1, 1, c.sampleRate);
-        const src = c.createBufferSource();
-        src.buffer = buf;
-        src.connect(c.destination);
-        src.start(0);
-
-        unlocked = true;
-    }
-
     function init() {
-        // Use capture phase + multiple event types for Safari/iOS
+        // On first user gesture: create context, resume it, and play silent buffer
+        // to fully unlock audio on Safari/iOS.
         const events = ['touchstart', 'touchend', 'mousedown', 'click', 'keydown'];
-        const handler = () => {
-            unlock();
-            // Remove all once unlocked
+        function handler() {
+            const c = getCtx();
+            if (c) {
+                // Play a tiny silent buffer to "warm up" Safari audio
+                try {
+                    const buf = c.createBuffer(1, 1, c.sampleRate);
+                    const src = c.createBufferSource();
+                    src.buffer = buf;
+                    src.connect(c.destination);
+                    src.start(0);
+                } catch(e) {}
+            }
             events.forEach(e => document.removeEventListener(e, handler, true));
-        };
+        }
         events.forEach(e => document.addEventListener(e, handler, true));
     }
 
-    // Helper: play an oscillator with envelope
     function playTone(freq, type, duration, volMult, freqEnd) {
         if (muted) return;
         const c = getCtx();
-        if (!c || c.state === 'suspended') return;
+        if (!c) return;
 
-        const now = c.currentTime;
-        const osc = c.createOscillator();
-        const gain = c.createGain();
+        try {
+            const now = c.currentTime;
+            const osc = c.createOscillator();
+            const gain = c.createGain();
 
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, now);
-        if (freqEnd != null) {
-            osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd, 20), now + duration);
-        }
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (freqEnd != null) {
+                osc.frequency.exponentialRampToValueAtTime(
+                    Math.max(freqEnd, 20), now + duration
+                );
+            }
 
-        const vol = volume * (volMult || 1);
-        gain.gain.setValueAtTime(vol, now);
-        // Safari needs linearRamp (exponentialRamp to near-zero can glitch)
-        gain.gain.linearRampToValueAtTime(0, now + duration);
+            const vol = volume * (volMult || 1);
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.linearRampToValueAtTime(0, now + duration);
 
-        osc.connect(gain);
-        gain.connect(c.destination);
-        osc.start(now);
-        osc.stop(now + duration + 0.01);
+            osc.connect(gain);
+            gain.connect(c.destination);
+            osc.start(now);
+            osc.stop(now + duration + 0.02);
+        } catch(e) {}
     }
 
-    // Helper: noise burst for explosions
     function playNoise(duration, volMult) {
         if (muted) return;
         const c = getCtx();
-        if (!c || c.state === 'suspended') return;
+        if (!c) return;
 
-        const now = c.currentTime;
-        const len = Math.max(1, Math.floor(c.sampleRate * duration));
-        const buffer = c.createBuffer(1, len, c.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < len; i++) {
-            data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-        }
+        try {
+            const now = c.currentTime;
+            const len = Math.max(1, Math.floor(c.sampleRate * duration));
+            const buffer = c.createBuffer(1, len, c.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < len; i++) {
+                data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+            }
 
-        const source = c.createBufferSource();
-        source.buffer = buffer;
+            const source = c.createBufferSource();
+            source.buffer = buffer;
 
-        const gain = c.createGain();
-        const vol = volume * (volMult || 0.3);
-        gain.gain.setValueAtTime(vol, now);
-        gain.gain.linearRampToValueAtTime(0, now + duration);
+            const gain = c.createGain();
+            const vol = volume * (volMult || 0.3);
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.linearRampToValueAtTime(0, now + duration);
 
-        const filter = c.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.value = 1000;
-        filter.Q.value = 0.5;
+            const filter = c.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1000;
+            filter.Q.value = 0.5;
 
-        source.connect(filter);
-        filter.connect(gain);
-        gain.connect(c.destination);
-        source.start(now);
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(c.destination);
+            source.start(now);
+        } catch(e) {}
     }
 
     // === SOUND EFFECTS ===
@@ -1478,12 +1473,87 @@ class Renderer {
         }
     }
 
+    // Color helpers for 3D shading
+    _shadeColor(hex, factor) {
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16);
+        const b = parseInt(hex.slice(5,7), 16);
+        return `rgb(${Math.floor(r*factor)},${Math.floor(g*factor)},${Math.floor(b*factor)})`;
+    }
+
+    _lightenColor(hex, factor) {
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16);
+        const b = parseInt(hex.slice(5,7), 16);
+        return `rgb(${Math.floor(r+(255-r)*factor)},${Math.floor(g+(255-g)*factor)},${Math.floor(b+(255-b)*factor)})`;
+    }
+
+    // 3D sphere-like circle with radial gradient, outline, and specular highlight
+    _draw3DCircle(cx, cy, radius, baseColor) {
+        const ctx = this.ctx;
+
+        // Radial gradient: light top-left to dark bottom-right
+        const grad = ctx.createRadialGradient(
+            cx - radius * 0.3, cy - radius * 0.3, radius * 0.05,
+            cx, cy, radius
+        );
+        grad.addColorStop(0, this._lightenColor(baseColor, 0.4));
+        grad.addColorStop(0.5, baseColor);
+        grad.addColorStop(1, this._shadeColor(baseColor, 0.5));
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outline
+        ctx.strokeStyle = this._shadeColor(baseColor, 0.35);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Specular highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(cx - radius * 0.25, cy - radius * 0.3, radius * 0.3, radius * 0.15, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 3D ear with gradient and outline
+    _draw3DEar(cx, cy, rx, ry, rotation, baseColor) {
+        const ctx = this.ctx;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rotation);
+
+        const grad = ctx.createRadialGradient(-rx * 0.2, -ry * 0.2, 0, 0, 0, Math.max(rx, ry));
+        grad.addColorStop(0, this._lightenColor(baseColor, 0.2));
+        grad.addColorStop(1, this._shadeColor(baseColor, 0.45));
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = this._shadeColor(baseColor, 0.35);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Inner ear
+        ctx.fillStyle = this._lightenColor(baseColor, 0.15);
+        ctx.beginPath();
+        ctx.ellipse(0, ry * 0.05, rx * 0.5, ry * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
     drawTower(tower) {
         const ts = this.tileSize;
         const ctx = this.ctx;
         const x = tower.x;
         const y = tower.y;
         const size = ts * 0.4;
+        const color = tower.color;
 
         // Attack animation (scale bounce)
         const scale = 1 + tower.attackAnim * 0.2;
@@ -1492,69 +1562,121 @@ class Renderer {
         ctx.translate(x, y);
         ctx.scale(scale, scale);
 
-        // Dog body (circle)
-        ctx.fillStyle = tower.color;
+        // Ground shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
         ctx.beginPath();
-        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        ctx.ellipse(0, size * 0.7, size * 1.0, size * 0.25, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Dog ears
+        // 3D Ears (behind body)
+        this._draw3DEar(-size * 0.7, -size * 0.6, size * 0.35, size * 0.5, -0.3, color);
+        this._draw3DEar(size * 0.7, -size * 0.6, size * 0.35, size * 0.5, 0.3, color);
+
+        // 3D Dog body
+        this._draw3DCircle(0, 0, size, color);
+
+        // Lighter muzzle area
+        const muzzleGrad = ctx.createRadialGradient(0, size * 0.15, 0, 0, size * 0.15, size * 0.35);
+        muzzleGrad.addColorStop(0, this._lightenColor(color, 0.4));
+        muzzleGrad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = muzzleGrad;
         ctx.beginPath();
-        ctx.ellipse(-size * 0.7, -size * 0.6, size * 0.35, size * 0.5, -0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(size * 0.7, -size * 0.6, size * 0.35, size * 0.5, 0.3, 0, Math.PI * 2);
+        ctx.ellipse(0, size * 0.2, size * 0.4, size * 0.32, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Eyes
-        ctx.fillStyle = '#fff';
+        // Eyes with gloss
+        const eyeR = size * 0.2;
+        [-1, 1].forEach(side => {
+            const ex = side * size * 0.3;
+            const ey = -size * 0.15;
+
+            // Eye white gradient
+            const eyeGrad = ctx.createRadialGradient(ex - eyeR * 0.2, ey - eyeR * 0.2, 0, ex, ey, eyeR);
+            eyeGrad.addColorStop(0, '#fff');
+            eyeGrad.addColorStop(1, '#ddd');
+            ctx.fillStyle = eyeGrad;
+            ctx.beginPath();
+            ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#aaa';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+
+            // Pupil
+            const px = ex + side * size * 0.05;
+            ctx.fillStyle = '#222';
+            ctx.beginPath();
+            ctx.arc(px, ey, eyeR * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye glint
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.beginPath();
+            ctx.arc(px - eyeR * 0.2, ey - eyeR * 0.2, eyeR * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 3D Nose
+        const noseGrad = ctx.createRadialGradient(-size * 0.03, size * 0.11, 0, 0, size * 0.15, size * 0.13);
+        noseGrad.addColorStop(0, '#555');
+        noseGrad.addColorStop(0.7, '#222');
+        noseGrad.addColorStop(1, '#111');
+        ctx.fillStyle = noseGrad;
         ctx.beginPath();
-        ctx.arc(-size * 0.3, -size * 0.15, size * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(size * 0.3, -size * 0.15, size * 0.2, 0, Math.PI * 2);
+        ctx.ellipse(0, size * 0.15, size * 0.13, size * 0.09, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupils
-        ctx.fillStyle = '#222';
+        // Nose shine
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.beginPath();
-        ctx.arc(-size * 0.25, -size * 0.15, size * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(size * 0.35, -size * 0.15, size * 0.1, 0, Math.PI * 2);
+        ctx.ellipse(-size * 0.03, size * 0.12, size * 0.05, size * 0.025, -0.3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Nose
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.arc(0, size * 0.15, size * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Mouth (smile)
-        ctx.strokeStyle = '#333';
+        // Mouth
+        ctx.strokeStyle = '#444';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, size * 0.1, size * 0.25, 0.2, Math.PI - 0.2);
         ctx.stroke();
 
+        // Big Boi collar (drawn inside save/restore so it scales with attack anim)
+        if (tower.type === 'bigboi') {
+            ctx.strokeStyle = '#C62828';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, size * 0.05, size * 0.85, 0.4, Math.PI - 0.4);
+            ctx.stroke();
+            // Tag
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(0, size * 0.72, size * 0.11, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+        }
+
         ctx.restore();
 
-        // Level indicator
+        // Level star with glow
         if (tower.level > 1) {
+            ctx.save();
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 6;
             ctx.fillStyle = '#FFD700';
-            ctx.font = `bold ${ts * 0.25}px Arial`;
+            ctx.font = `bold ${ts * 0.28}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('★', x + size * 0.9, y - size * 0.9);
+            ctx.restore();
         }
 
-        // Type-specific flair
+        // Poodle poofy hair
         if (tower.type === 'poodle') {
-            // Poofy hair tuft
-            ctx.fillStyle = '#FFC0CB';
-            ctx.beginPath();
-            ctx.arc(x, y - size * 1.1, size * 0.3, 0, Math.PI * 2);
-            ctx.fill();
+            const s = scale; // match attack anim
+            this._draw3DCircle(x, y - size * s * 1.1, size * 0.28 * s, '#FFC0CB');
+            this._draw3DCircle(x - size * 0.22 * s, y - size * s * 0.95, size * 0.16 * s, '#FFD0D8');
+            this._draw3DCircle(x + size * 0.22 * s, y - size * s * 0.95, size * 0.16 * s, '#FFD0D8');
         }
     }
 

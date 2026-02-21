@@ -1,9 +1,8 @@
 // Procedural sound effects using Web Audio API
-// Safari-compatible: unlocks audio on first user touch/click
+// Safari/iOS compatible
 
 const GameAudio = (() => {
     let ctx = null;
-    let unlocked = false;
     let muted = false;
     let volume = 0.4;
 
@@ -13,99 +12,95 @@ const GameAudio = (() => {
             if (!AC) return null;
             ctx = new AC();
         }
+        // Always try to resume - this is a no-op if already running
+        if (ctx.state !== 'running') {
+            try { ctx.resume(); } catch(e) {}
+        }
         return ctx;
     }
 
-    // Safari requires playing a buffer inside a user gesture to unlock audio.
-    // We attach to touchstart + click (not just pointerdown) for max compatibility.
-    function unlock() {
-        const c = getCtx();
-        if (!c || unlocked) return;
-
-        // Resume if suspended
-        if (c.state === 'suspended') {
-            c.resume();
-        }
-
-        // Play a tiny silent buffer to unlock on Safari/iOS
-        const buf = c.createBuffer(1, 1, c.sampleRate);
-        const src = c.createBufferSource();
-        src.buffer = buf;
-        src.connect(c.destination);
-        src.start(0);
-
-        unlocked = true;
-    }
-
     function init() {
-        // Use capture phase + multiple event types for Safari/iOS
+        // On first user gesture: create context, resume it, and play silent buffer
+        // to fully unlock audio on Safari/iOS.
         const events = ['touchstart', 'touchend', 'mousedown', 'click', 'keydown'];
-        const handler = () => {
-            unlock();
-            // Remove all once unlocked
+        function handler() {
+            const c = getCtx();
+            if (c) {
+                // Play a tiny silent buffer to "warm up" Safari audio
+                try {
+                    const buf = c.createBuffer(1, 1, c.sampleRate);
+                    const src = c.createBufferSource();
+                    src.buffer = buf;
+                    src.connect(c.destination);
+                    src.start(0);
+                } catch(e) {}
+            }
             events.forEach(e => document.removeEventListener(e, handler, true));
-        };
+        }
         events.forEach(e => document.addEventListener(e, handler, true));
     }
 
-    // Helper: play an oscillator with envelope
     function playTone(freq, type, duration, volMult, freqEnd) {
         if (muted) return;
         const c = getCtx();
-        if (!c || c.state === 'suspended') return;
+        if (!c) return;
 
-        const now = c.currentTime;
-        const osc = c.createOscillator();
-        const gain = c.createGain();
+        try {
+            const now = c.currentTime;
+            const osc = c.createOscillator();
+            const gain = c.createGain();
 
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, now);
-        if (freqEnd != null) {
-            osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd, 20), now + duration);
-        }
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (freqEnd != null) {
+                osc.frequency.exponentialRampToValueAtTime(
+                    Math.max(freqEnd, 20), now + duration
+                );
+            }
 
-        const vol = volume * (volMult || 1);
-        gain.gain.setValueAtTime(vol, now);
-        // Safari needs linearRamp (exponentialRamp to near-zero can glitch)
-        gain.gain.linearRampToValueAtTime(0, now + duration);
+            const vol = volume * (volMult || 1);
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.linearRampToValueAtTime(0, now + duration);
 
-        osc.connect(gain);
-        gain.connect(c.destination);
-        osc.start(now);
-        osc.stop(now + duration + 0.01);
+            osc.connect(gain);
+            gain.connect(c.destination);
+            osc.start(now);
+            osc.stop(now + duration + 0.02);
+        } catch(e) {}
     }
 
-    // Helper: noise burst for explosions
     function playNoise(duration, volMult) {
         if (muted) return;
         const c = getCtx();
-        if (!c || c.state === 'suspended') return;
+        if (!c) return;
 
-        const now = c.currentTime;
-        const len = Math.max(1, Math.floor(c.sampleRate * duration));
-        const buffer = c.createBuffer(1, len, c.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < len; i++) {
-            data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-        }
+        try {
+            const now = c.currentTime;
+            const len = Math.max(1, Math.floor(c.sampleRate * duration));
+            const buffer = c.createBuffer(1, len, c.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < len; i++) {
+                data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+            }
 
-        const source = c.createBufferSource();
-        source.buffer = buffer;
+            const source = c.createBufferSource();
+            source.buffer = buffer;
 
-        const gain = c.createGain();
-        const vol = volume * (volMult || 0.3);
-        gain.gain.setValueAtTime(vol, now);
-        gain.gain.linearRampToValueAtTime(0, now + duration);
+            const gain = c.createGain();
+            const vol = volume * (volMult || 0.3);
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.linearRampToValueAtTime(0, now + duration);
 
-        const filter = c.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.value = 1000;
-        filter.Q.value = 0.5;
+            const filter = c.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1000;
+            filter.Q.value = 0.5;
 
-        source.connect(filter);
-        filter.connect(gain);
-        gain.connect(c.destination);
-        source.start(now);
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(c.destination);
+            source.start(now);
+        } catch(e) {}
     }
 
     // === SOUND EFFECTS ===
