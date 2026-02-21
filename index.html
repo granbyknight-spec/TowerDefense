@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Puppy Defender</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Title Screen -->
+        <div id="title-screen" class="overlay-screen">
+            <div class="title-dogs">🐶🐕🐩</div>
+            <div class="game-title">PUPPY DEFENDER</div>
+            <div class="game-subtitle">Build a maze of dogs to stop the cat invasion!</div>
+            <button id="start-btn" class="screen-btn">PLAY</button>
+            <div class="game-subtitle" style="font-size:12px; margin-top:8px;">
+                Place towers to create a maze.<br>
+                Cats will pathfind around them!
+            </div>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-item">
+                <span class="hud-icon">💰</span>
+                <span id="gold-display">200</span>
+            </div>
+            <div id="timer-display"></div>
+            <div class="hud-item">
+                <span class="hud-icon">🐾</span>
+                Wave <span id="wave-display">0 / 20</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-icon">❤️</span>
+                <span id="lives-display">20</span>
+            </div>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Send Early Button -->
+        <button id="send-early-btn">Send Early (+30g)</button>
+
+        <!-- Upgrade/Sell Panel -->
+        <div id="upgrade-panel"></div>
+
+        <!-- Tower Selection Bar -->
+        <div id="tower-bar"></div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="overlay-screen">
+            <div class="end-title">THE CATS GOT THROUGH!</div>
+            <div class="end-subtitle">Your puppies fought bravely...</div>
+            <div class="end-stat">Survived to wave <span id="go-wave">0</span></div>
+            <div style="font-size:48px;">😿🐱🐈</div>
+            <button class="screen-btn restart-btn">TRY AGAIN</button>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="victory-screen" class="overlay-screen">
+            <div class="end-title">YARD DEFENDED!</div>
+            <div class="end-subtitle">The puppies saved the day!</div>
+            <div class="end-stat">Gold remaining: <span id="vic-gold">0</span></div>
+            <div style="font-size:48px;">🎉🐶🏆</div>
+            <button class="screen-btn restart-btn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <!-- Scripts (order matters) -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/pathfinding.js"></script>
+    <script src="js/grid.js"></script>
+    <script src="js/enemy.js"></script>
+    <script src="js/tower.js"></script>
+    <script src="js/projectile.js"></script>
+    <script src="js/wave.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
