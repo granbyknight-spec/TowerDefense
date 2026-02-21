@@ -22,6 +22,9 @@ class Game {
         this.lives = CONFIG.START_LIVES;
 
         this.lastTime = performance.now();
+        this.gameSpeed = 1; // 1 = normal, 0.5 = slow, 2 = fast
+
+        Audio.init();
 
         // Start render loop (renders title screen too)
         requestAnimationFrame((t) => this.loop(t));
@@ -63,6 +66,7 @@ class Game {
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('tower-bar').style.display = 'flex';
+        document.getElementById('game-controls').style.display = 'flex';
         this.ui.updateHUD();
     }
 
@@ -86,6 +90,10 @@ class Game {
         document.getElementById('victory-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('tower-bar').style.display = 'flex';
+        document.getElementById('game-controls').style.display = 'flex';
+        this.gameSpeed = 1;
+        const speedBtn = document.getElementById('speed-btn');
+        if (speedBtn) speedBtn.textContent = '1x';
         this.ui.updateHUD();
     }
 
@@ -93,6 +101,7 @@ class Game {
         const cost = CONFIG.TOWERS[type].cost;
         this.gold -= cost;
         this.grid.placeTower(col, row);
+        Audio.placeTower();
 
         const tower = new Tower(type, col, row, this.tileSize);
         this.towers.push(tower);
@@ -110,12 +119,14 @@ class Game {
         const cost = tower.getUpgradeCost();
         if (this.gold >= cost && tower.level < 2) {
             this.gold -= tower.upgrade();
+            Audio.upgradeTower();
         }
     }
 
     sellTower(tower) {
         const refund = tower.getSellValue();
         this.gold += refund;
+        Audio.sellTower();
         this.grid.removeTower(tower.col, tower.row);
         this.towers = this.towers.filter(t => t !== tower);
 
@@ -144,6 +155,7 @@ class Game {
             if (enemy.reachedEnd && enemy.alive) {
                 enemy.alive = false;
                 this.lives--;
+                Audio.enemyEscape();
                 if (this.lives <= 0) {
                     this.lives = 0;
                     this.gameOver();
@@ -155,6 +167,7 @@ class Game {
             if (!enemy.alive && enemy.hp <= 0 && !enemy._deathHandled) {
                 enemy._deathHandled = true;
                 this.gold += enemy.gold;
+                Audio.enemyDeath();
                 for (let i = 0; i < 6; i++) {
                     const angle = Math.random() * Math.PI * 2;
                     const speed = 30 + Math.random() * 50;
@@ -254,7 +267,7 @@ class Game {
     }
 
     loop(time) {
-        const dt = (time - this.lastTime) / 1000;
+        const dt = ((time - this.lastTime) / 1000) * this.gameSpeed;
         this.lastTime = time;
 
         this.update(dt);
@@ -265,9 +278,11 @@ class Game {
 
     gameOver() {
         this.state = 'lost';
+        Audio.gameOver();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
+        document.getElementById('game-controls').style.display = 'none';
         const screen = document.getElementById('game-over-screen');
         screen.style.display = 'flex';
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
@@ -275,9 +290,11 @@ class Game {
 
     victory() {
         this.state = 'won';
+        Audio.victory();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
+        document.getElementById('game-controls').style.display = 'none';
         const screen = document.getElementById('victory-screen');
         screen.style.display = 'flex';
         document.getElementById('vic-gold').textContent = this.gold;

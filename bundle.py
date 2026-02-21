@@ -16,6 +16,7 @@ BASE_DIR = "/home/user/TowerDefense"
 JS_FILES = [
     "js/config.js",
     "js/utils.js",
+    "js/audio.js",
     "js/pathfinding.js",
     "js/grid.js",
     "js/enemy.js",

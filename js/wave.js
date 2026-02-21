@@ -67,6 +67,7 @@ class WaveManager {
         this.waveInProgress = true;
         this.betweenWaves = false;
         this.currentWave++;
+        Audio.waveStart();
 
         return waveDef;
     }
