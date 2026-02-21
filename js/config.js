@@ -105,11 +105,11 @@ const CONFIG = {
     SPAWN_INTERVAL: 0.6, // seconds between enemy spawns within a wave
 
     // Visual
-    GRASS_COLOR: '#7EC850',
-    GRASS_COLOR_ALT: '#72B847',
-    PATH_COLOR: '#F4E9CD',
-    GRID_LINE_COLOR: 'rgba(0,0,0,0.08)',
-    RANGE_COLOR: 'rgba(255,255,255,0.15)',
-    BLOCKED_COLOR: 'rgba(255,0,0,0.3)',
-    VALID_COLOR: 'rgba(0,255,0,0.2)',
+    GRASS_COLOR: '#4A7C2E',
+    GRASS_COLOR_ALT: '#3D6B25',
+    PATH_COLOR: '#8B7355',
+    GRID_LINE_COLOR: 'rgba(0,0,0,0.06)',
+    RANGE_COLOR: 'rgba(255,255,255,0.08)',
+    BLOCKED_COLOR: 'rgba(255,60,60,0.3)',
+    VALID_COLOR: 'rgba(100,255,100,0.25)',
 };
