@@ -9,7 +9,7 @@ const CONFIG = {
     EXIT: { col: 11, row: 9 },
 
     // Starting resources
-    START_GOLD: 200,
+    START_GOLD: 600,
     START_LIVES: 20,
     WAVE_INCOME: 25,
     SEND_EARLY_BONUS: 30,
@@ -93,7 +93,7 @@ const CONFIG = {
             splash: 0,
             slow: 0,
             description: 'Fast single-target',
-            ability: { name: 'BARK STORM', desc: 'Rapid fire 3s', cooldown: 20, duration: 3 }
+            ability: { name: 'BARK STORM', desc: 'Rapid fire 10s', cooldown: 50, duration: 10 }
         },
         poodle: {
             name: 'Poodle',
@@ -109,7 +109,7 @@ const CONFIG = {
             slow: 0.5,
             slowDuration: 2,
             description: 'Rapid fire + slow',
-            ability: { name: 'ZOOMIES', desc: 'Slow all on screen', cooldown: 25, duration: 0 }
+            ability: { name: 'ZOOMIES', desc: 'Slow all enemies 10s', cooldown: 50, duration: 10 }
         },
         husky: {
             name: 'Husky',
@@ -125,7 +125,7 @@ const CONFIG = {
             slow: 0.35,
             slowDuration: 3,
             description: 'AoE freeze howl',
-            ability: { name: 'BLIZZARD', desc: 'Freeze in range 2s', cooldown: 30, duration: 2 }
+            ability: { name: 'BLIZZARD', desc: 'Freeze in range 10s', cooldown: 50, duration: 10 }
         },
         bigboi: {
             name: 'Big Boi',
@@ -140,7 +140,7 @@ const CONFIG = {
             splash: 1.5,
             slow: 0,
             description: 'Splash damage WOOF',
-            ability: { name: 'MEGA WOOF', desc: 'Screen-wide nuke', cooldown: 35, duration: 0 }
+            ability: { name: 'MEGA WOOF', desc: 'Damage all enemies 10s', cooldown: 50, duration: 10 }
         },
         doghouse: {
             name: 'Dog House',

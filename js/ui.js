@@ -1,4 +1,4 @@
-// UI management - HUD, tower selection, touch/click handling
+// UI management - HUD, tower selection, touch/click handling, global ability buttons
 
 class UI {
     constructor(game) {
@@ -9,6 +9,7 @@ class UI {
         this.hoverRow = -1;
 
         this.setupEventListeners();
+        this.setupAbilityButtons();
     }
 
     setupEventListeners() {
@@ -25,7 +26,6 @@ class UI {
         if (sendBtn) {
             sendBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 if (this.game.waveManager.sendEarly()) {
                     this.game.gold += CONFIG.SEND_EARLY_BONUS;
                 }
@@ -37,7 +37,6 @@ class UI {
         if (startBtn) {
             startBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 this.game.startGame();
             });
         }
@@ -46,7 +45,6 @@ class UI {
         document.querySelectorAll('.restart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 this.game.restart();
             });
         });
@@ -56,7 +54,6 @@ class UI {
         if (nextLevelBtn) {
             nextLevelBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 this.game.nextLevel();
             });
         }
@@ -68,7 +65,6 @@ class UI {
                 GameAudio.unlock();
                 const muted = GameAudio.toggleMute();
                 muteBtn.textContent = muted ? '🔇' : '🔊';
-                if (!muted) GameAudio.buttonClick();
             });
         }
 
@@ -80,7 +76,6 @@ class UI {
             let speedIdx = 0;
             speedBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 speedIdx = (speedIdx + 1) % speeds.length;
                 this.game.gameSpeed = speeds[speedIdx];
                 speedBtn.textContent = labels[speedIdx];
@@ -92,7 +87,6 @@ class UI {
         if (hsBtn) {
             hsBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 this.game.showLeaderboard();
             });
         }
@@ -102,7 +96,6 @@ class UI {
         if (closeHs) {
             closeHs.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 document.getElementById('leaderboard-screen').style.display = 'none';
             });
         }
@@ -139,6 +132,29 @@ class UI {
         }
     }
 
+    setupAbilityButtons() {
+        const bar = document.getElementById('ability-bar');
+        if (!bar) return;
+        bar.innerHTML = '';
+
+        for (const [key, state] of Object.entries(this.game.abilityState)) {
+            const def = CONFIG.TOWERS[key];
+            const btn = document.createElement('button');
+            btn.className = 'ability-btn';
+            btn.dataset.abilityType = key;
+            btn.innerHTML = `
+                <span class="ability-btn-icon">${def.emoji}</span>
+                <span class="ability-btn-name">${state.name}</span>
+                <span class="ability-btn-cd"></span>
+            `;
+            btn.addEventListener('click', () => {
+                GameAudio.unlock();
+                this.game.activateGlobalAbility(key);
+            });
+            bar.appendChild(btn);
+        }
+    }
+
     selectTowerType(type) {
         this.selectedTower = null;
         this.hideUpgradePanel();
@@ -157,6 +173,34 @@ class UI {
             btn.classList.toggle('selected', type === this.selectedTowerType);
             const cost = CONFIG.TOWERS[type].cost;
             btn.classList.toggle('too-expensive', cost > this.game.gold);
+        });
+    }
+
+    updateAbilityButtons() {
+        document.querySelectorAll('.ability-btn').forEach(btn => {
+            const type = btn.dataset.abilityType;
+            const state = this.game.abilityState[type];
+            if (!state) return;
+
+            const hasTower = this.game.towers.some(t => t.type === type);
+            const cdEl = btn.querySelector('.ability-btn-cd');
+
+            if (state.active) {
+                btn.classList.add('active');
+                btn.classList.remove('on-cooldown', 'no-towers');
+                if (cdEl) cdEl.textContent = Math.ceil(state.timer) + 's';
+            } else if (state.cooldown > 0) {
+                btn.classList.add('on-cooldown');
+                btn.classList.remove('active', 'no-towers');
+                if (cdEl) cdEl.textContent = Math.ceil(state.cooldown) + 's';
+            } else if (!hasTower) {
+                btn.classList.add('no-towers');
+                btn.classList.remove('active', 'on-cooldown');
+                if (cdEl) cdEl.textContent = '';
+            } else {
+                btn.classList.remove('active', 'on-cooldown', 'no-towers');
+                if (cdEl) cdEl.textContent = 'READY';
+            }
         });
     }
 
@@ -226,14 +270,6 @@ class UI {
             extraLine = `RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}`;
         }
 
-        // Ability button
-        let abilityHtml = '';
-        if (tower.abilityName) {
-            const ready = tower.canActivateAbility();
-            const cdLeft = tower.abilityCooldown > 0 ? ` (${Math.ceil(tower.abilityCooldown)}s)` : '';
-            abilityHtml = `<button id="ability-btn" class="${ready ? '' : 'disabled'}" style="background:#FF9800;">${tower.abilityName}${cdLeft}</button>`;
-        }
-
         panel.innerHTML = `
             <div class="upgrade-header">${tower.emoji} ${tower.name} Lv.${tower.level}</div>
             <div class="upgrade-stats">${statsLine}</div>
@@ -242,7 +278,6 @@ class UI {
                 ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : '<button class="disabled">MAX</button>'}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
             </div>
-            ${abilityHtml ? `<div class="upgrade-actions">${abilityHtml}</div>` : ''}
         `;
         panel.style.display = 'flex';
 
@@ -260,14 +295,6 @@ class UI {
                 this.game.sellTower(tower);
                 this.hideUpgradePanel();
                 this.selectedTower = null;
-            });
-        }
-
-        const abilityBtn = document.getElementById('ability-btn');
-        if (abilityBtn && tower.canActivateAbility()) {
-            abilityBtn.addEventListener('click', () => {
-                tower.activateAbility(this.game.enemies, this.game.particles);
-                this.showUpgradePanel(tower);
             });
         }
     }
@@ -299,5 +326,6 @@ class UI {
         }
 
         this.updateTowerButtons();
+        this.updateAbilityButtons();
     }
 }

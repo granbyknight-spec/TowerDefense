@@ -586,14 +586,17 @@ class Renderer {
             this._draw3DCircle(this.ctx, x + size * 0.22 * s, y - size * s * 0.95, size * 0.16 * s, '#FFD0D8');
         }
 
-        // Ability cooldown ring
-        if (tower.abilityName && tower.abilityCooldown > 0) {
-            const pct = 1 - tower.abilityCooldown / tower.abilityCooldownMax;
+        // Active ability glow ring
+        if (tower.abilityActive && tower.type !== 'barker') {
             ctx.save();
-            ctx.strokeStyle = 'rgba(255,215,0,0.5)';
+            const glowColor = tower.type === 'poodle' ? 'rgba(218,112,214,0.5)' :
+                              tower.type === 'husky' ? 'rgba(100,200,255,0.5)' :
+                              'rgba(255,99,71,0.5)';
+            ctx.strokeStyle = glowColor;
             ctx.lineWidth = 2;
+            const pulseR = size * (1.15 + Math.sin(Date.now() / 150) * 0.1);
             ctx.beginPath();
-            ctx.arc(x, y, size * 1.15, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2);
+            ctx.arc(x, y, pulseR, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
         }

@@ -37,6 +37,23 @@ class Game {
         this.triviaUsed = [];
         this._triviaShownForWave = -1;
 
+        // Global ability state (one per tower type that has abilities)
+        this.abilityState = {};
+        for (const [key, def] of Object.entries(CONFIG.TOWERS)) {
+            if (def.ability) {
+                this.abilityState[key] = {
+                    cooldown: 0,
+                    active: false,
+                    timer: 0,
+                    effectTick: 0,  // for periodic effects
+                    duration: def.ability.duration,
+                    cooldownMax: def.ability.cooldown,
+                    name: def.ability.name,
+                    emoji: def.emoji
+                };
+            }
+        }
+
         GameAudio.init();
 
         requestAnimationFrame((t) => this.loop(t));
@@ -71,7 +88,6 @@ class Game {
     }
 
     startGame() {
-        // Get player name
         const nameInput = document.getElementById('player-name');
         this.playerName = (nameInput ? nameInput.value.trim() : '') || 'Anonymous';
         this.kills = 0;
@@ -81,6 +97,7 @@ class Game {
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('tower-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
+        document.getElementById('ability-bar').style.display = 'flex';
         this.ui.updateHUD();
     }
 
@@ -100,6 +117,14 @@ class Game {
         this.ui.hideUpgradePanel();
         this.resize();
 
+        // Reset all abilities
+        for (const key in this.abilityState) {
+            this.abilityState[key].cooldown = 0;
+            this.abilityState[key].active = false;
+            this.abilityState[key].timer = 0;
+            this.abilityState[key].effectTick = 0;
+        }
+
         this.triviaActive = false;
         this.triviaUsed = [];
         this._triviaShownForWave = -1;
@@ -112,6 +137,7 @@ class Game {
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('tower-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
+        document.getElementById('ability-bar').style.display = 'flex';
         this.gameSpeed = 1;
         const speedBtn = document.getElementById('speed-btn');
         if (speedBtn) speedBtn.textContent = '1x';
@@ -127,6 +153,11 @@ class Game {
         const tower = new Tower(type, col, row, this.tileSize);
         this.towers.push(tower);
 
+        // If this type's ability is currently active, start it on the new tower
+        if (this.abilityState[type] && this.abilityState[type].active) {
+            tower.startAbility();
+        }
+
         const newPath = this.grid.currentPath;
         for (const enemy of this.enemies) {
             if (enemy.alive && !enemy.reachedEnd) {
@@ -140,14 +171,12 @@ class Game {
         const cost = tower.getUpgradeCost();
         if (this.gold >= cost && tower.level < maxLevel) {
             this.gold -= tower.upgrade();
-            GameAudio.upgradeTower();
         }
     }
 
     sellTower(tower) {
         const refund = tower.getSellValue();
         this.gold += refund;
-        GameAudio.sellTower();
         this.grid.removeTower(tower.col, tower.row);
         this.towers = this.towers.filter(t => t !== tower);
 
@@ -157,6 +186,109 @@ class Game {
                 enemy.updatePath(newPath);
             }
         }
+    }
+
+    // === GLOBAL ABILITY SYSTEM ===
+    activateGlobalAbility(towerType) {
+        const state = this.abilityState[towerType];
+        if (!state || state.active || state.cooldown > 0) return false;
+
+        // Need at least one tower of this type
+        const hasTower = this.towers.some(t => t.type === towerType);
+        if (!hasTower) return false;
+
+        state.active = true;
+        state.timer = state.duration;
+        state.effectTick = 0;
+
+        // Activate on all towers of this type
+        for (const tower of this.towers) {
+            if (tower.type === towerType) {
+                tower.startAbility();
+            }
+        }
+
+        GameAudio.ability();
+
+        // Particles burst from all towers of this type
+        for (const tower of this.towers) {
+            if (tower.type !== towerType) continue;
+            const color = towerType === 'barker' ? '#F5DEB3' :
+                          towerType === 'poodle' ? '#DA70D6' :
+                          towerType === 'husky' ? '#B3E5FC' : '#FF6347';
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 / 8) * i;
+                this.particles.push({
+                    x: tower.x, y: tower.y,
+                    vx: Math.cos(angle) * 80,
+                    vy: Math.sin(angle) * 80,
+                    life: 0.6, maxLife: 0.6,
+                    color: color, size: 5
+                });
+            }
+        }
+
+        return true;
+    }
+
+    _updateGlobalAbilities(dt) {
+        for (const [type, state] of Object.entries(this.abilityState)) {
+            if (state.active) {
+                state.timer -= dt;
+                state.effectTick -= dt;
+
+                // Apply sustained effects
+                if (state.effectTick <= 0) {
+                    state.effectTick = 0.5; // apply every 0.5s
+                    this._applyAbilityEffect(type);
+                }
+
+                if (state.timer <= 0) {
+                    // Deactivate
+                    state.active = false;
+                    state.cooldown = state.cooldownMax;
+                    for (const tower of this.towers) {
+                        if (tower.type === type) {
+                            tower.stopAbility();
+                        }
+                    }
+                }
+            } else if (state.cooldown > 0) {
+                state.cooldown -= dt;
+                if (state.cooldown < 0) state.cooldown = 0;
+            }
+        }
+    }
+
+    _applyAbilityEffect(type) {
+        if (type === 'poodle') {
+            // ZOOMIES: heavy slow on all enemies
+            for (const e of this.enemies) {
+                if (e.alive && !e.reachedEnd) {
+                    e.applySlow(0.2, 1.5);
+                }
+            }
+        } else if (type === 'husky') {
+            // BLIZZARD: freeze enemies in range of any husky
+            for (const tower of this.towers) {
+                if (tower.type !== 'husky') continue;
+                const rangePx = tower.range * tower.tileSize;
+                for (const e of this.enemies) {
+                    if (!e.alive || e.reachedEnd) continue;
+                    if (dist(tower.x, tower.y, e.x, e.y) <= rangePx) {
+                        e.applyFreeze(1.5);
+                    }
+                }
+            }
+        } else if (type === 'bigboi') {
+            // MEGA WOOF: periodic damage to all enemies
+            for (const e of this.enemies) {
+                if (e.alive && !e.reachedEnd) {
+                    e.takeDamage(15);
+                }
+            }
+        }
+        // barker: handled by tower's rapid fireRate (already set in startAbility)
     }
 
     // === TRIVIA SYSTEM ===
@@ -229,7 +361,6 @@ class Game {
             this.gold += CONFIG.TRIVIA_REWARD;
             resultEl.textContent = '+' + CONFIG.TRIVIA_REWARD + 'g!';
             resultEl.style.color = '#4CAF50';
-            GameAudio.goldEarned();
         }
     }
 
@@ -304,6 +435,15 @@ class Game {
         this.ui.selectedTowerType = null;
         this.ui.selectedTower = null;
         this.ui.hideUpgradePanel();
+
+        // Reset abilities
+        for (const key in this.abilityState) {
+            this.abilityState[key].cooldown = 0;
+            this.abilityState[key].active = false;
+            this.abilityState[key].timer = 0;
+            this.abilityState[key].effectTick = 0;
+        }
+
         this.state = 'playing';
         this._triviaShownForWave = -1;
         this.ui.updateHUD();
@@ -380,7 +520,6 @@ class Game {
         for (const enemy of this.enemies) {
             if (!enemy.isBoss || !enemy.alive) continue;
 
-            // Spawn minions when timer hits 0
             if (enemy.minionTimer <= 0) {
                 enemy.minionTimer = 8;
                 const path = this.grid.currentPath;
@@ -392,7 +531,6 @@ class Game {
                         minion.pathIndex = Math.max(0, enemy.pathIndex - 1);
                         this.enemies.push(minion);
                     }
-                    GameAudio.bossRoar();
                 }
             }
         }
@@ -417,6 +555,7 @@ class Game {
         dt = Math.min(dt, 0.1);
 
         this._updateTrivia(dt);
+        this._updateGlobalAbilities(dt);
         this.waveManager.update(dt, this.grid.currentPath, this.tileSize, this.enemies);
 
         // Show trivia between waves
@@ -439,7 +578,6 @@ class Game {
             if (enemy.reachedEnd && enemy.alive) {
                 enemy.alive = false;
                 this.lives--;
-                GameAudio.enemyEscape();
                 if (this.lives <= 0) {
                     this.lives = 0;
                     this.gameOver();
@@ -552,13 +690,13 @@ class Game {
     gameOver() {
         this.state = 'lost';
         this._hideTrivia();
-        GameAudio.gameOver();
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
+        document.getElementById('ability-bar').style.display = 'none';
         const screen = document.getElementById('game-over-screen');
         screen.style.display = 'flex';
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
@@ -569,13 +707,13 @@ class Game {
     victory() {
         this.state = 'won';
         this._hideTrivia();
-        GameAudio.victory();
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
+        document.getElementById('ability-bar').style.display = 'none';
         const screen = document.getElementById('victory-screen');
         screen.style.display = 'flex';
         document.getElementById('vic-gold').textContent = this.gold;

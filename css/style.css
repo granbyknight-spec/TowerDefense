@@ -154,6 +154,83 @@ body {
     font-weight: 600;
 }
 
+/* === Ability Bar (global per-type) === */
+#ability-bar {
+    display: none;
+    width: 100%;
+    padding: 3px 4px;
+    background: linear-gradient(0deg, #2e1b12 0%, #3e2723 100%);
+    justify-content: center;
+    align-items: stretch;
+    gap: 4px;
+    z-index: 10;
+    border-top: 1px solid #5d4037;
+}
+
+.ability-btn {
+    flex: 1;
+    max-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 4px 2px;
+    background: rgba(255,152,0,0.15);
+    border: 2px solid rgba(255,152,0,0.3);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.ability-btn:active {
+    transform: scale(0.95);
+}
+
+.ability-btn .ability-btn-icon {
+    font-size: 16px;
+}
+
+.ability-btn .ability-btn-name {
+    font-weight: 700;
+    font-size: 9px;
+    color: #FFD700;
+}
+
+.ability-btn .ability-btn-cd {
+    font-size: 9px;
+    font-weight: 600;
+    color: #a5d6a7;
+    min-height: 12px;
+}
+
+.ability-btn.active {
+    background: rgba(76, 175, 80, 0.5);
+    border-color: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+    animation: ability-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.ability-btn.on-cooldown {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ability-btn.on-cooldown .ability-btn-cd {
+    color: #ef9a9a;
+}
+
+.ability-btn.no-towers {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+@keyframes ability-pulse {
+    from { box-shadow: 0 0 4px rgba(76, 175, 80, 0.3); }
+    to { box-shadow: 0 0 12px rgba(76, 175, 80, 0.6); }
+}
+
 /* === Upgrade Panel === */
 #upgrade-panel {
     display: none;

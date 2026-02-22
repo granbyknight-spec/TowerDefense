@@ -163,6 +163,83 @@ body {
     font-weight: 600;
 }
 
+/* === Ability Bar (global per-type) === */
+#ability-bar {
+    display: none;
+    width: 100%;
+    padding: 3px 4px;
+    background: linear-gradient(0deg, #2e1b12 0%, #3e2723 100%);
+    justify-content: center;
+    align-items: stretch;
+    gap: 4px;
+    z-index: 10;
+    border-top: 1px solid #5d4037;
+}
+
+.ability-btn {
+    flex: 1;
+    max-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 4px 2px;
+    background: rgba(255,152,0,0.15);
+    border: 2px solid rgba(255,152,0,0.3);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.ability-btn:active {
+    transform: scale(0.95);
+}
+
+.ability-btn .ability-btn-icon {
+    font-size: 16px;
+}
+
+.ability-btn .ability-btn-name {
+    font-weight: 700;
+    font-size: 9px;
+    color: #FFD700;
+}
+
+.ability-btn .ability-btn-cd {
+    font-size: 9px;
+    font-weight: 600;
+    color: #a5d6a7;
+    min-height: 12px;
+}
+
+.ability-btn.active {
+    background: rgba(76, 175, 80, 0.5);
+    border-color: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+    animation: ability-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.ability-btn.on-cooldown {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ability-btn.on-cooldown .ability-btn-cd {
+    color: #ef9a9a;
+}
+
+.ability-btn.no-towers {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+@keyframes ability-pulse {
+    from { box-shadow: 0 0 4px rgba(76, 175, 80, 0.3); }
+    to { box-shadow: 0 0 12px rgba(76, 175, 80, 0.6); }
+}
+
 /* === Upgrade Panel === */
 #upgrade-panel {
     display: none;
@@ -592,6 +669,9 @@ body {
         <!-- Upgrade/Sell Panel -->
         <div id="upgrade-panel"></div>
 
+        <!-- Ability Bar (global per-type abilities) -->
+        <div id="ability-bar"></div>
+
         <!-- Tower Selection Bar -->
         <div id="tower-bar"></div>
 
@@ -638,7 +718,7 @@ const CONFIG = {
     EXIT: { col: 11, row: 9 },
 
     // Starting resources
-    START_GOLD: 200,
+    START_GOLD: 600,
     START_LIVES: 20,
     WAVE_INCOME: 25,
     SEND_EARLY_BONUS: 30,
@@ -722,7 +802,7 @@ const CONFIG = {
             splash: 0,
             slow: 0,
             description: 'Fast single-target',
-            ability: { name: 'BARK STORM', desc: 'Rapid fire 3s', cooldown: 20, duration: 3 }
+            ability: { name: 'BARK STORM', desc: 'Rapid fire 10s', cooldown: 50, duration: 10 }
         },
         poodle: {
             name: 'Poodle',
@@ -738,7 +818,7 @@ const CONFIG = {
             slow: 0.5,
             slowDuration: 2,
             description: 'Rapid fire + slow',
-            ability: { name: 'ZOOMIES', desc: 'Slow all on screen', cooldown: 25, duration: 0 }
+            ability: { name: 'ZOOMIES', desc: 'Slow all enemies 10s', cooldown: 50, duration: 10 }
         },
         husky: {
             name: 'Husky',
@@ -754,7 +834,7 @@ const CONFIG = {
             slow: 0.35,
             slowDuration: 3,
             description: 'AoE freeze howl',
-            ability: { name: 'BLIZZARD', desc: 'Freeze in range 2s', cooldown: 30, duration: 2 }
+            ability: { name: 'BLIZZARD', desc: 'Freeze in range 10s', cooldown: 50, duration: 10 }
         },
         bigboi: {
             name: 'Big Boi',
@@ -769,7 +849,7 @@ const CONFIG = {
             splash: 1.5,
             slow: 0,
             description: 'Splash damage WOOF',
-            ability: { name: 'MEGA WOOF', desc: 'Screen-wide nuke', cooldown: 35, duration: 0 }
+            ability: { name: 'MEGA WOOF', desc: 'Damage all enemies 10s', cooldown: 50, duration: 10 }
         },
         doghouse: {
             name: 'Dog House',
@@ -943,15 +1023,14 @@ function pixelToGrid(x, y, tileSize) {
 
 
 // === js/audio.js ===
-// Procedural sound via pre-generated WAV blobs + HTML5 Audio elements
-// No Web Audio API dependency — maximum browser compatibility
-// All sounds are synthesized as WAV at startup, then played via new Audio(url)
+// Minimal sound - soft pop on enemy death only
+// Procedural WAV synthesis, no Web Audio API dependency
 
 const GameAudio = (() => {
-    const SR = 22050; // sample rate
+    const SR = 22050;
     let urls = {};
     let muted = false;
-    let volume = 0.7;
+    let volume = 0.5;
 
     // === WAV ENCODER ===
     function _writeStr(v, off, s) {
@@ -967,8 +1046,8 @@ const GameAudio = (() => {
         _writeStr(v, 8, 'WAVE');
         _writeStr(v, 12, 'fmt ');
         v.setUint32(16, 16, true);
-        v.setUint16(20, 1, true);   // PCM
-        v.setUint16(22, 1, true);   // mono
+        v.setUint16(20, 1, true);
+        v.setUint16(22, 1, true);
         v.setUint32(24, SR, true);
         v.setUint32(28, SR * 2, true);
         v.setUint16(32, 2, true);
@@ -981,41 +1060,22 @@ const GameAudio = (() => {
         return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
     }
 
-    // === SYNTHESIZERS (pure math, no AudioContext) ===
     function _tone(freq, type, dur, vol, freqEnd) {
         const n = (SR * dur) | 0;
         const out = new Float32Array(n);
         let phase = 0;
         for (let i = 0; i < n; i++) {
             const t = i / SR;
-            const env = vol * (1 - t / dur);
+            const env = vol * (1 - t / dur) * (1 - t / dur); // quadratic fade for softness
             let f = freq;
             if (freqEnd) f = freq * Math.pow(Math.max(freqEnd, 20) / freq, t / dur);
-
-            const p = (phase / (2 * Math.PI)) % 1;
-            let s;
-            switch (type) {
-                case 'square': s = Math.sin(phase) > 0 ? 1 : -1; break;
-                case 'sawtooth': s = 2 * p - 1; break;
-                case 'triangle': s = 4 * Math.abs(p - 0.5) - 1; break;
-                default: s = Math.sin(phase); // sine
-            }
+            const s = Math.sin(phase);
             out[i] = s * env;
             phase += 2 * Math.PI * f / SR;
         }
         return out;
     }
 
-    function _noise(dur, vol) {
-        const n = (SR * dur) | 0;
-        const out = new Float32Array(n);
-        for (let i = 0; i < n; i++) {
-            out[i] = (Math.random() * 2 - 1) * vol * (1 - i / n);
-        }
-        return out;
-    }
-
-    // Mix multiple sample arrays at time offsets (in seconds)
     function _mix(parts) {
         let maxLen = 0;
         for (const p of parts) {
@@ -1036,86 +1096,20 @@ const GameAudio = (() => {
         return out;
     }
 
-    // === PRE-GENERATE ALL SOUNDS ===
     function _generateAll() {
-        urls.shootBarker = _toWavUrl(_mix([
-            { samples: _tone(400, 'square', 0.1, 0.4, 200) },
-            { samples: _tone(350, 'sawtooth', 0.08, 0.2, 180) }
+        // Soft delightful pop - gentle rising sine with quick fade
+        urls.pop = _toWavUrl(_mix([
+            { samples: _tone(600, 'sine', 0.08, 0.25, 1200) },
+            { samples: _tone(900, 'sine', 0.06, 0.15, 1400), offset: 0.02 }
         ]));
-        urls.shootBigBoi = _toWavUrl(_mix([
-            { samples: _tone(180, 'sawtooth', 0.18, 0.5, 80) },
-            { samples: _tone(140, 'square', 0.15, 0.25, 60) }
-        ]));
-        urls.shootPoodle = _toWavUrl(_mix([
-            { samples: _tone(700, 'sine', 0.08, 0.35, 500) },
-            { samples: _tone(900, 'triangle', 0.06, 0.2, 600) }
-        ]));
-        urls.shootHusky = _toWavUrl(_mix([
-            { samples: _tone(250, 'sine', 0.2, 0.35, 120) },
-            { samples: _tone(1200, 'triangle', 0.1, 0.15, 800) }
-        ]));
-        urls.enemyDeath = _toWavUrl(_mix([
-            { samples: _tone(600, 'sine', 0.12, 0.5, 150) },
-            { samples: _noise(0.08, 0.3) }
-        ]));
-        urls.enemyEscape = _toWavUrl(_mix([
-            { samples: _tone(400, 'triangle', 0.15, 0.35) },
-            { samples: _tone(250, 'triangle', 0.2, 0.35), offset: 0.12 }
-        ]));
-        urls.waveStart = _toWavUrl(_mix([
-            { samples: _tone(500, 'sine', 0.12, 0.35, 700) },
-            { samples: _tone(700, 'sine', 0.15, 0.4, 900), offset: 0.13 }
-        ]));
-        urls.placeTower = _toWavUrl(_mix([
-            { samples: _tone(200, 'sine', 0.1, 0.5, 100) },
-            { samples: _tone(500, 'triangle', 0.08, 0.3) }
-        ]));
-        urls.upgradeTower = _toWavUrl(_mix([
-            { samples: _tone(400, 'sine', 0.1, 0.35) },
-            { samples: _tone(550, 'sine', 0.1, 0.35), offset: 0.08 },
-            { samples: _tone(700, 'sine', 0.15, 0.4), offset: 0.16 }
-        ]));
-        urls.sellTower = _toWavUrl(_mix([
-            { samples: _tone(1200, 'sine', 0.06, 0.3) },
-            { samples: _tone(1500, 'sine', 0.08, 0.3), offset: 0.06 }
-        ]));
-        urls.splash = _toWavUrl(_mix([
-            { samples: _tone(150, 'sawtooth', 0.15, 0.35, 40) },
-            { samples: _noise(0.12, 0.4) }
-        ]));
-        urls.gameOver = _toWavUrl(_mix([
-            { samples: _tone(400, 'triangle', 0.25, 0.4) },
-            { samples: _tone(350, 'triangle', 0.25, 0.4), offset: 0.2 },
-            { samples: _tone(300, 'triangle', 0.25, 0.4), offset: 0.4 },
-            { samples: _tone(200, 'triangle', 0.25, 0.4), offset: 0.6 }
-        ]));
-        urls.victory = _toWavUrl(_mix([
-            { samples: _tone(523, 'sine', 0.2, 0.4) },
-            { samples: _tone(262, 'triangle', 0.2, 0.2) },
-            { samples: _tone(659, 'sine', 0.2, 0.4), offset: 0.15 },
-            { samples: _tone(330, 'triangle', 0.2, 0.2), offset: 0.15 },
-            { samples: _tone(784, 'sine', 0.2, 0.4), offset: 0.30 },
-            { samples: _tone(392, 'triangle', 0.2, 0.2), offset: 0.30 },
-            { samples: _tone(1047, 'sine', 0.2, 0.4), offset: 0.45 },
-            { samples: _tone(524, 'triangle', 0.2, 0.2), offset: 0.45 }
-        ]));
-        urls.buttonClick = _toWavUrl(_tone(800, 'sine', 0.04, 0.25));
-        urls.goldEarned = _toWavUrl(_tone(1000, 'sine', 0.07, 0.25));
-        // Ability activation: dramatic rising chord
+
+        // Gentle ability activation - subtle chime
         urls.ability = _toWavUrl(_mix([
-            { samples: _tone(300, 'sine', 0.15, 0.4, 600) },
-            { samples: _tone(450, 'triangle', 0.12, 0.3, 900) },
-            { samples: _tone(600, 'square', 0.1, 0.2, 1200), offset: 0.05 }
-        ]));
-        // Boss roar: low rumble
-        urls.bossRoar = _toWavUrl(_mix([
-            { samples: _tone(80, 'sawtooth', 0.4, 0.5, 40) },
-            { samples: _noise(0.3, 0.35) },
-            { samples: _tone(120, 'square', 0.3, 0.3, 50), offset: 0.1 }
+            { samples: _tone(800, 'sine', 0.1, 0.15, 1200) },
+            { samples: _tone(1000, 'sine', 0.08, 0.1, 1400), offset: 0.05 }
         ]));
     }
 
-    // === PLAYBACK via HTML5 Audio ===
     function _play(name) {
         if (muted || !urls[name]) return;
         try {
@@ -1125,44 +1119,38 @@ const GameAudio = (() => {
         } catch (e) {}
     }
 
-    // Called at page load — generates all WAV blobs
     function init() {
         _generateAll();
     }
 
-    // Called from button click handlers — plays silent audio to unlock iOS
     function unlock() {
         try {
-            const a = new Audio(urls.buttonClick || '');
+            const a = new Audio(urls.pop || '');
             a.volume = 0.01;
             a.play().catch(() => {});
         } catch (e) {}
     }
 
-    function shoot(type) {
-        if (type === 'barker') _play('shootBarker');
-        else if (type === 'bigboi') _play('shootBigBoi');
-        else if (type === 'poodle') _play('shootPoodle');
-        else if (type === 'husky') _play('shootHusky');
-    }
+    // No-ops for removed sounds
+    const noop = () => {};
 
     return {
         init,
         unlock,
-        shoot,
-        enemyDeath:   () => _play('enemyDeath'),
-        enemyEscape:  () => _play('enemyEscape'),
-        waveStart:    () => _play('waveStart'),
-        placeTower:   () => _play('placeTower'),
-        upgradeTower: () => _play('upgradeTower'),
-        sellTower:    () => _play('sellTower'),
-        splash:       () => _play('splash'),
-        gameOver:     () => _play('gameOver'),
-        victory:      () => _play('victory'),
-        buttonClick:  () => _play('buttonClick'),
-        goldEarned:   () => _play('goldEarned'),
+        shoot: noop,
+        enemyDeath:   () => _play('pop'),
+        enemyEscape:  noop,
+        waveStart:    noop,
+        placeTower:   noop,
+        upgradeTower: noop,
+        sellTower:    noop,
+        splash:       noop,
+        gameOver:     noop,
+        victory:      noop,
+        buttonClick:  noop,
+        goldEarned:   noop,
         ability:      () => _play('ability'),
-        bossRoar:     () => _play('bossRoar'),
+        bossRoar:     noop,
         toggleMute:   () => { muted = !muted; return muted; },
         isMuted:      () => muted
     };
@@ -1513,7 +1501,7 @@ class Enemy {
 
 
 // === js/tower.js ===
-// Tower (Dog) entities with ability system
+// Tower (Dog) entities — abilities are activated globally by game.js
 
 class Tower {
     constructor(type, col, row, tileSize) {
@@ -1551,19 +1539,9 @@ class Tower {
         // Animation
         this.attackAnim = 0;
 
-        // Ability system
-        const abilDef = def.ability;
-        if (abilDef) {
-            this.abilityName = abilDef.name;
-            this.abilityDesc = abilDef.desc;
-            this.abilityCooldownMax = abilDef.cooldown;
-            this.abilityDurationMax = abilDef.duration;
-            this.abilityCooldown = 0; // 0 = ready
-            this.abilityActive = false;
-            this.abilityTimer = 0;
-        } else {
-            this.abilityName = null;
-        }
+        // Ability flag (set by game.js global ability system)
+        this.abilityActive = false;
+        this.abilityName = def.ability ? def.ability.name : null;
 
         // Bark Storm: saved original fireRate
         this._baseFireRate = def.fireRate;
@@ -1588,7 +1566,6 @@ class Tower {
             this.slow = Math.max(0.2, this.slow - 0.05);
         }
 
-        // Dog house: more gold per wave at higher levels
         if (this.goldPerWave > 0) {
             this.goldPerWave = Math.floor(this.goldPerWave * mult);
         }
@@ -1604,94 +1581,20 @@ class Tower {
         return Math.floor(this.totalInvested * CONFIG.SELL_REFUND);
     }
 
-    canActivateAbility() {
-        return this.abilityName && this.abilityCooldown <= 0 && !this.abilityActive;
+    // Called by game.js when global ability activates
+    startAbility() {
+        this.abilityActive = true;
+        if (this.type === 'barker') {
+            this.fireRate = 0.1;
+        }
     }
 
-    activateAbility(enemies, particles) {
-        if (!this.canActivateAbility()) return false;
-
-        this.abilityActive = true;
-        this.abilityTimer = this.abilityDurationMax;
-
+    // Called by game.js when global ability expires
+    stopAbility() {
+        this.abilityActive = false;
         if (this.type === 'barker') {
-            // BARK STORM: rapid fire for duration
-            this.fireRate = 0.1;
-            GameAudio.ability();
-        } else if (this.type === 'poodle') {
-            // ZOOMIES: slow all enemies on screen immediately
-            for (const e of enemies) {
-                if (e.alive && !e.reachedEnd) {
-                    e.applySlow(0.2, 4);
-                }
-            }
-            this.abilityActive = false;
-            this.abilityCooldown = this.abilityCooldownMax;
-            GameAudio.ability();
-            // Visual burst
-            if (particles) {
-                for (let i = 0; i < 12; i++) {
-                    const angle = (Math.PI * 2 / 12) * i;
-                    particles.push({
-                        x: this.x, y: this.y,
-                        vx: Math.cos(angle) * 120,
-                        vy: Math.sin(angle) * 120,
-                        life: 0.6, maxLife: 0.6,
-                        color: '#DA70D6', size: 6
-                    });
-                }
-            }
-        } else if (this.type === 'husky') {
-            // BLIZZARD: freeze enemies in range
-            const rangePx = this.range * this.tileSize;
-            for (const e of enemies) {
-                if (!e.alive || e.reachedEnd) continue;
-                if (dist(this.x, this.y, e.x, e.y) <= rangePx) {
-                    e.applyFreeze(2);
-                }
-            }
-            this.abilityActive = false;
-            this.abilityCooldown = this.abilityCooldownMax;
-            GameAudio.ability();
-            if (particles) {
-                for (let i = 0; i < 16; i++) {
-                    const angle = (Math.PI * 2 / 16) * i;
-                    const r = rangePx * (0.3 + Math.random() * 0.7);
-                    particles.push({
-                        x: this.x + Math.cos(angle) * r,
-                        y: this.y + Math.sin(angle) * r,
-                        vx: (Math.random() - 0.5) * 20,
-                        vy: -20 - Math.random() * 30,
-                        life: 0.8, maxLife: 0.8,
-                        color: '#B3E5FC', size: 5
-                    });
-                }
-            }
-        } else if (this.type === 'bigboi') {
-            // MEGA WOOF: screen-wide damage nuke
-            for (const e of enemies) {
-                if (e.alive && !e.reachedEnd) {
-                    e.takeDamage(100);
-                }
-            }
-            this.abilityActive = false;
-            this.abilityCooldown = this.abilityCooldownMax;
-            GameAudio.ability();
-            if (particles) {
-                for (let i = 0; i < 20; i++) {
-                    const angle = (Math.PI * 2 / 20) * i;
-                    particles.push({
-                        x: this.x, y: this.y,
-                        vx: Math.cos(angle) * 200,
-                        vy: Math.sin(angle) * 200,
-                        life: 0.5, maxLife: 0.5,
-                        color: '#FF6347', size: 8
-                    });
-                }
-            }
+            this.fireRate = this._baseFireRate;
         }
-
-        return true;
     }
 
     findTarget(enemies) {
@@ -1715,22 +1618,6 @@ class Tower {
     }
 
     update(dt, enemies, projectiles) {
-        // Ability cooldown
-        if (this.abilityCooldown > 0) {
-            this.abilityCooldown -= dt;
-            if (this.abilityCooldown < 0) this.abilityCooldown = 0;
-        }
-
-        // Bark Storm duration
-        if (this.abilityActive && this.type === 'barker') {
-            this.abilityTimer -= dt;
-            if (this.abilityTimer <= 0) {
-                this.abilityActive = false;
-                this.fireRate = this._baseFireRate;
-                this.abilityCooldown = this.abilityCooldownMax;
-            }
-        }
-
         if (this.isPassive) return;
 
         this.fireCooldown -= dt;
@@ -1740,7 +1627,6 @@ class Tower {
         if (target && this.fireCooldown <= 0) {
             this.fireCooldown = this.fireRate;
             this.attackAnim = 1;
-            GameAudio.shoot(this.type);
 
             projectiles.push(new Projectile(
                 this.x, this.y,
@@ -2619,14 +2505,17 @@ class Renderer {
             this._draw3DCircle(this.ctx, x + size * 0.22 * s, y - size * s * 0.95, size * 0.16 * s, '#FFD0D8');
         }
 
-        // Ability cooldown ring
-        if (tower.abilityName && tower.abilityCooldown > 0) {
-            const pct = 1 - tower.abilityCooldown / tower.abilityCooldownMax;
+        // Active ability glow ring
+        if (tower.abilityActive && tower.type !== 'barker') {
             ctx.save();
-            ctx.strokeStyle = 'rgba(255,215,0,0.5)';
+            const glowColor = tower.type === 'poodle' ? 'rgba(218,112,214,0.5)' :
+                              tower.type === 'husky' ? 'rgba(100,200,255,0.5)' :
+                              'rgba(255,99,71,0.5)';
+            ctx.strokeStyle = glowColor;
             ctx.lineWidth = 2;
+            const pulseR = size * (1.15 + Math.sin(Date.now() / 150) * 0.1);
             ctx.beginPath();
-            ctx.arc(x, y, size * 1.15, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2);
+            ctx.arc(x, y, pulseR, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
         }
@@ -2977,7 +2866,7 @@ class Renderer {
 
 
 // === js/ui.js ===
-// UI management - HUD, tower selection, touch/click handling
+// UI management - HUD, tower selection, touch/click handling, global ability buttons
 
 class UI {
     constructor(game) {
@@ -2988,6 +2877,7 @@ class UI {
         this.hoverRow = -1;
 
         this.setupEventListeners();
+        this.setupAbilityButtons();
     }
 
     setupEventListeners() {
@@ -3004,7 +2894,6 @@ class UI {
         if (sendBtn) {
             sendBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 if (this.game.waveManager.sendEarly()) {
                     this.game.gold += CONFIG.SEND_EARLY_BONUS;
                 }
@@ -3016,7 +2905,6 @@ class UI {
         if (startBtn) {
             startBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 this.game.startGame();
             });
         }
@@ -3025,7 +2913,6 @@ class UI {
         document.querySelectorAll('.restart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 this.game.restart();
             });
         });
@@ -3035,7 +2922,6 @@ class UI {
         if (nextLevelBtn) {
             nextLevelBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 this.game.nextLevel();
             });
         }
@@ -3047,7 +2933,6 @@ class UI {
                 GameAudio.unlock();
                 const muted = GameAudio.toggleMute();
                 muteBtn.textContent = muted ? '🔇' : '🔊';
-                if (!muted) GameAudio.buttonClick();
             });
         }
 
@@ -3059,7 +2944,6 @@ class UI {
             let speedIdx = 0;
             speedBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 speedIdx = (speedIdx + 1) % speeds.length;
                 this.game.gameSpeed = speeds[speedIdx];
                 speedBtn.textContent = labels[speedIdx];
@@ -3071,7 +2955,6 @@ class UI {
         if (hsBtn) {
             hsBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 this.game.showLeaderboard();
             });
         }
@@ -3081,7 +2964,6 @@ class UI {
         if (closeHs) {
             closeHs.addEventListener('click', () => {
                 GameAudio.unlock();
-                GameAudio.buttonClick();
                 document.getElementById('leaderboard-screen').style.display = 'none';
             });
         }
@@ -3118,6 +3000,29 @@ class UI {
         }
     }
 
+    setupAbilityButtons() {
+        const bar = document.getElementById('ability-bar');
+        if (!bar) return;
+        bar.innerHTML = '';
+
+        for (const [key, state] of Object.entries(this.game.abilityState)) {
+            const def = CONFIG.TOWERS[key];
+            const btn = document.createElement('button');
+            btn.className = 'ability-btn';
+            btn.dataset.abilityType = key;
+            btn.innerHTML = `
+                <span class="ability-btn-icon">${def.emoji}</span>
+                <span class="ability-btn-name">${state.name}</span>
+                <span class="ability-btn-cd"></span>
+            `;
+            btn.addEventListener('click', () => {
+                GameAudio.unlock();
+                this.game.activateGlobalAbility(key);
+            });
+            bar.appendChild(btn);
+        }
+    }
+
     selectTowerType(type) {
         this.selectedTower = null;
         this.hideUpgradePanel();
@@ -3136,6 +3041,34 @@ class UI {
             btn.classList.toggle('selected', type === this.selectedTowerType);
             const cost = CONFIG.TOWERS[type].cost;
             btn.classList.toggle('too-expensive', cost > this.game.gold);
+        });
+    }
+
+    updateAbilityButtons() {
+        document.querySelectorAll('.ability-btn').forEach(btn => {
+            const type = btn.dataset.abilityType;
+            const state = this.game.abilityState[type];
+            if (!state) return;
+
+            const hasTower = this.game.towers.some(t => t.type === type);
+            const cdEl = btn.querySelector('.ability-btn-cd');
+
+            if (state.active) {
+                btn.classList.add('active');
+                btn.classList.remove('on-cooldown', 'no-towers');
+                if (cdEl) cdEl.textContent = Math.ceil(state.timer) + 's';
+            } else if (state.cooldown > 0) {
+                btn.classList.add('on-cooldown');
+                btn.classList.remove('active', 'no-towers');
+                if (cdEl) cdEl.textContent = Math.ceil(state.cooldown) + 's';
+            } else if (!hasTower) {
+                btn.classList.add('no-towers');
+                btn.classList.remove('active', 'on-cooldown');
+                if (cdEl) cdEl.textContent = '';
+            } else {
+                btn.classList.remove('active', 'on-cooldown', 'no-towers');
+                if (cdEl) cdEl.textContent = 'READY';
+            }
         });
     }
 
@@ -3205,14 +3138,6 @@ class UI {
             extraLine = `RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}`;
         }
 
-        // Ability button
-        let abilityHtml = '';
-        if (tower.abilityName) {
-            const ready = tower.canActivateAbility();
-            const cdLeft = tower.abilityCooldown > 0 ? ` (${Math.ceil(tower.abilityCooldown)}s)` : '';
-            abilityHtml = `<button id="ability-btn" class="${ready ? '' : 'disabled'}" style="background:#FF9800;">${tower.abilityName}${cdLeft}</button>`;
-        }
-
         panel.innerHTML = `
             <div class="upgrade-header">${tower.emoji} ${tower.name} Lv.${tower.level}</div>
             <div class="upgrade-stats">${statsLine}</div>
@@ -3221,7 +3146,6 @@ class UI {
                 ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : '<button class="disabled">MAX</button>'}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
             </div>
-            ${abilityHtml ? `<div class="upgrade-actions">${abilityHtml}</div>` : ''}
         `;
         panel.style.display = 'flex';
 
@@ -3239,14 +3163,6 @@ class UI {
                 this.game.sellTower(tower);
                 this.hideUpgradePanel();
                 this.selectedTower = null;
-            });
-        }
-
-        const abilityBtn = document.getElementById('ability-btn');
-        if (abilityBtn && tower.canActivateAbility()) {
-            abilityBtn.addEventListener('click', () => {
-                tower.activateAbility(this.game.enemies, this.game.particles);
-                this.showUpgradePanel(tower);
             });
         }
     }
@@ -3278,6 +3194,7 @@ class UI {
         }
 
         this.updateTowerButtons();
+        this.updateAbilityButtons();
     }
 }
 
@@ -3322,6 +3239,23 @@ class Game {
         this.triviaUsed = [];
         this._triviaShownForWave = -1;
 
+        // Global ability state (one per tower type that has abilities)
+        this.abilityState = {};
+        for (const [key, def] of Object.entries(CONFIG.TOWERS)) {
+            if (def.ability) {
+                this.abilityState[key] = {
+                    cooldown: 0,
+                    active: false,
+                    timer: 0,
+                    effectTick: 0,  // for periodic effects
+                    duration: def.ability.duration,
+                    cooldownMax: def.ability.cooldown,
+                    name: def.ability.name,
+                    emoji: def.emoji
+                };
+            }
+        }
+
         GameAudio.init();
 
         requestAnimationFrame((t) => this.loop(t));
@@ -3356,7 +3290,6 @@ class Game {
     }
 
     startGame() {
-        // Get player name
         const nameInput = document.getElementById('player-name');
         this.playerName = (nameInput ? nameInput.value.trim() : '') || 'Anonymous';
         this.kills = 0;
@@ -3366,6 +3299,7 @@ class Game {
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('tower-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
+        document.getElementById('ability-bar').style.display = 'flex';
         this.ui.updateHUD();
     }
 
@@ -3385,6 +3319,14 @@ class Game {
         this.ui.hideUpgradePanel();
         this.resize();
 
+        // Reset all abilities
+        for (const key in this.abilityState) {
+            this.abilityState[key].cooldown = 0;
+            this.abilityState[key].active = false;
+            this.abilityState[key].timer = 0;
+            this.abilityState[key].effectTick = 0;
+        }
+
         this.triviaActive = false;
         this.triviaUsed = [];
         this._triviaShownForWave = -1;
@@ -3397,6 +3339,7 @@ class Game {
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('tower-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
+        document.getElementById('ability-bar').style.display = 'flex';
         this.gameSpeed = 1;
         const speedBtn = document.getElementById('speed-btn');
         if (speedBtn) speedBtn.textContent = '1x';
@@ -3412,6 +3355,11 @@ class Game {
         const tower = new Tower(type, col, row, this.tileSize);
         this.towers.push(tower);
 
+        // If this type's ability is currently active, start it on the new tower
+        if (this.abilityState[type] && this.abilityState[type].active) {
+            tower.startAbility();
+        }
+
         const newPath = this.grid.currentPath;
         for (const enemy of this.enemies) {
             if (enemy.alive && !enemy.reachedEnd) {
@@ -3425,14 +3373,12 @@ class Game {
         const cost = tower.getUpgradeCost();
         if (this.gold >= cost && tower.level < maxLevel) {
             this.gold -= tower.upgrade();
-            GameAudio.upgradeTower();
         }
     }
 
     sellTower(tower) {
         const refund = tower.getSellValue();
         this.gold += refund;
-        GameAudio.sellTower();
         this.grid.removeTower(tower.col, tower.row);
         this.towers = this.towers.filter(t => t !== tower);
 
@@ -3442,6 +3388,109 @@ class Game {
                 enemy.updatePath(newPath);
             }
         }
+    }
+
+    // === GLOBAL ABILITY SYSTEM ===
+    activateGlobalAbility(towerType) {
+        const state = this.abilityState[towerType];
+        if (!state || state.active || state.cooldown > 0) return false;
+
+        // Need at least one tower of this type
+        const hasTower = this.towers.some(t => t.type === towerType);
+        if (!hasTower) return false;
+
+        state.active = true;
+        state.timer = state.duration;
+        state.effectTick = 0;
+
+        // Activate on all towers of this type
+        for (const tower of this.towers) {
+            if (tower.type === towerType) {
+                tower.startAbility();
+            }
+        }
+
+        GameAudio.ability();
+
+        // Particles burst from all towers of this type
+        for (const tower of this.towers) {
+            if (tower.type !== towerType) continue;
+            const color = towerType === 'barker' ? '#F5DEB3' :
+                          towerType === 'poodle' ? '#DA70D6' :
+                          towerType === 'husky' ? '#B3E5FC' : '#FF6347';
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 / 8) * i;
+                this.particles.push({
+                    x: tower.x, y: tower.y,
+                    vx: Math.cos(angle) * 80,
+                    vy: Math.sin(angle) * 80,
+                    life: 0.6, maxLife: 0.6,
+                    color: color, size: 5
+                });
+            }
+        }
+
+        return true;
+    }
+
+    _updateGlobalAbilities(dt) {
+        for (const [type, state] of Object.entries(this.abilityState)) {
+            if (state.active) {
+                state.timer -= dt;
+                state.effectTick -= dt;
+
+                // Apply sustained effects
+                if (state.effectTick <= 0) {
+                    state.effectTick = 0.5; // apply every 0.5s
+                    this._applyAbilityEffect(type);
+                }
+
+                if (state.timer <= 0) {
+                    // Deactivate
+                    state.active = false;
+                    state.cooldown = state.cooldownMax;
+                    for (const tower of this.towers) {
+                        if (tower.type === type) {
+                            tower.stopAbility();
+                        }
+                    }
+                }
+            } else if (state.cooldown > 0) {
+                state.cooldown -= dt;
+                if (state.cooldown < 0) state.cooldown = 0;
+            }
+        }
+    }
+
+    _applyAbilityEffect(type) {
+        if (type === 'poodle') {
+            // ZOOMIES: heavy slow on all enemies
+            for (const e of this.enemies) {
+                if (e.alive && !e.reachedEnd) {
+                    e.applySlow(0.2, 1.5);
+                }
+            }
+        } else if (type === 'husky') {
+            // BLIZZARD: freeze enemies in range of any husky
+            for (const tower of this.towers) {
+                if (tower.type !== 'husky') continue;
+                const rangePx = tower.range * tower.tileSize;
+                for (const e of this.enemies) {
+                    if (!e.alive || e.reachedEnd) continue;
+                    if (dist(tower.x, tower.y, e.x, e.y) <= rangePx) {
+                        e.applyFreeze(1.5);
+                    }
+                }
+            }
+        } else if (type === 'bigboi') {
+            // MEGA WOOF: periodic damage to all enemies
+            for (const e of this.enemies) {
+                if (e.alive && !e.reachedEnd) {
+                    e.takeDamage(15);
+                }
+            }
+        }
+        // barker: handled by tower's rapid fireRate (already set in startAbility)
     }
 
     // === TRIVIA SYSTEM ===
@@ -3514,7 +3563,6 @@ class Game {
             this.gold += CONFIG.TRIVIA_REWARD;
             resultEl.textContent = '+' + CONFIG.TRIVIA_REWARD + 'g!';
             resultEl.style.color = '#4CAF50';
-            GameAudio.goldEarned();
         }
     }
 
@@ -3589,6 +3637,15 @@ class Game {
         this.ui.selectedTowerType = null;
         this.ui.selectedTower = null;
         this.ui.hideUpgradePanel();
+
+        // Reset abilities
+        for (const key in this.abilityState) {
+            this.abilityState[key].cooldown = 0;
+            this.abilityState[key].active = false;
+            this.abilityState[key].timer = 0;
+            this.abilityState[key].effectTick = 0;
+        }
+
         this.state = 'playing';
         this._triviaShownForWave = -1;
         this.ui.updateHUD();
@@ -3665,7 +3722,6 @@ class Game {
         for (const enemy of this.enemies) {
             if (!enemy.isBoss || !enemy.alive) continue;
 
-            // Spawn minions when timer hits 0
             if (enemy.minionTimer <= 0) {
                 enemy.minionTimer = 8;
                 const path = this.grid.currentPath;
@@ -3677,7 +3733,6 @@ class Game {
                         minion.pathIndex = Math.max(0, enemy.pathIndex - 1);
                         this.enemies.push(minion);
                     }
-                    GameAudio.bossRoar();
                 }
             }
         }
@@ -3702,6 +3757,7 @@ class Game {
         dt = Math.min(dt, 0.1);
 
         this._updateTrivia(dt);
+        this._updateGlobalAbilities(dt);
         this.waveManager.update(dt, this.grid.currentPath, this.tileSize, this.enemies);
 
         // Show trivia between waves
@@ -3724,7 +3780,6 @@ class Game {
             if (enemy.reachedEnd && enemy.alive) {
                 enemy.alive = false;
                 this.lives--;
-                GameAudio.enemyEscape();
                 if (this.lives <= 0) {
                     this.lives = 0;
                     this.gameOver();
@@ -3837,13 +3892,13 @@ class Game {
     gameOver() {
         this.state = 'lost';
         this._hideTrivia();
-        GameAudio.gameOver();
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
+        document.getElementById('ability-bar').style.display = 'none';
         const screen = document.getElementById('game-over-screen');
         screen.style.display = 'flex';
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
@@ -3854,13 +3909,13 @@ class Game {
     victory() {
         this.state = 'won';
         this._hideTrivia();
-        GameAudio.victory();
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
+        document.getElementById('ability-bar').style.display = 'none';
         const screen = document.getElementById('victory-screen');
         screen.style.display = 'flex';
         document.getElementById('vic-gold').textContent = this.gold;
