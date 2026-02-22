@@ -261,6 +261,7 @@ class UI {
                 <span class="tower-btn-dps">${statLine}</span>
             `;
             btn.addEventListener('click', () => {
+                if (this.game.triviaActive) return;
                 GameAudio.unlock();
                 this.selectTowerType(key);
             });
@@ -353,6 +354,7 @@ class UI {
 
     onPointerDown(e) {
         if (this.game.state !== 'playing') return;
+        if (this.game.triviaActive) return;
         GameAudio.unlock();
 
         // Right-click starts panning
@@ -496,6 +498,7 @@ class UI {
         const upgradeBtn = document.getElementById('upgrade-btn');
         if (upgradeBtn && canUpgrade && upgradeCost <= this.game.gold) {
             upgradeBtn.addEventListener('click', () => {
+                if (this.game.triviaActive) return;
                 this.game.upgradeTower(tower);
                 this.showUpgradePanel(tower);
             });
@@ -504,6 +507,7 @@ class UI {
         const moveBtnEl = document.getElementById('move-btn');
         if (moveBtnEl) {
             moveBtnEl.addEventListener('click', () => {
+                if (this.game.triviaActive) return;
                 this.movingTower = tower;
                 this.selectedTowerType = null;
                 this.updateTowerButtons();
@@ -514,6 +518,7 @@ class UI {
         const sellBtn = document.getElementById('sell-btn');
         if (sellBtn) {
             sellBtn.addEventListener('click', () => {
+                if (this.game.triviaActive) return;
                 this.game.sellTower(tower);
                 this.hideUpgradePanel();
                 this.selectedTower = null;

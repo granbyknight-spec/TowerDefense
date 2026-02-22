@@ -200,7 +200,7 @@ const CONFIG = {
             name: 'Kitten',
             emoji: '🐱',
             hp: 30,
-            speed: 2.5,
+            speed: 1.25,
             gold: 10,
             color: '#FFD700',
             armor: 0,
@@ -210,7 +210,7 @@ const CONFIG = {
             name: 'Tabby',
             emoji: '🐈',
             hp: 80,
-            speed: 1.8,
+            speed: 0.9,
             gold: 20,
             color: '#FF8C00',
             armor: 0,
@@ -220,7 +220,7 @@ const CONFIG = {
             name: 'Fat Cat',
             emoji: '🐈‍⬛',
             hp: 200,
-            speed: 1.0,
+            speed: 0.5,
             gold: 50,
             color: '#4A4A4A',
             armor: 5,
@@ -230,7 +230,7 @@ const CONFIG = {
             name: 'Ninja Cat',
             emoji: '🥷',
             hp: 40,
-            speed: 3.5,
+            speed: 1.75,
             gold: 25,
             color: '#2C2C2C',
             armor: 0,
@@ -241,7 +241,7 @@ const CONFIG = {
             name: 'Chonker',
             emoji: '😺',
             hp: 500,
-            speed: 0.6,
+            speed: 0.3,
             gold: 75,
             color: '#FF6B6B',
             armor: 8,
@@ -252,7 +252,7 @@ const CONFIG = {
             name: 'Boss Cat',
             emoji: '👑',
             hp: 1000,
-            speed: 0.8,
+            speed: 0.4,
             gold: 200,
             color: '#9C27B0',
             armor: 5,
@@ -267,7 +267,7 @@ const CONFIG = {
     SPAWN_INTERVAL: 0.6,
 
     // Trivia - themed pools per level (20 questions each)
-    TRIVIA_TIME: 3,     // seconds to answer
+    TRIVIA_TIME: 5,     // seconds to answer
     TRIVIA_REWARD: 100,  // gold for correct answer
     TRIVIA: [
         // Level 1: The Backyard - Basic dog breed facts

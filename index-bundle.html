@@ -937,7 +937,7 @@ const CONFIG = {
             name: 'Kitten',
             emoji: '🐱',
             hp: 30,
-            speed: 2.5,
+            speed: 1.25,
             gold: 10,
             color: '#FFD700',
             armor: 0,
@@ -947,7 +947,7 @@ const CONFIG = {
             name: 'Tabby',
             emoji: '🐈',
             hp: 80,
-            speed: 1.8,
+            speed: 0.9,
             gold: 20,
             color: '#FF8C00',
             armor: 0,
@@ -957,7 +957,7 @@ const CONFIG = {
             name: 'Fat Cat',
             emoji: '🐈‍⬛',
             hp: 200,
-            speed: 1.0,
+            speed: 0.5,
             gold: 50,
             color: '#4A4A4A',
             armor: 5,
@@ -967,7 +967,7 @@ const CONFIG = {
             name: 'Ninja Cat',
             emoji: '🥷',
             hp: 40,
-            speed: 3.5,
+            speed: 1.75,
             gold: 25,
             color: '#2C2C2C',
             armor: 0,
@@ -978,7 +978,7 @@ const CONFIG = {
             name: 'Chonker',
             emoji: '😺',
             hp: 500,
-            speed: 0.6,
+            speed: 0.3,
             gold: 75,
             color: '#FF6B6B',
             armor: 8,
@@ -989,7 +989,7 @@ const CONFIG = {
             name: 'Boss Cat',
             emoji: '👑',
             hp: 1000,
-            speed: 0.8,
+            speed: 0.4,
             gold: 200,
             color: '#9C27B0',
             armor: 5,
@@ -1004,7 +1004,7 @@ const CONFIG = {
     SPAWN_INTERVAL: 0.6,
 
     // Trivia - themed pools per level (20 questions each)
-    TRIVIA_TIME: 3,     // seconds to answer
+    TRIVIA_TIME: 5,     // seconds to answer
     TRIVIA_REWARD: 100,  // gold for correct answer
     TRIVIA: [
         // Level 1: The Backyard - Basic dog breed facts
@@ -1495,6 +1495,37 @@ const GameAudio = (() => {
         return parts;
     }
 
+    // Helper: duplicate a set of parts shifted by a time offset
+    function _offsetParts(parts, dt) {
+        return parts.map(p => ({
+            samples: p.samples,
+            offset: (p.offset || 0) + dt
+        }));
+    }
+
+    // Helper: build pads + bass + drums for a chord cycle (reusable base layer)
+    function _buildBase(chords, barDur, beatDur, padVol, padFn, bassNotes, bassVol, drumFn) {
+        const parts = [];
+        // Pads
+        for (let c = 0; c < chords.length; c++) {
+            const offset = c * barDur;
+            for (const freq of chords[c]) {
+                parts.push({ samples: padFn(freq, barDur + 0.1, padVol), offset });
+            }
+        }
+        // Bass
+        for (const note of bassNotes) {
+            if (note.slide) {
+                parts.push({ samples: _slideBass(note.freq, note.slide, note.dur || beatDur * 0.8, bassVol), offset: note.offset });
+            } else {
+                parts.push({ samples: _bass(note.freq, note.dur || beatDur * 0.9, bassVol), offset: note.offset });
+            }
+        }
+        // Drums
+        if (drumFn) parts.push(...drumFn());
+        return parts;
+    }
+
     function _generateAll() {
         // === SFX ===
         urls.pop = _toWavUrl(_mix([
@@ -1525,177 +1556,148 @@ const GameAudio = (() => {
 
         // =====================================================
         // LEVEL 1: The Backyard - Bouncy, cheerful, playful
-        // C major, ~100 BPM, 8 bars, light shuffle drums
+        // C major, ~100 BPM, 28 bars (~67s), light shuffle drums
+        // Structure: A(8) + B(8 no melody, arps) + C(8 new melody) + tag(4)
         // =====================================================
         {
             const bpm = 100;
-            const beatDur = 60 / bpm; // 0.6s per beat
-            const barDur = beatDur * 4; // 2.4s per bar
-            const padVol = 0.09;
+            const beatDur = 60 / bpm;
+            const barDur = beatDur * 4;
+            const cycleDur = 8 * barDur;
             const parts = [];
 
-            // 8-bar chord progression: C - Am - F - G - C - Em - F - G
             const chords = [
-                [C3, E3, G3],       // C major
-                [A3, C4, E4],       // A minor
-                [F3, A3, C4],       // F major
-                [G3, B3, D4],       // G major
-                [C3, E3, G3],       // C major
-                [E3, G3, B3],       // E minor
-                [F3, A3, C4],       // F major
-                [G3, B3, D4],       // G major
+                [C3, E3, G3], [A3, C4, E4], [F3, A3, C4], [G3, B3, D4],
+                [C3, E3, G3], [E3, G3, B3], [F3, A3, C4], [G3, B3, D4],
             ];
-
-            // Pad chords
-            for (let c = 0; c < chords.length; c++) {
-                const offset = c * barDur;
-                for (const freq of chords[c]) {
-                    parts.push({ samples: _pad(freq, barDur + 0.1, padVol), offset });
-                }
-            }
-
-            // Bass line - root notes with some movement
-            const bassLine = [
-                { freq: C3, offset: 0 }, { freq: C3, offset: beatDur * 2 },
-                { freq: E3, offset: beatDur * 3 },
-                { freq: A3, offset: barDur }, { freq: A3, offset: barDur + beatDur * 2 },
-                { freq: G3, offset: barDur + beatDur * 3 },
-                { freq: F3, offset: barDur * 2 }, { freq: F3, offset: barDur * 2 + beatDur * 2 },
-                { freq: A3, offset: barDur * 2 + beatDur * 3 },
-                { freq: G3, offset: barDur * 3 }, { freq: G3, offset: barDur * 3 + beatDur * 2 },
-                { freq: B3, offset: barDur * 3 + beatDur * 3 },
-                // Second half
+            const bassNotes = [
+                { freq: C3, offset: 0 }, { freq: C3, offset: beatDur * 2 }, { freq: E3, offset: beatDur * 3 },
+                { freq: A3, offset: barDur }, { freq: A3, offset: barDur + beatDur * 2 }, { freq: G3, offset: barDur + beatDur * 3 },
+                { freq: F3, offset: barDur * 2 }, { freq: F3, offset: barDur * 2 + beatDur * 2 }, { freq: A3, offset: barDur * 2 + beatDur * 3 },
+                { freq: G3, offset: barDur * 3 }, { freq: G3, offset: barDur * 3 + beatDur * 2 }, { freq: B3, offset: barDur * 3 + beatDur * 3 },
                 { freq: C3, offset: barDur * 4 }, { freq: E3, offset: barDur * 4 + beatDur * 2 },
                 { freq: E3, offset: barDur * 5 }, { freq: G3, offset: barDur * 5 + beatDur * 2 },
                 { freq: F3, offset: barDur * 6 }, { freq: A3, offset: barDur * 6 + beatDur * 2 },
-                { freq: G3, offset: barDur * 7 }, { freq: G3, offset: barDur * 7 + beatDur * 2 },
-                { freq: B3, offset: barDur * 7 + beatDur * 3 },
+                { freq: G3, offset: barDur * 7 }, { freq: G3, offset: barDur * 7 + beatDur * 2 }, { freq: B3, offset: barDur * 7 + beatDur * 3 },
             ];
-            for (const note of bassLine) {
-                parts.push({ samples: _bass(note.freq, beatDur * 0.9, 0.12), offset: note.offset });
-            }
+            const drumFn = () => {
+                const dp = [];
+                for (let bar = 0; bar < 8; bar++) {
+                    const off = bar * 4;
+                    dp.push({ beat: off, type: 'kick' });
+                    dp.push({ beat: off + 2, type: 'kick', vol: 0.7 });
+                    dp.push({ beat: off + 1, type: 'snare', vol: 0.6 });
+                    dp.push({ beat: off + 3, type: 'snare', vol: 0.6 });
+                    for (let i = 0; i < 8; i++) dp.push({ beat: off + i * 0.5, type: 'hat', vol: i % 2 === 0 ? 0.6 : 0.3 });
+                }
+                return _buildDrums(dp, beatDur, 32, 0.2);
+            };
 
-            // Melody - playful bouncy theme (first 4 bars)
-            const melody1 = [
-                { freq: E5, offset: 0, dur: 0.3 },
-                { freq: G5, offset: beatDur, dur: 0.3 },
-                { freq: A5, offset: beatDur * 1.5, dur: 0.2 },
-                { freq: G5, offset: beatDur * 2, dur: 0.5 },
-                // Bar 2
-                { freq: A4, offset: barDur, dur: 0.3 },
-                { freq: C5, offset: barDur + beatDur, dur: 0.3 },
+            const base = _buildBase(chords, barDur, beatDur, 0.09, _pad, bassNotes, 0.12, drumFn);
+
+            // Cycle 1: base + melody A
+            parts.push(...base);
+            const melA = [
+                { freq: E5, offset: 0, dur: 0.3 }, { freq: G5, offset: beatDur, dur: 0.3 },
+                { freq: A5, offset: beatDur * 1.5, dur: 0.2 }, { freq: G5, offset: beatDur * 2, dur: 0.5 },
+                { freq: A4, offset: barDur, dur: 0.3 }, { freq: C5, offset: barDur + beatDur, dur: 0.3 },
                 { freq: E5, offset: barDur + beatDur * 2, dur: 0.6 },
-                // Bar 3
-                { freq: F5, offset: barDur * 2, dur: 0.3 },
-                { freq: E5, offset: barDur * 2 + beatDur, dur: 0.3 },
-                { freq: C5, offset: barDur * 2 + beatDur * 2, dur: 0.3 },
-                { freq: A4, offset: barDur * 2 + beatDur * 3, dur: 0.3 },
-                // Bar 4
-                { freq: G5, offset: barDur * 3, dur: 0.3 },
-                { freq: E5, offset: barDur * 3 + beatDur, dur: 0.3 },
+                { freq: F5, offset: barDur * 2, dur: 0.3 }, { freq: E5, offset: barDur * 2 + beatDur, dur: 0.3 },
+                { freq: C5, offset: barDur * 2 + beatDur * 2, dur: 0.3 }, { freq: A4, offset: barDur * 2 + beatDur * 3, dur: 0.3 },
+                { freq: G5, offset: barDur * 3, dur: 0.3 }, { freq: E5, offset: barDur * 3 + beatDur, dur: 0.3 },
                 { freq: D5, offset: barDur * 3 + beatDur * 2, dur: 0.8 },
-            ];
-            // Counter melody (second 4 bars) - different rhythm
-            const melody2 = [
-                { freq: C5, offset: barDur * 4, dur: 0.5 },
-                { freq: D5, offset: barDur * 4 + beatDur * 1.5, dur: 0.3 },
+                { freq: C5, offset: barDur * 4, dur: 0.5 }, { freq: D5, offset: barDur * 4 + beatDur * 1.5, dur: 0.3 },
                 { freq: E5, offset: barDur * 4 + beatDur * 2.5, dur: 0.5 },
-                // Bar 6
-                { freq: G5, offset: barDur * 5, dur: 0.2 },
-                { freq: E5, offset: barDur * 5 + beatDur * 0.5, dur: 0.2 },
-                { freq: G5, offset: barDur * 5 + beatDur, dur: 0.2 },
-                { freq: B5, offset: barDur * 5 + beatDur * 2, dur: 0.6 },
-                // Bar 7
-                { freq: A5, offset: barDur * 6, dur: 0.3 },
-                { freq: F5, offset: barDur * 6 + beatDur, dur: 0.3 },
+                { freq: G5, offset: barDur * 5, dur: 0.2 }, { freq: E5, offset: barDur * 5 + beatDur * 0.5, dur: 0.2 },
+                { freq: G5, offset: barDur * 5 + beatDur, dur: 0.2 }, { freq: B5, offset: barDur * 5 + beatDur * 2, dur: 0.6 },
+                { freq: A5, offset: barDur * 6, dur: 0.3 }, { freq: F5, offset: barDur * 6 + beatDur, dur: 0.3 },
                 { freq: C5, offset: barDur * 6 + beatDur * 2, dur: 0.6 },
-                // Bar 8 - resolution
-                { freq: G5, offset: barDur * 7, dur: 0.3 },
-                { freq: F5, offset: barDur * 7 + beatDur, dur: 0.3 },
-                { freq: E5, offset: barDur * 7 + beatDur * 2, dur: 0.3 },
-                { freq: D5, offset: barDur * 7 + beatDur * 3, dur: 0.5 },
+                { freq: G5, offset: barDur * 7, dur: 0.3 }, { freq: F5, offset: barDur * 7 + beatDur, dur: 0.3 },
+                { freq: E5, offset: barDur * 7 + beatDur * 2, dur: 0.3 }, { freq: D5, offset: barDur * 7 + beatDur * 3, dur: 0.5 },
             ];
-            for (const note of [...melody1, ...melody2]) {
-                parts.push({ samples: _pluck(note.freq, note.dur, 0.1), offset: note.offset });
-            }
+            for (const n of melA) parts.push({ samples: _pluck(n.freq, n.dur, 0.1), offset: n.offset });
 
-            // Arpeggios on bars 3,4,7,8 for sparkle
-            const arpBars = [2, 3, 6, 7];
-            for (const bar of arpBars) {
-                const arpChord = chords[bar];
-                // Use higher octave
-                const arpFreqs = [arpChord[0] * 4, arpChord[1] * 2, arpChord[2] * 2];
-                parts.push(..._buildArp(arpFreqs, bar * barDur, barDur, beatDur * 0.5, 0.04));
-            }
-
-            // Drums - light bouncy pattern
-            const drumPattern = [];
+            // Cycle 2: base + arpeggios only (no melody - breathing room)
+            parts.push(..._offsetParts(base, cycleDur));
             for (let bar = 0; bar < 8; bar++) {
-                const off = bar * 4;
-                // Kick on 1 and 3
-                drumPattern.push({ beat: off, type: 'kick' });
-                drumPattern.push({ beat: off + 2, type: 'kick', vol: 0.7 });
-                // Snare on 2 and 4 (light)
-                drumPattern.push({ beat: off + 1, type: 'snare', vol: 0.6 });
-                drumPattern.push({ beat: off + 3, type: 'snare', vol: 0.6 });
-                // Hi-hats on every eighth note
-                for (let i = 0; i < 8; i++) {
-                    drumPattern.push({ beat: off + i * 0.5, type: 'hat', vol: i % 2 === 0 ? 0.6 : 0.3 });
+                const ch = chords[bar];
+                const af = [ch[0] * 4, ch[1] * 2, ch[2] * 2];
+                parts.push(..._buildArp(af, cycleDur + bar * barDur, barDur, beatDur * 0.5, 0.05));
+            }
+
+            // Cycle 3: base + melody B (variation - lead voice, different rhythm)
+            parts.push(..._offsetParts(base, cycleDur * 2));
+            const melB = [
+                { freq: C5, offset: 0, dur: 0.4 }, { freq: E5, offset: beatDur, dur: 0.3 },
+                { freq: G5, offset: beatDur * 2, dur: 0.5 }, { freq: E5, offset: barDur, dur: 0.6 },
+                { freq: D5, offset: barDur + beatDur * 2, dur: 0.3 }, { freq: C5, offset: barDur + beatDur * 3, dur: 0.3 },
+                { freq: A4, offset: barDur * 2, dur: 0.3 }, { freq: C5, offset: barDur * 2 + beatDur, dur: 0.4 },
+                { freq: F5, offset: barDur * 2 + beatDur * 2.5, dur: 0.5 },
+                { freq: E5, offset: barDur * 3, dur: 0.4 }, { freq: D5, offset: barDur * 3 + beatDur * 1.5, dur: 0.3 },
+                { freq: G4, offset: barDur * 3 + beatDur * 3, dur: 0.5 },
+                { freq: C5, offset: barDur * 4, dur: 0.3 }, { freq: G5, offset: barDur * 4 + beatDur * 1.5, dur: 0.5 },
+                { freq: A5, offset: barDur * 5, dur: 0.3 }, { freq: G5, offset: barDur * 5 + beatDur, dur: 0.3 },
+                { freq: E5, offset: barDur * 5 + beatDur * 2.5, dur: 0.5 },
+                { freq: F5, offset: barDur * 6, dur: 0.4 }, { freq: D5, offset: barDur * 6 + beatDur * 1.5, dur: 0.4 },
+                { freq: E5, offset: barDur * 6 + beatDur * 3, dur: 0.4 },
+                { freq: D5, offset: barDur * 7, dur: 0.3 }, { freq: C5, offset: barDur * 7 + beatDur * 1.5, dur: 0.6 },
+            ];
+            for (const n of melB) parts.push({ samples: _lead(n.freq, n.dur, 0.09), offset: cycleDur * 2 + n.offset });
+            // Add arps on last 4 bars of cycle 3
+            for (let bar = 4; bar < 8; bar++) {
+                const ch = chords[bar];
+                parts.push(..._buildArp([ch[0] * 4, ch[1] * 2, ch[2] * 2], cycleDur * 2 + bar * barDur, barDur, beatDur * 0.5, 0.04));
+            }
+
+            // Tag: 4-bar outro (just first 4 chords, softer)
+            const tagChords = chords.slice(0, 4);
+            const tagOff = cycleDur * 3;
+            for (let c = 0; c < tagChords.length; c++) {
+                for (const freq of tagChords[c]) {
+                    parts.push({ samples: _pad(freq, barDur + 0.1, 0.07), offset: tagOff + c * barDur });
                 }
             }
-            parts.push(..._buildDrums(drumPattern, beatDur, 32, 0.2));
+            for (const n of bassNotes.slice(0, 12)) parts.push({ samples: _bass(n.freq, beatDur * 0.9, 0.1), offset: tagOff + n.offset });
+            // Light drums on tag
+            const tagDp = [];
+            for (let bar = 0; bar < 4; bar++) {
+                const off = bar * 4;
+                tagDp.push({ beat: off, type: 'kick' });
+                tagDp.push({ beat: off + 2, type: 'kick', vol: 0.5 });
+                for (let i = 0; i < 8; i++) tagDp.push({ beat: off + i * 0.5, type: 'hat', vol: 0.3 });
+            }
+            parts.push(..._offsetParts(_buildDrums(tagDp, beatDur, 16, 0.15), tagOff));
 
-            urls.music0 = _toWavUrl(_mix(parts));
+            urls.music0 = _toWavUrl(_mix(parts)); // 28 bars = ~67s
         }
 
         // =====================================================
         // LEVEL 2: The Park - Groovy, dark, atmospheric
-        // D minor, ~110 BPM, 8 bars, groove drums + saw pads
+        // D minor, ~110 BPM, 28 bars (~61s)
+        // Structure: A(8 melody) + B(8 arps) + C(8 new melody) + tag(4)
         // =====================================================
         {
             const bpm = 110;
             const beatDur = 60 / bpm;
             const barDur = beatDur * 4;
-            const padVol = 0.08;
+            const cycleDur = 8 * barDur;
             const parts = [];
 
-            // 8-bar progression: Dm - Bb - C - Am - Dm - Gm - A - Dm
-            const Gm3f = [G3, Bb3, D4];
             const chords = [
-                [D3, F3, A3],       // D minor
-                [Bb3, D4, F4],      // Bb major
-                [C3, E3, G3],       // C major
-                [A3, C4, E4],       // A minor
-                [D3, F3, A3],       // D minor
-                Gm3f,               // G minor
-                [A3, C4 * 1.059, E4], // A major (C#4 approx)
-                [D3, F3, A3],       // D minor
+                [D3, F3, A3], [Bb3, D4, F4], [C3, E3, G3], [A3, C4, E4],
+                [D3, F3, A3], [G3, Bb3, D4], [A3, C4 * 1.059, E4], [D3, F3, A3],
             ];
-
-            // Saw pads for darker atmosphere
-            for (let c = 0; c < chords.length; c++) {
-                const offset = c * barDur;
-                for (const freq of chords[c]) {
-                    parts.push({ samples: _sawPad(freq, barDur + 0.1, padVol), offset });
-                }
-            }
-
-            // Groove bass line with slides
-            const bl = [
+            const bassNotes = [
                 { freq: D3, offset: 0, dur: beatDur * 1.5 },
                 { freq: D3, offset: beatDur * 2, dur: beatDur * 0.8 },
                 { freq: F3, offset: beatDur * 3, slide: A3 },
-                // Bar 2
                 { freq: Bb3, offset: barDur, dur: beatDur * 1.5 },
                 { freq: Bb3, offset: barDur + beatDur * 2.5, dur: beatDur * 0.8 },
-                // Bar 3
                 { freq: C3, offset: barDur * 2, dur: beatDur * 1.5 },
                 { freq: E3, offset: barDur * 2 + beatDur * 2, dur: beatDur },
                 { freq: G3, offset: barDur * 2 + beatDur * 3, dur: beatDur * 0.8 },
-                // Bar 4
                 { freq: A3, offset: barDur * 3, dur: beatDur * 2 },
                 { freq: A3, offset: barDur * 3 + beatDur * 2.5, dur: beatDur },
-                // Bar 5-8
                 { freq: D3, offset: barDur * 4, dur: beatDur * 1.5 },
                 { freq: F3, offset: barDur * 4 + beatDur * 2, dur: beatDur },
                 { freq: G3, offset: barDur * 5, dur: beatDur },
@@ -1706,223 +1708,225 @@ const GameAudio = (() => {
                 { freq: D3, offset: barDur * 7, dur: beatDur * 2 },
                 { freq: A3, offset: barDur * 7 + beatDur * 2.5, slide: D3 },
             ];
-            for (const note of bl) {
-                if (note.slide) {
-                    parts.push({ samples: _slideBass(note.freq, note.slide, note.dur || beatDur * 0.8, 0.13), offset: note.offset });
-                } else {
-                    parts.push({ samples: _bass(note.freq, note.dur || beatDur * 0.8, 0.13), offset: note.offset });
-                }
-            }
-
-            // Lead melody - moody, minor key
-            const melodyNotes = [
-                // Bar 1
-                { freq: D5, offset: beatDur * 0.5, dur: 0.4 },
-                { freq: F5, offset: beatDur * 1.5, dur: 0.3 },
-                { freq: A5, offset: beatDur * 2.5, dur: 0.6 },
-                // Bar 2
-                { freq: Bb4, offset: barDur + beatDur * 0.5, dur: 0.5 },
-                { freq: A4, offset: barDur + beatDur * 2, dur: 0.3 },
-                { freq: G4, offset: barDur + beatDur * 3, dur: 0.4 },
-                // Bar 3
-                { freq: E5, offset: barDur * 2, dur: 0.3 },
-                { freq: G5, offset: barDur * 2 + beatDur * 1.5, dur: 0.5 },
-                { freq: E5, offset: barDur * 2 + beatDur * 3, dur: 0.3 },
-                // Bar 4 - tension
-                { freq: A4, offset: barDur * 3, dur: 0.6 },
-                { freq: C5, offset: barDur * 3 + beatDur * 2, dur: 0.8 },
-                // Bar 5 - variation
-                { freq: D5, offset: barDur * 4, dur: 0.25 },
-                { freq: E5, offset: barDur * 4 + beatDur * 0.5, dur: 0.25 },
-                { freq: F5, offset: barDur * 4 + beatDur, dur: 0.25 },
-                { freq: A5, offset: barDur * 4 + beatDur * 2, dur: 0.8 },
-                // Bar 6
-                { freq: G5, offset: barDur * 5 + beatDur * 0.5, dur: 0.4 },
-                { freq: F5, offset: barDur * 5 + beatDur * 2, dur: 0.4 },
-                { freq: D5, offset: barDur * 5 + beatDur * 3, dur: 0.4 },
-                // Bar 7 - climax
-                { freq: E5, offset: barDur * 6, dur: 0.3 },
-                { freq: A5, offset: barDur * 6 + beatDur, dur: 0.5 },
-                { freq: G5, offset: barDur * 6 + beatDur * 2.5, dur: 0.5 },
-                // Bar 8 - resolve down
-                { freq: F5, offset: barDur * 7, dur: 0.4 },
-                { freq: E5, offset: barDur * 7 + beatDur * 1.5, dur: 0.3 },
-                { freq: D5, offset: barDur * 7 + beatDur * 2.5, dur: 0.8 },
-            ];
-            for (const note of melodyNotes) {
-                parts.push({ samples: _lead(note.freq, note.dur, 0.09), offset: note.offset });
-            }
-
-            // Groove drums - syncopated kick, strong backbeat
-            const drumPattern = [];
-            for (let bar = 0; bar < 8; bar++) {
-                const off = bar * 4;
-                // Kick: 1, and-of-2, 3
-                drumPattern.push({ beat: off, type: 'kick' });
-                drumPattern.push({ beat: off + 1.5, type: 'kick', vol: 0.7 });
-                drumPattern.push({ beat: off + 2, type: 'kick', vol: 0.85 });
-                // Snare on 2 and 4
-                drumPattern.push({ beat: off + 1, type: 'snare' });
-                drumPattern.push({ beat: off + 3, type: 'snare' });
-                // Hi-hat: eighth notes with open hat on off-beats
-                for (let i = 0; i < 8; i++) {
-                    if (i === 3 || i === 7) {
-                        drumPattern.push({ beat: off + i * 0.5, type: 'openhat', vol: 0.6 });
-                    } else {
-                        drumPattern.push({ beat: off + i * 0.5, type: 'hat', vol: i % 2 === 0 ? 0.7 : 0.4 });
+            const drumFn = () => {
+                const dp = [];
+                for (let bar = 0; bar < 8; bar++) {
+                    const off = bar * 4;
+                    dp.push({ beat: off, type: 'kick' }); dp.push({ beat: off + 1.5, type: 'kick', vol: 0.7 });
+                    dp.push({ beat: off + 2, type: 'kick', vol: 0.85 });
+                    dp.push({ beat: off + 1, type: 'snare' }); dp.push({ beat: off + 3, type: 'snare' });
+                    for (let i = 0; i < 8; i++) {
+                        if (i === 3 || i === 7) dp.push({ beat: off + i * 0.5, type: 'openhat', vol: 0.6 });
+                        else dp.push({ beat: off + i * 0.5, type: 'hat', vol: i % 2 === 0 ? 0.7 : 0.4 });
                     }
                 }
-            }
-            parts.push(..._buildDrums(drumPattern, beatDur, 32, 0.22));
+                return _buildDrums(dp, beatDur, 32, 0.22);
+            };
 
-            urls.music1 = _toWavUrl(_mix(parts));
+            const base = _buildBase(chords, barDur, beatDur, 0.08, _sawPad, bassNotes, 0.13, drumFn);
+
+            // Cycle 1: base + lead melody A
+            parts.push(...base);
+            const melA = [
+                { freq: D5, offset: beatDur * 0.5, dur: 0.4 }, { freq: F5, offset: beatDur * 1.5, dur: 0.3 },
+                { freq: A5, offset: beatDur * 2.5, dur: 0.6 },
+                { freq: Bb4, offset: barDur + beatDur * 0.5, dur: 0.5 }, { freq: A4, offset: barDur + beatDur * 2, dur: 0.3 },
+                { freq: G4, offset: barDur + beatDur * 3, dur: 0.4 },
+                { freq: E5, offset: barDur * 2, dur: 0.3 }, { freq: G5, offset: barDur * 2 + beatDur * 1.5, dur: 0.5 },
+                { freq: E5, offset: barDur * 2 + beatDur * 3, dur: 0.3 },
+                { freq: A4, offset: barDur * 3, dur: 0.6 }, { freq: C5, offset: barDur * 3 + beatDur * 2, dur: 0.8 },
+                { freq: D5, offset: barDur * 4, dur: 0.25 }, { freq: E5, offset: barDur * 4 + beatDur * 0.5, dur: 0.25 },
+                { freq: F5, offset: barDur * 4 + beatDur, dur: 0.25 }, { freq: A5, offset: barDur * 4 + beatDur * 2, dur: 0.8 },
+                { freq: G5, offset: barDur * 5 + beatDur * 0.5, dur: 0.4 }, { freq: F5, offset: barDur * 5 + beatDur * 2, dur: 0.4 },
+                { freq: D5, offset: barDur * 5 + beatDur * 3, dur: 0.4 },
+                { freq: E5, offset: barDur * 6, dur: 0.3 }, { freq: A5, offset: barDur * 6 + beatDur, dur: 0.5 },
+                { freq: G5, offset: barDur * 6 + beatDur * 2.5, dur: 0.5 },
+                { freq: F5, offset: barDur * 7, dur: 0.4 }, { freq: E5, offset: barDur * 7 + beatDur * 1.5, dur: 0.3 },
+                { freq: D5, offset: barDur * 7 + beatDur * 2.5, dur: 0.8 },
+            ];
+            for (const n of melA) parts.push({ samples: _lead(n.freq, n.dur, 0.09), offset: n.offset });
+
+            // Cycle 2: base + arpeggios (atmospheric, no melody)
+            parts.push(..._offsetParts(base, cycleDur));
+            for (let bar = 0; bar < 8; bar++) {
+                const ch = chords[bar];
+                parts.push(..._buildArp([ch[0] * 4, ch[1] * 2, ch[2] * 2], cycleDur + bar * barDur, barDur, beatDur * 0.5, 0.045));
+            }
+
+            // Cycle 3: base + melody B (pluck voice, different phrasing)
+            parts.push(..._offsetParts(base, cycleDur * 2));
+            const melB = [
+                { freq: A5, offset: 0, dur: 0.5 }, { freq: F5, offset: beatDur * 1.5, dur: 0.3 },
+                { freq: D5, offset: beatDur * 2.5, dur: 0.5 },
+                { freq: D5, offset: barDur, dur: 0.3 }, { freq: F5, offset: barDur + beatDur, dur: 0.3 },
+                { freq: Bb4, offset: barDur + beatDur * 2.5, dur: 0.5 },
+                { freq: C5, offset: barDur * 2, dur: 0.4 }, { freq: E5, offset: barDur * 2 + beatDur * 1.5, dur: 0.4 },
+                { freq: G5, offset: barDur * 2 + beatDur * 3, dur: 0.3 },
+                { freq: A4, offset: barDur * 3, dur: 0.5 }, { freq: E5, offset: barDur * 3 + beatDur * 2, dur: 0.6 },
+                { freq: D5, offset: barDur * 4, dur: 0.3 }, { freq: A5, offset: barDur * 4 + beatDur, dur: 0.4 },
+                { freq: F5, offset: barDur * 4 + beatDur * 2.5, dur: 0.5 },
+                { freq: G5, offset: barDur * 5, dur: 0.4 }, { freq: Bb4, offset: barDur * 5 + beatDur * 1.5, dur: 0.4 },
+                { freq: D5, offset: barDur * 5 + beatDur * 3, dur: 0.3 },
+                { freq: E5, offset: barDur * 6, dur: 0.3 }, { freq: C5, offset: barDur * 6 + beatDur, dur: 0.4 },
+                { freq: A5, offset: barDur * 6 + beatDur * 2.5, dur: 0.6 },
+                { freq: D5, offset: barDur * 7, dur: 0.5 }, { freq: A4, offset: barDur * 7 + beatDur * 2, dur: 0.7 },
+            ];
+            for (const n of melB) parts.push({ samples: _pluck(n.freq, n.dur, 0.1), offset: cycleDur * 2 + n.offset });
+
+            // Tag: 4 bars wind-down
+            const tagOff = cycleDur * 3;
+            for (let c = 0; c < 4; c++) {
+                for (const freq of chords[c]) parts.push({ samples: _sawPad(freq, barDur + 0.1, 0.06), offset: tagOff + c * barDur });
+            }
+            for (const n of bassNotes.slice(0, 10)) parts.push({ samples: _bass(n.freq, n.dur || beatDur * 0.8, 0.1), offset: tagOff + n.offset });
+            const tagDp = [];
+            for (let bar = 0; bar < 4; bar++) {
+                const off = bar * 4;
+                tagDp.push({ beat: off, type: 'kick' }); tagDp.push({ beat: off + 2, type: 'kick', vol: 0.5 });
+                for (let i = 0; i < 8; i++) tagDp.push({ beat: off + i * 0.5, type: 'hat', vol: 0.3 });
+            }
+            parts.push(..._offsetParts(_buildDrums(tagDp, beatDur, 16, 0.15), tagOff));
+
+            urls.music1 = _toWavUrl(_mix(parts)); // 28 bars = ~61s
         }
 
         // =====================================================
         // LEVEL 3: Cat Central - Intense, driving, dramatic
-        // A minor, ~130 BPM, 8 bars, heavy drums, urgent feel
+        // A minor, ~130 BPM, 34 bars (~63s)
+        // Structure: A(8 melody+arps) + B(8 arps only) + C(8 melody var) + D(8 melody+arps) + tag(2)
         // =====================================================
         {
             const bpm = 130;
             const beatDur = 60 / bpm;
             const barDur = beatDur * 4;
-            const padVol = 0.1;
+            const cycleDur = 8 * barDur;
             const parts = [];
 
-            // 8-bar progression: Am - F - Dm - E - Am - G - F - E
             const chords = [
-                [A3, C4, E4],       // A minor
-                [F3, A3, C4],       // F major
-                [D3, F3, A3],       // D minor
-                [E3, G3 * 1.059, B3], // E major (G#3 approx)
-                [A3, C4, E4],       // A minor
-                [G3, B3, D4],       // G major
-                [F3, A3, C4],       // F major
-                [E3, G3 * 1.059, B3], // E major
+                [A3, C4, E4], [F3, A3, C4], [D3, F3, A3], [E3, G3 * 1.059, B3],
+                [A3, C4, E4], [G3, B3, D4], [F3, A3, C4], [E3, G3 * 1.059, B3],
             ];
-
-            // Pulsing pads with tremolo for tension
-            for (let c = 0; c < chords.length; c++) {
-                const offset = c * barDur;
-                for (const freq of chords[c]) {
-                    // Use saw pad for more intensity
-                    parts.push({ samples: _sawPad(freq, barDur + 0.1, padVol), offset });
-                }
-            }
-
-            // Driving bass - eighth note pulse
             const bassRoots = [A3, F3, D3, E3, A3, G3, F3, E3];
-            for (let bar = 0; bar < 8; bar++) {
-                const root = bassRoots[bar];
-                for (let i = 0; i < 8; i++) {
-                    // Alternate root and fifth for movement
-                    const freq = (i % 4 === 2) ? root * 1.5 : root;
-                    const accent = (i % 2 === 0) ? 0.14 : 0.09;
-                    parts.push({
-                        samples: _bass(freq, beatDur * 0.45, accent),
-                        offset: bar * barDur + i * beatDur * 0.5
-                    });
+
+            // Generate one cycle of base (pads + bass + drums)
+            const buildCycle3Base = () => {
+                const bp = [];
+                for (let c = 0; c < chords.length; c++) {
+                    for (const freq of chords[c]) bp.push({ samples: _sawPad(freq, barDur + 0.1, 0.1), offset: c * barDur });
                 }
-            }
-
-            // Urgent melody with runs and quick phrases
-            const melodyNotes = [
-                // Bar 1 - opening riff
-                { freq: A5, offset: 0, dur: 0.2 },
-                { freq: G5, offset: beatDur * 0.5, dur: 0.15 },
-                { freq: A5, offset: beatDur, dur: 0.15 },
-                { freq: C5 * 2, offset: beatDur * 1.5, dur: 0.3 },
-                { freq: A5, offset: beatDur * 2.5, dur: 0.4 },
-                // Bar 2
-                { freq: F5, offset: barDur, dur: 0.2 },
-                { freq: A5, offset: barDur + beatDur, dur: 0.2 },
-                { freq: C5 * 2, offset: barDur + beatDur * 2, dur: 0.3 },
-                { freq: A5, offset: barDur + beatDur * 3, dur: 0.3 },
-                // Bar 3 - descending run
-                { freq: D5 * 2, offset: barDur * 2, dur: 0.15 },
-                { freq: C5 * 2, offset: barDur * 2 + beatDur * 0.5, dur: 0.15 },
-                { freq: A5, offset: barDur * 2 + beatDur, dur: 0.15 },
-                { freq: F5, offset: barDur * 2 + beatDur * 1.5, dur: 0.15 },
-                { freq: D5, offset: barDur * 2 + beatDur * 2, dur: 0.5 },
-                // Bar 4 - tension hold
-                { freq: E5, offset: barDur * 3, dur: 0.3 },
-                { freq: G5 * 1.059, offset: barDur * 3 + beatDur * 1.5, dur: 0.5 }, // G#5
-                { freq: B5, offset: barDur * 3 + beatDur * 3, dur: 0.3 },
-                // Bar 5 - second verse variation
-                { freq: A5, offset: barDur * 4, dur: 0.15 },
-                { freq: E5, offset: barDur * 4 + beatDur * 0.5, dur: 0.15 },
-                { freq: A5, offset: barDur * 4 + beatDur, dur: 0.15 },
-                { freq: E5, offset: barDur * 4 + beatDur * 1.5, dur: 0.15 },
-                { freq: A5, offset: barDur * 4 + beatDur * 2, dur: 0.5 },
-                // Bar 6
-                { freq: G5, offset: barDur * 5, dur: 0.2 },
-                { freq: B5, offset: barDur * 5 + beatDur, dur: 0.3 },
-                { freq: D5 * 2, offset: barDur * 5 + beatDur * 2, dur: 0.4 },
-                // Bar 7 - building
-                { freq: F5, offset: barDur * 6, dur: 0.15 },
-                { freq: A5, offset: barDur * 6 + beatDur * 0.5, dur: 0.15 },
-                { freq: C5 * 2, offset: barDur * 6 + beatDur, dur: 0.15 },
-                { freq: A5, offset: barDur * 6 + beatDur * 1.5, dur: 0.15 },
-                { freq: F5, offset: barDur * 6 + beatDur * 2, dur: 0.15 },
-                { freq: A5, offset: barDur * 6 + beatDur * 2.5, dur: 0.15 },
-                { freq: C5 * 2, offset: barDur * 6 + beatDur * 3, dur: 0.3 },
-                // Bar 8 - climax resolve
-                { freq: E5, offset: barDur * 7, dur: 0.2 },
-                { freq: G5 * 1.059, offset: barDur * 7 + beatDur, dur: 0.3 },
-                { freq: B5, offset: barDur * 7 + beatDur * 2, dur: 0.5 },
-                { freq: A5, offset: barDur * 7 + beatDur * 3, dur: 0.4 },
-            ];
-            for (const note of melodyNotes) {
-                parts.push({ samples: _lead(note.freq, note.dur, 0.1), offset: note.offset });
-            }
-
-            // Arpeggios on every bar for intensity
-            for (let bar = 0; bar < 8; bar++) {
-                const ch = chords[bar];
-                const arpFreqs = [ch[0] * 4, ch[1] * 2, ch[2] * 2, ch[1] * 2];
-                parts.push(..._buildArp(arpFreqs, bar * barDur, barDur, beatDur * 0.25, 0.035));
-            }
-
-            // Heavy drums - driving four-on-floor with fills
-            const drumPattern = [];
-            for (let bar = 0; bar < 8; bar++) {
-                const off = bar * 4;
-                const isFillBar = (bar === 3 || bar === 7);
-
-                if (isFillBar) {
-                    // Fill bars: rapid snare/kick pattern
-                    drumPattern.push({ beat: off, type: 'kick' });
-                    drumPattern.push({ beat: off + 0.5, type: 'snare', vol: 0.5 });
-                    drumPattern.push({ beat: off + 1, type: 'kick' });
-                    drumPattern.push({ beat: off + 1.5, type: 'snare', vol: 0.6 });
-                    drumPattern.push({ beat: off + 2, type: 'snare', vol: 0.7 });
-                    drumPattern.push({ beat: off + 2.5, type: 'snare', vol: 0.8 });
-                    drumPattern.push({ beat: off + 3, type: 'snare', vol: 0.9 });
-                    drumPattern.push({ beat: off + 3.5, type: 'kick' });
+                for (let bar = 0; bar < 8; bar++) {
+                    const root = bassRoots[bar];
                     for (let i = 0; i < 8; i++) {
-                        drumPattern.push({ beat: off + i * 0.5, type: 'hat', vol: 0.5 });
+                        const freq = (i % 4 === 2) ? root * 1.5 : root;
+                        bp.push({ samples: _bass(freq, beatDur * 0.45, (i % 2 === 0) ? 0.14 : 0.09), offset: bar * barDur + i * beatDur * 0.5 });
                     }
-                } else {
-                    // Four-on-the-floor kick
-                    for (let b = 0; b < 4; b++) {
-                        drumPattern.push({ beat: off + b, type: 'kick' });
-                    }
-                    // Snare on 2 and 4
-                    drumPattern.push({ beat: off + 1, type: 'snare' });
-                    drumPattern.push({ beat: off + 3, type: 'snare' });
-                    // Sixteenth note hi-hats for urgency
-                    for (let i = 0; i < 16; i++) {
-                        const vol = (i % 4 === 0) ? 0.7 : (i % 2 === 0) ? 0.5 : 0.25;
-                        drumPattern.push({ beat: off + i * 0.25, type: 'hat', vol });
-                    }
-                    // Open hat accents
-                    drumPattern.push({ beat: off + 1.75, type: 'openhat', vol: 0.5 });
-                    drumPattern.push({ beat: off + 3.75, type: 'openhat', vol: 0.5 });
                 }
-            }
-            parts.push(..._buildDrums(drumPattern, beatDur, 32, 0.25));
+                // Drums
+                const dp = [];
+                for (let bar = 0; bar < 8; bar++) {
+                    const off = bar * 4;
+                    const isFill = (bar === 3 || bar === 7);
+                    if (isFill) {
+                        dp.push({ beat: off, type: 'kick' }); dp.push({ beat: off + 0.5, type: 'snare', vol: 0.5 });
+                        dp.push({ beat: off + 1, type: 'kick' }); dp.push({ beat: off + 1.5, type: 'snare', vol: 0.6 });
+                        dp.push({ beat: off + 2, type: 'snare', vol: 0.7 }); dp.push({ beat: off + 2.5, type: 'snare', vol: 0.8 });
+                        dp.push({ beat: off + 3, type: 'snare', vol: 0.9 }); dp.push({ beat: off + 3.5, type: 'kick' });
+                        for (let i = 0; i < 8; i++) dp.push({ beat: off + i * 0.5, type: 'hat', vol: 0.5 });
+                    } else {
+                        for (let b = 0; b < 4; b++) dp.push({ beat: off + b, type: 'kick' });
+                        dp.push({ beat: off + 1, type: 'snare' }); dp.push({ beat: off + 3, type: 'snare' });
+                        for (let i = 0; i < 16; i++) {
+                            const vol = (i % 4 === 0) ? 0.7 : (i % 2 === 0) ? 0.5 : 0.25;
+                            dp.push({ beat: off + i * 0.25, type: 'hat', vol });
+                        }
+                        dp.push({ beat: off + 1.75, type: 'openhat', vol: 0.5 });
+                        dp.push({ beat: off + 3.75, type: 'openhat', vol: 0.5 });
+                    }
+                }
+                bp.push(..._buildDrums(dp, beatDur, 32, 0.25));
+                return bp;
+            };
 
-            urls.music2 = _toWavUrl(_mix(parts));
+            const base = buildCycle3Base();
+
+            const addArps = (off) => {
+                for (let bar = 0; bar < 8; bar++) {
+                    const ch = chords[bar];
+                    parts.push(..._buildArp([ch[0] * 4, ch[1] * 2, ch[2] * 2, ch[1] * 2], off + bar * barDur, barDur, beatDur * 0.25, 0.035));
+                }
+            };
+
+            // Cycle 1: base + melody A + arps
+            parts.push(...base);
+            const melA = [
+                { freq: A5, offset: 0, dur: 0.2 }, { freq: G5, offset: beatDur * 0.5, dur: 0.15 },
+                { freq: A5, offset: beatDur, dur: 0.15 }, { freq: C5 * 2, offset: beatDur * 1.5, dur: 0.3 },
+                { freq: A5, offset: beatDur * 2.5, dur: 0.4 },
+                { freq: F5, offset: barDur, dur: 0.2 }, { freq: A5, offset: barDur + beatDur, dur: 0.2 },
+                { freq: C5 * 2, offset: barDur + beatDur * 2, dur: 0.3 }, { freq: A5, offset: barDur + beatDur * 3, dur: 0.3 },
+                { freq: D5 * 2, offset: barDur * 2, dur: 0.15 }, { freq: C5 * 2, offset: barDur * 2 + beatDur * 0.5, dur: 0.15 },
+                { freq: A5, offset: barDur * 2 + beatDur, dur: 0.15 }, { freq: F5, offset: barDur * 2 + beatDur * 1.5, dur: 0.15 },
+                { freq: D5, offset: barDur * 2 + beatDur * 2, dur: 0.5 },
+                { freq: E5, offset: barDur * 3, dur: 0.3 }, { freq: G5 * 1.059, offset: barDur * 3 + beatDur * 1.5, dur: 0.5 },
+                { freq: B5, offset: barDur * 3 + beatDur * 3, dur: 0.3 },
+                { freq: A5, offset: barDur * 4, dur: 0.15 }, { freq: E5, offset: barDur * 4 + beatDur * 0.5, dur: 0.15 },
+                { freq: A5, offset: barDur * 4 + beatDur, dur: 0.15 }, { freq: E5, offset: barDur * 4 + beatDur * 1.5, dur: 0.15 },
+                { freq: A5, offset: barDur * 4 + beatDur * 2, dur: 0.5 },
+                { freq: G5, offset: barDur * 5, dur: 0.2 }, { freq: B5, offset: barDur * 5 + beatDur, dur: 0.3 },
+                { freq: D5 * 2, offset: barDur * 5 + beatDur * 2, dur: 0.4 },
+                { freq: F5, offset: barDur * 6, dur: 0.15 }, { freq: A5, offset: barDur * 6 + beatDur * 0.5, dur: 0.15 },
+                { freq: C5 * 2, offset: barDur * 6 + beatDur, dur: 0.15 }, { freq: A5, offset: barDur * 6 + beatDur * 1.5, dur: 0.15 },
+                { freq: F5, offset: barDur * 6 + beatDur * 2, dur: 0.15 }, { freq: A5, offset: barDur * 6 + beatDur * 2.5, dur: 0.15 },
+                { freq: C5 * 2, offset: barDur * 6 + beatDur * 3, dur: 0.3 },
+                { freq: E5, offset: barDur * 7, dur: 0.2 }, { freq: G5 * 1.059, offset: barDur * 7 + beatDur, dur: 0.3 },
+                { freq: B5, offset: barDur * 7 + beatDur * 2, dur: 0.5 }, { freq: A5, offset: barDur * 7 + beatDur * 3, dur: 0.4 },
+            ];
+            for (const n of melA) parts.push({ samples: _lead(n.freq, n.dur, 0.1), offset: n.offset });
+            addArps(0);
+
+            // Cycle 2: base + arps only (intense instrumental)
+            parts.push(..._offsetParts(base, cycleDur));
+            addArps(cycleDur);
+
+            // Cycle 3: base + melody B (variation - pluck voice, different rhythm)
+            parts.push(..._offsetParts(base, cycleDur * 2));
+            const melB = [
+                { freq: E5, offset: 0, dur: 0.2 }, { freq: A5, offset: beatDur * 0.5, dur: 0.3 },
+                { freq: C5 * 2, offset: beatDur * 1.5, dur: 0.4 },
+                { freq: A5, offset: barDur, dur: 0.3 }, { freq: F5, offset: barDur + beatDur, dur: 0.25 },
+                { freq: C5, offset: barDur + beatDur * 2, dur: 0.25 }, { freq: F5, offset: barDur + beatDur * 3, dur: 0.3 },
+                { freq: D5, offset: barDur * 2, dur: 0.2 }, { freq: F5, offset: barDur * 2 + beatDur * 0.5, dur: 0.2 },
+                { freq: A5, offset: barDur * 2 + beatDur, dur: 0.2 }, { freq: D5 * 2, offset: barDur * 2 + beatDur * 2, dur: 0.5 },
+                { freq: B5, offset: barDur * 3, dur: 0.3 }, { freq: G5 * 1.059, offset: barDur * 3 + beatDur, dur: 0.4 },
+                { freq: E5, offset: barDur * 3 + beatDur * 2.5, dur: 0.5 },
+                { freq: A5, offset: barDur * 4, dur: 0.2 }, { freq: C5 * 2, offset: barDur * 4 + beatDur, dur: 0.2 },
+                { freq: A5, offset: barDur * 4 + beatDur * 2, dur: 0.2 }, { freq: E5, offset: barDur * 4 + beatDur * 3, dur: 0.3 },
+                { freq: G5, offset: barDur * 5, dur: 0.3 }, { freq: D5, offset: barDur * 5 + beatDur, dur: 0.3 },
+                { freq: B5, offset: barDur * 5 + beatDur * 2, dur: 0.5 },
+                { freq: C5 * 2, offset: barDur * 6, dur: 0.15 }, { freq: A5, offset: barDur * 6 + beatDur * 0.5, dur: 0.15 },
+                { freq: F5, offset: barDur * 6 + beatDur, dur: 0.15 }, { freq: A5, offset: barDur * 6 + beatDur * 1.5, dur: 0.15 },
+                { freq: C5 * 2, offset: barDur * 6 + beatDur * 2.5, dur: 0.4 },
+                { freq: B5, offset: barDur * 7, dur: 0.3 }, { freq: G5 * 1.059, offset: barDur * 7 + beatDur, dur: 0.3 },
+                { freq: E5, offset: barDur * 7 + beatDur * 2, dur: 0.3 }, { freq: A5, offset: barDur * 7 + beatDur * 3, dur: 0.4 },
+            ];
+            for (const n of melB) parts.push({ samples: _pluck(n.freq, n.dur, 0.1), offset: cycleDur * 2 + n.offset });
+            addArps(cycleDur * 2);
+
+            // Cycle 4: base + melody A reprise + arps
+            parts.push(..._offsetParts(base, cycleDur * 3));
+            for (const n of melA) parts.push({ samples: _lead(n.freq, n.dur, 0.1), offset: cycleDur * 3 + n.offset });
+            addArps(cycleDur * 3);
+
+            // Tag: 2-bar crash ending
+            const tagOff = cycleDur * 4;
+            for (const freq of chords[0]) parts.push({ samples: _sawPad(freq, barDur * 2 + 0.1, 0.12), offset: tagOff });
+            parts.push({ samples: _bass(A3, barDur, 0.15), offset: tagOff });
+            parts.push(..._offsetParts(_buildDrums([
+                { beat: 0, type: 'kick' }, { beat: 1, type: 'kick' }, { beat: 2, type: 'kick' }, { beat: 3, type: 'kick' },
+                { beat: 4, type: 'kick' }, { beat: 5, type: 'snare' }, { beat: 6, type: 'snare' }, { beat: 7, type: 'snare' },
+            ], beatDur, 8, 0.25), tagOff));
+
+            urls.music2 = _toWavUrl(_mix(parts)); // 34 bars = ~63s
         }
     }
 
@@ -4597,6 +4601,7 @@ class UI {
                 <span class="tower-btn-dps">${statLine}</span>
             `;
             btn.addEventListener('click', () => {
+                if (this.game.triviaActive) return;
                 GameAudio.unlock();
                 this.selectTowerType(key);
             });
@@ -4689,6 +4694,7 @@ class UI {
 
     onPointerDown(e) {
         if (this.game.state !== 'playing') return;
+        if (this.game.triviaActive) return;
         GameAudio.unlock();
 
         // Right-click starts panning
@@ -4832,6 +4838,7 @@ class UI {
         const upgradeBtn = document.getElementById('upgrade-btn');
         if (upgradeBtn && canUpgrade && upgradeCost <= this.game.gold) {
             upgradeBtn.addEventListener('click', () => {
+                if (this.game.triviaActive) return;
                 this.game.upgradeTower(tower);
                 this.showUpgradePanel(tower);
             });
@@ -4840,6 +4847,7 @@ class UI {
         const moveBtnEl = document.getElementById('move-btn');
         if (moveBtnEl) {
             moveBtnEl.addEventListener('click', () => {
+                if (this.game.triviaActive) return;
                 this.movingTower = tower;
                 this.selectedTowerType = null;
                 this.updateTowerButtons();
@@ -4850,6 +4858,7 @@ class UI {
         const sellBtn = document.getElementById('sell-btn');
         if (sellBtn) {
             sellBtn.addEventListener('click', () => {
+                if (this.game.triviaActive) return;
                 this.game.sellTower(tower);
                 this.hideUpgradePanel();
                 this.selectedTower = null;
