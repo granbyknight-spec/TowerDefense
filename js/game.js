@@ -8,11 +8,6 @@ class Game {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        this.grid = new Grid(0);
-        this.renderer = new Renderer(this.canvas, this.tileSize);
-        this.waveManager = new WaveManager();
-        this.ui = new UI(this);
-
         this.towers = [];
         this.enemies = [];
         this.projectiles = [];
@@ -53,6 +48,11 @@ class Game {
                 };
             }
         }
+
+        this.grid = new Grid(0);
+        this.renderer = new Renderer(this.canvas, this.tileSize);
+        this.waveManager = new WaveManager();
+        this.ui = new UI(this);
 
         GameAudio.init();
 
