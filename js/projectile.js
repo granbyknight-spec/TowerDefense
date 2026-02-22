@@ -22,9 +22,20 @@ class Projectile {
         this.chainRange = 0;
         this.chainFalloff = 0.6;
         this.chainArcs = []; // [{x1,y1,x2,y2,life,maxLife}] for rendering
+
+        // Super tower effects (set by Tower)
+        this.stunDuration = 0;
+        this.freezeDuration = 0;
     }
 
     update(dt, enemies, particles) {
+        // Decay chain arc visuals even when dead
+        if (this.chainArcs.length > 0) {
+            for (const arc of this.chainArcs) {
+                arc.life -= dt;
+            }
+            this.chainArcs = this.chainArcs.filter(a => a.life > 0);
+        }
         if (!this.alive) return;
 
         if (this.target && this.target.alive) {
@@ -48,6 +59,12 @@ class Projectile {
                         enemy.takeDamage(this.damage);
                         if (this.slow > 0) {
                             enemy.applySlow(this.slow, this.slowDuration);
+                        }
+                        if (this.freezeDuration > 0) {
+                            enemy.applyFreeze(this.freezeDuration);
+                        }
+                        if (this.stunDuration > 0) {
+                            enemy.applyFreeze(this.stunDuration);
                         }
                     }
                 }
@@ -73,6 +90,12 @@ class Projectile {
                     if (this.slow > 0) {
                         this.target.applySlow(this.slow, this.slowDuration);
                     }
+                    if (this.freezeDuration > 0) {
+                        this.target.applyFreeze(this.freezeDuration);
+                    }
+                    if (this.stunDuration > 0) {
+                        this.target.applyFreeze(this.stunDuration);
+                    }
                 }
 
                 // Chain lightning: bounce to nearby enemies
@@ -84,12 +107,6 @@ class Projectile {
             this.x += (dx / d) * move;
             this.y += (dy / d) * move;
         }
-
-        // Decay chain arc visuals
-        for (const arc of this.chainArcs) {
-            arc.life -= dt;
-        }
-        this.chainArcs = this.chainArcs.filter(a => a.life > 0);
     }
 
     _doChainLightning(enemies, particles) {

@@ -259,14 +259,18 @@ class UI {
         if (!panel) return;
 
         const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
-        const canUpgrade = tower.level < maxLevel;
+        const canUpgrade = !tower.isSuper && tower.level < maxLevel;
         const upgradeCost = tower.getUpgradeCost();
         const sellValue = tower.getSellValue();
 
         let statsLine;
         if (tower.isPassive) {
-            const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
-            statsLine = tier ? tier.label : `Income: +${tower.goldPerWave}g/wave`;
+            if (tower.isSuper) {
+                statsLine = `+${tower.goldPerWave}g/wave | Aura: ${tower.auraRange} tiles`;
+            } else {
+                const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
+                statsLine = tier ? tier.label : `Income: +${tower.goldPerWave}g/wave`;
+            }
         } else {
             const effDmg = Math.floor(tower.damage * tower.buffDamageMult);
             const effRate = tower.fireRate * tower.buffFireRateMult;
@@ -275,7 +279,7 @@ class UI {
         }
 
         let extraLine = '';
-        if (tower.isPassive) {
+        if (tower.isPassive && !tower.isSuper) {
             const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
             if (tier && tier.next) {
                 extraLine = `Next: ${tier.next}`;
@@ -283,20 +287,34 @@ class UI {
             if (tier && tier.auraRange > 0) {
                 extraLine = `Aura: ${tier.auraRange} tiles` + (extraLine ? ` | ${extraLine}` : '');
             }
-        } else {
+        } else if (tower.isSuper && tower.isPassive) {
+            extraLine = '+Spd | +Rng | +Dmg | Ultimate';
+        } else if (!tower.isPassive) {
             const effRange = tower.range + tower.buffRange;
             extraLine = `RNG: ${effRange.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}${tower.chainCount > 0 ? ' | Chain: ' + tower.chainCount : ''}`;
+            if (tower.superPerk) {
+                const perkLabels = {
+                    tripleShot: '3x Shot',
+                    freezeBlast: 'AoE Freeze',
+                    frostZone: 'Frost Zone',
+                    megaChain: 'Mega Chain',
+                    stun: 'Earthquake Stun'
+                };
+                extraLine += ' | ' + (perkLabels[tower.superPerk] || tower.superPerk);
+            }
             if (tower.isBuffed) {
                 extraLine += ' | 🏠 Buffed';
             }
         }
 
+        const headerClass = tower.isSuper ? 'upgrade-header super' : 'upgrade-header';
+
         panel.innerHTML = `
-            <div class="upgrade-header">${tower.emoji} ${tower.name} Lv.${tower.level}</div>
+            <div class="${headerClass}">${tower.emoji} ${tower.name}${tower.isSuper ? ' ★' : ' Lv.' + tower.level}</div>
             <div class="upgrade-stats">${statsLine}</div>
             ${extraLine ? `<div class="upgrade-stats">${extraLine}</div>` : ''}
             <div class="upgrade-actions">
-                ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : '<button class="disabled">MAX</button>'}
+                ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : `<button class="disabled">${tower.isSuper ? 'SUPER' : 'MAX'}</button>`}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
             </div>
         `;

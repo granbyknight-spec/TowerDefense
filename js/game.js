@@ -169,6 +169,102 @@ class Game {
                 enemy.updatePath(newPath);
             }
         }
+
+        // Check for 3-in-a-line merge
+        this._checkAndMerge(tower);
+    }
+
+    // === TOWER MERGE SYSTEM ===
+    _findMergeLine(tower) {
+        const type = tower.type;
+        const col = tower.col;
+        const row = tower.row;
+
+        if (!CONFIG.SUPER_TOWERS[type]) return null;
+
+        const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+        const findAt = (c, r) =>
+            this.towers.find(t => t.col === c && t.row === r && t.type === type && !t.isSuper);
+
+        for (const [dc, dr] of dirs) {
+            // Collect same-type towers along this line through the placed tower
+            const line = [];
+            for (let i = -2; i <= 2; i++) {
+                const t = findAt(col + dc * i, row + dr * i);
+                if (t) line.push({ i, tower: t });
+            }
+
+            // Find 3 consecutive
+            for (let s = 0; s < line.length - 2; s++) {
+                if (line[s + 1].i === line[s].i + 1 && line[s + 2].i === line[s].i + 2) {
+                    return [line[s].tower, line[s + 1].tower, line[s + 2].tower];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    _checkAndMerge(newTower) {
+        const line = this._findMergeLine(newTower);
+        if (!line) return;
+
+        // Middle tower becomes super, other two are removed
+        const middle = line[1];
+        const outer = [line[0], line[2]];
+
+        // Combine total investment
+        const totalInvested = line.reduce((sum, t) => sum + t.totalInvested, 0);
+
+        // Remove outer towers
+        for (const t of outer) {
+            this.grid.removeTower(t.col, t.row);
+            this.towers = this.towers.filter(tw => tw !== t);
+        }
+
+        // Transform middle into super tower
+        middle.makeSuper(totalInvested);
+
+        // Merge particle burst
+        for (const t of line) {
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                const speed = 50 + Math.random() * 60;
+                this.particles.push({
+                    x: t.x, y: t.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.8, maxLife: 0.8,
+                    color: '#FFD700', size: 6
+                });
+            }
+        }
+
+        // Converging particles from outer positions to middle
+        for (const t of outer) {
+            const dx = middle.x - t.x;
+            const dy = middle.y - t.y;
+            for (let i = 0; i < 5; i++) {
+                this.particles.push({
+                    x: t.x, y: t.y,
+                    vx: dx * (0.8 + Math.random() * 0.5),
+                    vy: dy * (0.8 + Math.random() * 0.5),
+                    life: 0.5, maxLife: 0.5,
+                    color: '#FFF', size: 4
+                });
+            }
+        }
+
+        // Recalc path since we freed 2 cells
+        const newPath = this.grid.currentPath;
+        for (const enemy of this.enemies) {
+            if (enemy.alive && !enemy.reachedEnd) {
+                enemy.updatePath(newPath);
+            }
+        }
+
+        GameAudio.ability(); // reuse ability sound for merge
     }
 
     upgradeTower(tower) {
@@ -220,7 +316,8 @@ class Game {
             if (tower.type !== towerType) continue;
             const color = towerType === 'barker' ? '#F5DEB3' :
                           towerType === 'poodle' ? '#DA70D6' :
-                          towerType === 'husky' ? '#B3E5FC' : '#FF6347';
+                          towerType === 'husky' ? '#B3E5FC' :
+                          towerType === 'sparky' ? '#FFEB3B' : '#FF6347';
             for (let i = 0; i < 8; i++) {
                 const angle = (Math.PI * 2 / 8) * i;
                 this.particles.push({
@@ -574,8 +671,15 @@ class Game {
         for (const dh of this.towers) {
             if (!dh.isPassive || dh.auraRange <= 0) continue;
 
-            const tier = CONFIG.DOGHOUSE_TIERS[dh.auraTier];
-            if (!tier) continue;
+            // Dog Mansion (super) uses its own config, regular uses tier array
+            let aura;
+            if (dh.isSuper) {
+                const superDef = CONFIG.SUPER_TOWERS.doghouse;
+                aura = { fireRateMult: superDef.fireRateMult, rangePlus: superDef.rangePlus, damageMult: superDef.damageMult };
+            } else {
+                aura = CONFIG.DOGHOUSE_TIERS[dh.auraTier];
+            }
+            if (!aura) continue;
 
             const auraPx = dh.auraRange * dh.tileSize;
 
@@ -586,9 +690,9 @@ class Game {
 
                 // Apply buffs (don't stack — use best value from any Dog House)
                 tower.isBuffed = true;
-                tower.buffFireRateMult = Math.min(tower.buffFireRateMult, tier.fireRateMult);
-                tower.buffRange = Math.max(tower.buffRange, tier.rangePlus);
-                tower.buffDamageMult = Math.max(tower.buffDamageMult, tier.damageMult);
+                tower.buffFireRateMult = Math.min(tower.buffFireRateMult, aura.fireRateMult);
+                tower.buffRange = Math.max(tower.buffRange, aura.rangePlus);
+                tower.buffDamageMult = Math.max(tower.buffDamageMult, aura.damageMult);
             }
         }
     }

@@ -349,6 +349,58 @@ const CONFIG = {
     LEADERBOARD_KEY: 'puppy_defender_scores',
     LEADERBOARD_MAX: 10,
 
+    // Super Towers — formed by merging 3-in-a-line of the same type
+    SUPER_TOWERS: {
+        barker: {
+            name: 'Alpha Barker', emoji: '🦮', color: '#B8860B',
+            damage: 20, range: 4.5, fireRate: 0.7,
+            projectileColor: '#FFD700', projectileSpeed: 7,
+            splash: 0, slow: 0, slowDuration: 0,
+            perk: 'tripleShot',
+            description: 'Triple shot'
+        },
+        poodle: {
+            name: 'Diamond Poodle', emoji: '💎', color: '#E1BEE7',
+            damage: 12, range: 3.5, fireRate: 0.5,
+            projectileColor: '#CE93D8', projectileSpeed: 6,
+            splash: 1.5, slow: 0.5, slowDuration: 3,
+            perk: 'freezeBlast',
+            description: 'AoE freeze'
+        },
+        husky: {
+            name: 'Arctic Husky', emoji: '❄️', color: '#81D4FA',
+            damage: 8, range: 3.5, fireRate: 0.5,
+            projectileColor: '#B3E5FC', projectileSpeed: 0,
+            splash: 0, slow: 0.4, slowDuration: 2,
+            perk: 'frostZone',
+            description: 'Frost zone aura'
+        },
+        sparky: {
+            name: 'Mega Sparky', emoji: '🌩️', color: '#FFC107',
+            damage: 30, range: 3.5, fireRate: 1.2,
+            projectileColor: '#FFEB3B', projectileSpeed: 10,
+            splash: 0, slow: 0, slowDuration: 0,
+            chainCount: 8, chainRange: 2.5, chainFalloff: 0.8,
+            perk: 'megaChain',
+            description: 'Chain everything'
+        },
+        bigboi: {
+            name: 'Titan Boi', emoji: '💥', color: '#6D4C41',
+            damage: 60, range: 3, fireRate: 2.0,
+            projectileColor: '#FF5722', projectileSpeed: 5,
+            splash: 2.5, slow: 0, slowDuration: 0,
+            perk: 'stun',
+            description: 'Earthquake + stun'
+        },
+        doghouse: {
+            name: 'Dog Mansion', emoji: '🏰', color: '#8B4513',
+            goldPerWave: 25, auraRange: 5,
+            fireRateMult: 0.75, rangePlus: 1.0, damageMult: 1.3,
+            perk: 'mansion',
+            description: 'Ultimate aura'
+        }
+    },
+
     // Visual
     GRASS_COLOR: '#4A7C2E',
     GRASS_COLOR_ALT: '#3D6B25',

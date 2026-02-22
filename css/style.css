@@ -260,6 +260,11 @@ body {
     font-weight: 700;
 }
 
+.upgrade-header.super {
+    color: #FFD700;
+    text-shadow: 0 0 6px rgba(255,215,0,0.5);
+}
+
 .upgrade-stats {
     font-size: 11px;
     color: #bcaaa4;

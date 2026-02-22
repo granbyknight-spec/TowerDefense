@@ -269,6 +269,11 @@ body {
     font-weight: 700;
 }
 
+.upgrade-header.super {
+    color: #FFD700;
+    text-shadow: 0 0 6px rgba(255,215,0,0.5);
+}
+
 .upgrade-stats {
     font-size: 11px;
     color: #bcaaa4;
@@ -1064,6 +1069,58 @@ const CONFIG = {
     LEADERBOARD_KEY: 'puppy_defender_scores',
     LEADERBOARD_MAX: 10,
 
+    // Super Towers — formed by merging 3-in-a-line of the same type
+    SUPER_TOWERS: {
+        barker: {
+            name: 'Alpha Barker', emoji: '🦮', color: '#B8860B',
+            damage: 20, range: 4.5, fireRate: 0.7,
+            projectileColor: '#FFD700', projectileSpeed: 7,
+            splash: 0, slow: 0, slowDuration: 0,
+            perk: 'tripleShot',
+            description: 'Triple shot'
+        },
+        poodle: {
+            name: 'Diamond Poodle', emoji: '💎', color: '#E1BEE7',
+            damage: 12, range: 3.5, fireRate: 0.5,
+            projectileColor: '#CE93D8', projectileSpeed: 6,
+            splash: 1.5, slow: 0.5, slowDuration: 3,
+            perk: 'freezeBlast',
+            description: 'AoE freeze'
+        },
+        husky: {
+            name: 'Arctic Husky', emoji: '❄️', color: '#81D4FA',
+            damage: 8, range: 3.5, fireRate: 0.5,
+            projectileColor: '#B3E5FC', projectileSpeed: 0,
+            splash: 0, slow: 0.4, slowDuration: 2,
+            perk: 'frostZone',
+            description: 'Frost zone aura'
+        },
+        sparky: {
+            name: 'Mega Sparky', emoji: '🌩️', color: '#FFC107',
+            damage: 30, range: 3.5, fireRate: 1.2,
+            projectileColor: '#FFEB3B', projectileSpeed: 10,
+            splash: 0, slow: 0, slowDuration: 0,
+            chainCount: 8, chainRange: 2.5, chainFalloff: 0.8,
+            perk: 'megaChain',
+            description: 'Chain everything'
+        },
+        bigboi: {
+            name: 'Titan Boi', emoji: '💥', color: '#6D4C41',
+            damage: 60, range: 3, fireRate: 2.0,
+            projectileColor: '#FF5722', projectileSpeed: 5,
+            splash: 2.5, slow: 0, slowDuration: 0,
+            perk: 'stun',
+            description: 'Earthquake + stun'
+        },
+        doghouse: {
+            name: 'Dog Mansion', emoji: '🏰', color: '#8B4513',
+            goldPerWave: 25, auraRange: 5,
+            fireRateMult: 0.75, rangePlus: 1.0, damageMult: 1.3,
+            perk: 'mansion',
+            description: 'Ultimate aura'
+        }
+    },
+
     // Visual
     GRASS_COLOR: '#4A7C2E',
     GRASS_COLOR_ALT: '#3D6B25',
@@ -1764,9 +1821,15 @@ class Tower {
         this.buffFireRateMult = 1;
         this.buffRange = 0;
         this.isBuffed = false;
+
+        // Super tower (set via makeSuper)
+        this.isSuper = false;
+        this.superPerk = null;
+        this.superAnim = 0; // merge flash animation
     }
 
     upgrade() {
+        if (this.isSuper) return 0; // super towers can't upgrade further
         const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
         if (this.level >= maxLevel) return 0;
 
@@ -1828,6 +1891,42 @@ class Tower {
         }
     }
 
+    makeSuper(combinedInvestment) {
+        const superDef = CONFIG.SUPER_TOWERS[this.type];
+        if (!superDef) return;
+
+        this.isSuper = true;
+        this.superPerk = superDef.perk;
+        this.superAnim = 1.5; // flash timer
+        this.level = 5; // display level
+        this.totalInvested = combinedInvestment;
+
+        this.name = superDef.name;
+        this.emoji = superDef.emoji;
+        this.color = superDef.color;
+        this.description = superDef.description;
+
+        if (this.isPassive) {
+            // Dog Mansion
+            this.goldPerWave = superDef.goldPerWave;
+            this.auraRange = superDef.auraRange;
+            this.auraTier = 4; // special tier index
+        } else {
+            this.damage = superDef.damage;
+            this.range = superDef.range;
+            this.fireRate = superDef.fireRate;
+            this._baseFireRate = superDef.fireRate;
+            this.projectileColor = superDef.projectileColor;
+            this.projectileSpeed = superDef.projectileSpeed;
+            this.splash = superDef.splash;
+            this.slow = superDef.slow;
+            this.slowDuration = superDef.slowDuration || 0;
+            this.chainCount = superDef.chainCount || 0;
+            this.chainRange = superDef.chainRange || 0;
+            this.chainFalloff = superDef.chainFalloff || 0.6;
+        }
+    }
+
     findTarget(enemies) {
         if (this.isPassive) return null;
 
@@ -1851,9 +1950,28 @@ class Tower {
 
     update(dt, enemies, projectiles) {
         if (this.isPassive) return;
+        if (this.superAnim > 0) this.superAnim -= dt;
 
         this.fireCooldown -= dt;
         if (this.attackAnim > 0) this.attackAnim -= dt * 4;
+
+        // Frost Zone super perk: damage/slow all enemies in range each tick
+        if (this.superPerk === 'frostZone') {
+            if (this.fireCooldown <= 0) {
+                this.fireCooldown = this.fireRate * this.buffFireRateMult;
+                const rangePx = (this.range + this.buffRange) * this.tileSize;
+                const dmg = Math.floor(this.damage * this.buffDamageMult);
+                for (const e of enemies) {
+                    if (!e.alive || e.reachedEnd) continue;
+                    if (dist(this.x, this.y, e.x, e.y) <= rangePx) {
+                        e.takeDamage(dmg);
+                        e.applySlow(this.slow, this.slowDuration);
+                    }
+                }
+                this.attackAnim = 0.5;
+            }
+            return;
+        }
 
         const target = this.findTarget(enemies);
         const effectiveFireRate = this.fireRate * this.buffFireRateMult;
@@ -1863,26 +1981,55 @@ class Tower {
 
             const effectiveDamage = Math.floor(this.damage * this.buffDamageMult);
 
-            const proj = new Projectile(
-                this.x, this.y,
-                target,
-                effectiveDamage,
-                this.projectileSpeed * this.tileSize,
-                this.projectileColor,
-                this.splash * this.tileSize,
-                this.slow,
-                this.slowDuration
-            );
+            // Triple Shot super perk: fire 3 projectiles in a spread
+            const shotCount = this.superPerk === 'tripleShot' ? 3 : 1;
+            const spreadAngle = 0.25; // radians between spread shots
 
-            // Chain lightning
-            if (this.chainCount > 0) {
-                proj.chainCount = this.abilityActive ? this.chainCount * 2 : this.chainCount;
-                proj.chainRange = this.chainRange * this.tileSize;
-                proj.chainFalloff = this.chainFalloff;
-                proj.chainArcs = []; // rendered by renderer
+            for (let s = 0; s < shotCount; s++) {
+                const proj = new Projectile(
+                    this.x, this.y,
+                    target,
+                    effectiveDamage,
+                    this.projectileSpeed * this.tileSize,
+                    this.projectileColor,
+                    this.splash * this.tileSize,
+                    this.slow,
+                    this.slowDuration
+                );
+
+                // Stun super perk
+                if (this.superPerk === 'stun') {
+                    proj.stunDuration = 1.0;
+                }
+
+                // Freeze blast super perk
+                if (this.superPerk === 'freezeBlast') {
+                    proj.freezeDuration = 1.5;
+                }
+
+                // Spread offset for triple shot
+                if (shotCount > 1) {
+                    const angle = (s - 1) * spreadAngle;
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    const offset = d * Math.tan(angle);
+                    const perpX = -dy / d;
+                    const perpY = dx / d;
+                    proj.targetX += perpX * offset;
+                    proj.targetY += perpY * offset;
+                }
+
+                // Chain lightning
+                if (this.chainCount > 0) {
+                    proj.chainCount = this.abilityActive ? this.chainCount * 2 : this.chainCount;
+                    proj.chainRange = this.chainRange * this.tileSize;
+                    proj.chainFalloff = this.chainFalloff;
+                    proj.chainArcs = [];
+                }
+
+                projectiles.push(proj);
             }
-
-            projectiles.push(proj);
         }
     }
 }
@@ -1913,9 +2060,20 @@ class Projectile {
         this.chainRange = 0;
         this.chainFalloff = 0.6;
         this.chainArcs = []; // [{x1,y1,x2,y2,life,maxLife}] for rendering
+
+        // Super tower effects (set by Tower)
+        this.stunDuration = 0;
+        this.freezeDuration = 0;
     }
 
     update(dt, enemies, particles) {
+        // Decay chain arc visuals even when dead
+        if (this.chainArcs.length > 0) {
+            for (const arc of this.chainArcs) {
+                arc.life -= dt;
+            }
+            this.chainArcs = this.chainArcs.filter(a => a.life > 0);
+        }
         if (!this.alive) return;
 
         if (this.target && this.target.alive) {
@@ -1939,6 +2097,12 @@ class Projectile {
                         enemy.takeDamage(this.damage);
                         if (this.slow > 0) {
                             enemy.applySlow(this.slow, this.slowDuration);
+                        }
+                        if (this.freezeDuration > 0) {
+                            enemy.applyFreeze(this.freezeDuration);
+                        }
+                        if (this.stunDuration > 0) {
+                            enemy.applyFreeze(this.stunDuration);
                         }
                     }
                 }
@@ -1964,6 +2128,12 @@ class Projectile {
                     if (this.slow > 0) {
                         this.target.applySlow(this.slow, this.slowDuration);
                     }
+                    if (this.freezeDuration > 0) {
+                        this.target.applyFreeze(this.freezeDuration);
+                    }
+                    if (this.stunDuration > 0) {
+                        this.target.applyFreeze(this.stunDuration);
+                    }
                 }
 
                 // Chain lightning: bounce to nearby enemies
@@ -1975,12 +2145,6 @@ class Projectile {
             this.x += (dx / d) * move;
             this.y += (dy / d) * move;
         }
-
-        // Decay chain arc visuals
-        for (const arc of this.chainArcs) {
-            arc.life -= dt;
-        }
-        this.chainArcs = this.chainArcs.filter(a => a.life > 0);
     }
 
     _doChainLightning(enemies, particles) {
@@ -2675,10 +2839,94 @@ class Renderer {
         }
     }
 
+    // === DOG MANSION (super Dog House) ===
+    drawDogMansion(tower) {
+        const ts = this.tileSize;
+        const ctx = this.ctx;
+        const x = tower.x;
+        const y = tower.y;
+        const s = ts * 0.42; // bigger than regular
+
+        // Glow aura
+        const auraPx = tower.auraRange * ts;
+        const t = Date.now() / 1000;
+        const pulse = 1 + Math.sin(t * 1.5) * 0.03;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, auraPx * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,215,0,0.05)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + s * 0.8, s * 1.3, s * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Castle body
+        ctx.fillStyle = '#6D4C41';
+        ctx.fillRect(x - s * 0.8, y - s * 0.4, s * 1.6, s * 1.2);
+
+        // Battlements
+        for (let i = 0; i < 5; i++) {
+            const bx = x - s * 0.8 + i * s * 0.4;
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(bx, y - s * 0.6, s * 0.2, s * 0.2);
+        }
+
+        // Tower turrets
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - s * 0.85, y - s * 0.7, s * 0.3, s * 0.9);
+        ctx.fillRect(x + s * 0.55, y - s * 0.7, s * 0.3, s * 0.9);
+        // Turret roofs
+        ctx.fillStyle = '#C62828';
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.9, y - s * 0.7);
+        ctx.lineTo(x - s * 0.7, y - s * 1.0);
+        ctx.lineTo(x - s * 0.5, y - s * 0.7);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x + s * 0.5, y - s * 0.7);
+        ctx.lineTo(x + s * 0.7, y - s * 1.0);
+        ctx.lineTo(x + s * 0.9, y - s * 0.7);
+        ctx.fill();
+
+        // Main gate
+        ctx.fillStyle = '#3E2723';
+        ctx.beginPath();
+        ctx.arc(x, y + s * 0.15, s * 0.35, Math.PI, 0);
+        ctx.lineTo(x + s * 0.35, y + s * 0.8);
+        ctx.lineTo(x - s * 0.35, y + s * 0.8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gold banner
+        ctx.fillStyle = '#FFD700';
+        ctx.font = `bold ${ts * 0.3}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', x, y - s * 0.2);
+
+        // Crown / SUPER label
+        ctx.fillStyle = '#FFD700';
+        ctx.font = `bold ${ts * 0.15}px Arial`;
+        ctx.fillText('SUPER', x, y - s * 1.25);
+    }
+
     // === 3D PUPPY TOWER ===
     drawTower(tower) {
         if (tower.isPassive) {
-            this.drawDogHouse(tower);
+            if (tower.isSuper) {
+                this.drawDogMansion(tower);
+            } else {
+                this.drawDogHouse(tower);
+            }
             return;
         }
 
@@ -2686,9 +2934,60 @@ class Renderer {
         const ctx = this.ctx;
         const x = tower.x;
         const y = tower.y;
-        const size = ts * 0.4;
+        const baseSize = tower.isSuper ? ts * 0.48 : ts * 0.4;
+        const size = baseSize;
         const color = tower.color;
         const scale = 1 + tower.attackAnim * 0.2;
+
+        // Super tower golden glow ring
+        if (tower.isSuper) {
+            ctx.save();
+            const glowR = size * (1.6 + Math.sin(Date.now() / 400) * 0.1);
+            const glow = ctx.createRadialGradient(x, y, size * 0.8, x, y, glowR);
+            glow.addColorStop(0, 'rgba(255,215,0,0.15)');
+            glow.addColorStop(1, 'rgba(255,215,0,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(x, y, glowR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Frost Zone perk: draw frost aura circle
+        if (tower.superPerk === 'frostZone') {
+            const rangePx = (tower.range + tower.buffRange) * ts;
+            ctx.save();
+            ctx.fillStyle = 'rgba(100,200,255,0.06)';
+            ctx.beginPath();
+            ctx.arc(x, y, rangePx, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(100,200,255,0.2)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 6]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Frost particles
+            for (let i = 0; i < 6; i++) {
+                const angle = (Date.now() / 2000 + i * 1.047) % (Math.PI * 2);
+                const r = rangePx * (0.5 + Math.sin(Date.now() / 800 + i) * 0.3);
+                ctx.fillStyle = 'rgba(180,230,255,0.4)';
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(angle) * r, y + Math.sin(angle) * r, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // Merge flash animation
+        if (tower.superAnim > 0) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, tower.superAnim);
+            ctx.fillStyle = 'rgba(255,255,255,' + (tower.superAnim * 0.4) + ')';
+            ctx.beginPath();
+            ctx.arc(x, y, size * 2 * tower.superAnim, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
 
         ctx.save();
         ctx.translate(x, y);
@@ -2856,18 +3155,30 @@ class Renderer {
             ctx.restore();
         }
 
-        // Level stars
-        const stars = tower.level - 1;
-        if (stars > 0) {
+        // Level stars / super label
+        if (tower.isSuper) {
             ctx.save();
             ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 4;
+            ctx.shadowBlur = 6;
             ctx.fillStyle = '#FFD700';
-            ctx.font = `bold ${ts * 0.2}px Arial`;
+            ctx.font = `bold ${ts * 0.17}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('★'.repeat(stars), x, y - size * 1.2);
+            ctx.fillText('SUPER', x, y - size * 1.25);
             ctx.restore();
+        } else {
+            const stars = tower.level - 1;
+            if (stars > 0) {
+                ctx.save();
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = '#FFD700';
+                ctx.font = `bold ${ts * 0.2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('★'.repeat(stars), x, y - size * 1.2);
+                ctx.restore();
+            }
         }
 
         // Dog House buff indicator
@@ -3582,14 +3893,18 @@ class UI {
         if (!panel) return;
 
         const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
-        const canUpgrade = tower.level < maxLevel;
+        const canUpgrade = !tower.isSuper && tower.level < maxLevel;
         const upgradeCost = tower.getUpgradeCost();
         const sellValue = tower.getSellValue();
 
         let statsLine;
         if (tower.isPassive) {
-            const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
-            statsLine = tier ? tier.label : `Income: +${tower.goldPerWave}g/wave`;
+            if (tower.isSuper) {
+                statsLine = `+${tower.goldPerWave}g/wave | Aura: ${tower.auraRange} tiles`;
+            } else {
+                const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
+                statsLine = tier ? tier.label : `Income: +${tower.goldPerWave}g/wave`;
+            }
         } else {
             const effDmg = Math.floor(tower.damage * tower.buffDamageMult);
             const effRate = tower.fireRate * tower.buffFireRateMult;
@@ -3598,7 +3913,7 @@ class UI {
         }
 
         let extraLine = '';
-        if (tower.isPassive) {
+        if (tower.isPassive && !tower.isSuper) {
             const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
             if (tier && tier.next) {
                 extraLine = `Next: ${tier.next}`;
@@ -3606,20 +3921,34 @@ class UI {
             if (tier && tier.auraRange > 0) {
                 extraLine = `Aura: ${tier.auraRange} tiles` + (extraLine ? ` | ${extraLine}` : '');
             }
-        } else {
+        } else if (tower.isSuper && tower.isPassive) {
+            extraLine = '+Spd | +Rng | +Dmg | Ultimate';
+        } else if (!tower.isPassive) {
             const effRange = tower.range + tower.buffRange;
             extraLine = `RNG: ${effRange.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}${tower.chainCount > 0 ? ' | Chain: ' + tower.chainCount : ''}`;
+            if (tower.superPerk) {
+                const perkLabels = {
+                    tripleShot: '3x Shot',
+                    freezeBlast: 'AoE Freeze',
+                    frostZone: 'Frost Zone',
+                    megaChain: 'Mega Chain',
+                    stun: 'Earthquake Stun'
+                };
+                extraLine += ' | ' + (perkLabels[tower.superPerk] || tower.superPerk);
+            }
             if (tower.isBuffed) {
                 extraLine += ' | 🏠 Buffed';
             }
         }
 
+        const headerClass = tower.isSuper ? 'upgrade-header super' : 'upgrade-header';
+
         panel.innerHTML = `
-            <div class="upgrade-header">${tower.emoji} ${tower.name} Lv.${tower.level}</div>
+            <div class="${headerClass}">${tower.emoji} ${tower.name}${tower.isSuper ? ' ★' : ' Lv.' + tower.level}</div>
             <div class="upgrade-stats">${statsLine}</div>
             ${extraLine ? `<div class="upgrade-stats">${extraLine}</div>` : ''}
             <div class="upgrade-actions">
-                ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : '<button class="disabled">MAX</button>'}
+                ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : `<button class="disabled">${tower.isSuper ? 'SUPER' : 'MAX'}</button>`}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
             </div>
         `;
@@ -3848,6 +4177,102 @@ class Game {
                 enemy.updatePath(newPath);
             }
         }
+
+        // Check for 3-in-a-line merge
+        this._checkAndMerge(tower);
+    }
+
+    // === TOWER MERGE SYSTEM ===
+    _findMergeLine(tower) {
+        const type = tower.type;
+        const col = tower.col;
+        const row = tower.row;
+
+        if (!CONFIG.SUPER_TOWERS[type]) return null;
+
+        const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+        const findAt = (c, r) =>
+            this.towers.find(t => t.col === c && t.row === r && t.type === type && !t.isSuper);
+
+        for (const [dc, dr] of dirs) {
+            // Collect same-type towers along this line through the placed tower
+            const line = [];
+            for (let i = -2; i <= 2; i++) {
+                const t = findAt(col + dc * i, row + dr * i);
+                if (t) line.push({ i, tower: t });
+            }
+
+            // Find 3 consecutive
+            for (let s = 0; s < line.length - 2; s++) {
+                if (line[s + 1].i === line[s].i + 1 && line[s + 2].i === line[s].i + 2) {
+                    return [line[s].tower, line[s + 1].tower, line[s + 2].tower];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    _checkAndMerge(newTower) {
+        const line = this._findMergeLine(newTower);
+        if (!line) return;
+
+        // Middle tower becomes super, other two are removed
+        const middle = line[1];
+        const outer = [line[0], line[2]];
+
+        // Combine total investment
+        const totalInvested = line.reduce((sum, t) => sum + t.totalInvested, 0);
+
+        // Remove outer towers
+        for (const t of outer) {
+            this.grid.removeTower(t.col, t.row);
+            this.towers = this.towers.filter(tw => tw !== t);
+        }
+
+        // Transform middle into super tower
+        middle.makeSuper(totalInvested);
+
+        // Merge particle burst
+        for (const t of line) {
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                const speed = 50 + Math.random() * 60;
+                this.particles.push({
+                    x: t.x, y: t.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.8, maxLife: 0.8,
+                    color: '#FFD700', size: 6
+                });
+            }
+        }
+
+        // Converging particles from outer positions to middle
+        for (const t of outer) {
+            const dx = middle.x - t.x;
+            const dy = middle.y - t.y;
+            for (let i = 0; i < 5; i++) {
+                this.particles.push({
+                    x: t.x, y: t.y,
+                    vx: dx * (0.8 + Math.random() * 0.5),
+                    vy: dy * (0.8 + Math.random() * 0.5),
+                    life: 0.5, maxLife: 0.5,
+                    color: '#FFF', size: 4
+                });
+            }
+        }
+
+        // Recalc path since we freed 2 cells
+        const newPath = this.grid.currentPath;
+        for (const enemy of this.enemies) {
+            if (enemy.alive && !enemy.reachedEnd) {
+                enemy.updatePath(newPath);
+            }
+        }
+
+        GameAudio.ability(); // reuse ability sound for merge
     }
 
     upgradeTower(tower) {
@@ -3899,7 +4324,8 @@ class Game {
             if (tower.type !== towerType) continue;
             const color = towerType === 'barker' ? '#F5DEB3' :
                           towerType === 'poodle' ? '#DA70D6' :
-                          towerType === 'husky' ? '#B3E5FC' : '#FF6347';
+                          towerType === 'husky' ? '#B3E5FC' :
+                          towerType === 'sparky' ? '#FFEB3B' : '#FF6347';
             for (let i = 0; i < 8; i++) {
                 const angle = (Math.PI * 2 / 8) * i;
                 this.particles.push({
@@ -4253,8 +4679,15 @@ class Game {
         for (const dh of this.towers) {
             if (!dh.isPassive || dh.auraRange <= 0) continue;
 
-            const tier = CONFIG.DOGHOUSE_TIERS[dh.auraTier];
-            if (!tier) continue;
+            // Dog Mansion (super) uses its own config, regular uses tier array
+            let aura;
+            if (dh.isSuper) {
+                const superDef = CONFIG.SUPER_TOWERS.doghouse;
+                aura = { fireRateMult: superDef.fireRateMult, rangePlus: superDef.rangePlus, damageMult: superDef.damageMult };
+            } else {
+                aura = CONFIG.DOGHOUSE_TIERS[dh.auraTier];
+            }
+            if (!aura) continue;
 
             const auraPx = dh.auraRange * dh.tileSize;
 
@@ -4265,9 +4698,9 @@ class Game {
 
                 // Apply buffs (don't stack — use best value from any Dog House)
                 tower.isBuffed = true;
-                tower.buffFireRateMult = Math.min(tower.buffFireRateMult, tier.fireRateMult);
-                tower.buffRange = Math.max(tower.buffRange, tier.rangePlus);
-                tower.buffDamageMult = Math.max(tower.buffDamageMult, tier.damageMult);
+                tower.buffFireRateMult = Math.min(tower.buffFireRateMult, aura.fireRateMult);
+                tower.buffRange = Math.max(tower.buffRange, aura.rangePlus);
+                tower.buffDamageMult = Math.max(tower.buffDamageMult, aura.damageMult);
             }
         }
     }

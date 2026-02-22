@@ -441,10 +441,94 @@ class Renderer {
         }
     }
 
+    // === DOG MANSION (super Dog House) ===
+    drawDogMansion(tower) {
+        const ts = this.tileSize;
+        const ctx = this.ctx;
+        const x = tower.x;
+        const y = tower.y;
+        const s = ts * 0.42; // bigger than regular
+
+        // Glow aura
+        const auraPx = tower.auraRange * ts;
+        const t = Date.now() / 1000;
+        const pulse = 1 + Math.sin(t * 1.5) * 0.03;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, auraPx * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,215,0,0.05)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + s * 0.8, s * 1.3, s * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Castle body
+        ctx.fillStyle = '#6D4C41';
+        ctx.fillRect(x - s * 0.8, y - s * 0.4, s * 1.6, s * 1.2);
+
+        // Battlements
+        for (let i = 0; i < 5; i++) {
+            const bx = x - s * 0.8 + i * s * 0.4;
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(bx, y - s * 0.6, s * 0.2, s * 0.2);
+        }
+
+        // Tower turrets
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - s * 0.85, y - s * 0.7, s * 0.3, s * 0.9);
+        ctx.fillRect(x + s * 0.55, y - s * 0.7, s * 0.3, s * 0.9);
+        // Turret roofs
+        ctx.fillStyle = '#C62828';
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.9, y - s * 0.7);
+        ctx.lineTo(x - s * 0.7, y - s * 1.0);
+        ctx.lineTo(x - s * 0.5, y - s * 0.7);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x + s * 0.5, y - s * 0.7);
+        ctx.lineTo(x + s * 0.7, y - s * 1.0);
+        ctx.lineTo(x + s * 0.9, y - s * 0.7);
+        ctx.fill();
+
+        // Main gate
+        ctx.fillStyle = '#3E2723';
+        ctx.beginPath();
+        ctx.arc(x, y + s * 0.15, s * 0.35, Math.PI, 0);
+        ctx.lineTo(x + s * 0.35, y + s * 0.8);
+        ctx.lineTo(x - s * 0.35, y + s * 0.8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gold banner
+        ctx.fillStyle = '#FFD700';
+        ctx.font = `bold ${ts * 0.3}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', x, y - s * 0.2);
+
+        // Crown / SUPER label
+        ctx.fillStyle = '#FFD700';
+        ctx.font = `bold ${ts * 0.15}px Arial`;
+        ctx.fillText('SUPER', x, y - s * 1.25);
+    }
+
     // === 3D PUPPY TOWER ===
     drawTower(tower) {
         if (tower.isPassive) {
-            this.drawDogHouse(tower);
+            if (tower.isSuper) {
+                this.drawDogMansion(tower);
+            } else {
+                this.drawDogHouse(tower);
+            }
             return;
         }
 
@@ -452,9 +536,60 @@ class Renderer {
         const ctx = this.ctx;
         const x = tower.x;
         const y = tower.y;
-        const size = ts * 0.4;
+        const baseSize = tower.isSuper ? ts * 0.48 : ts * 0.4;
+        const size = baseSize;
         const color = tower.color;
         const scale = 1 + tower.attackAnim * 0.2;
+
+        // Super tower golden glow ring
+        if (tower.isSuper) {
+            ctx.save();
+            const glowR = size * (1.6 + Math.sin(Date.now() / 400) * 0.1);
+            const glow = ctx.createRadialGradient(x, y, size * 0.8, x, y, glowR);
+            glow.addColorStop(0, 'rgba(255,215,0,0.15)');
+            glow.addColorStop(1, 'rgba(255,215,0,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(x, y, glowR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Frost Zone perk: draw frost aura circle
+        if (tower.superPerk === 'frostZone') {
+            const rangePx = (tower.range + tower.buffRange) * ts;
+            ctx.save();
+            ctx.fillStyle = 'rgba(100,200,255,0.06)';
+            ctx.beginPath();
+            ctx.arc(x, y, rangePx, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(100,200,255,0.2)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 6]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Frost particles
+            for (let i = 0; i < 6; i++) {
+                const angle = (Date.now() / 2000 + i * 1.047) % (Math.PI * 2);
+                const r = rangePx * (0.5 + Math.sin(Date.now() / 800 + i) * 0.3);
+                ctx.fillStyle = 'rgba(180,230,255,0.4)';
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(angle) * r, y + Math.sin(angle) * r, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // Merge flash animation
+        if (tower.superAnim > 0) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, tower.superAnim);
+            ctx.fillStyle = 'rgba(255,255,255,' + (tower.superAnim * 0.4) + ')';
+            ctx.beginPath();
+            ctx.arc(x, y, size * 2 * tower.superAnim, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
 
         ctx.save();
         ctx.translate(x, y);
@@ -622,18 +757,30 @@ class Renderer {
             ctx.restore();
         }
 
-        // Level stars
-        const stars = tower.level - 1;
-        if (stars > 0) {
+        // Level stars / super label
+        if (tower.isSuper) {
             ctx.save();
             ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 4;
+            ctx.shadowBlur = 6;
             ctx.fillStyle = '#FFD700';
-            ctx.font = `bold ${ts * 0.2}px Arial`;
+            ctx.font = `bold ${ts * 0.17}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('★'.repeat(stars), x, y - size * 1.2);
+            ctx.fillText('SUPER', x, y - size * 1.25);
             ctx.restore();
+        } else {
+            const stars = tower.level - 1;
+            if (stars > 0) {
+                ctx.save();
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = '#FFD700';
+                ctx.font = `bold ${ts * 0.2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('★'.repeat(stars), x, y - size * 1.2);
+                ctx.restore();
+            }
         }
 
         // Dog House buff indicator

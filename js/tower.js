@@ -57,9 +57,15 @@ class Tower {
         this.buffFireRateMult = 1;
         this.buffRange = 0;
         this.isBuffed = false;
+
+        // Super tower (set via makeSuper)
+        this.isSuper = false;
+        this.superPerk = null;
+        this.superAnim = 0; // merge flash animation
     }
 
     upgrade() {
+        if (this.isSuper) return 0; // super towers can't upgrade further
         const maxLevel = CONFIG.MAX_TOWER_LEVEL || 4;
         if (this.level >= maxLevel) return 0;
 
@@ -121,6 +127,42 @@ class Tower {
         }
     }
 
+    makeSuper(combinedInvestment) {
+        const superDef = CONFIG.SUPER_TOWERS[this.type];
+        if (!superDef) return;
+
+        this.isSuper = true;
+        this.superPerk = superDef.perk;
+        this.superAnim = 1.5; // flash timer
+        this.level = 5; // display level
+        this.totalInvested = combinedInvestment;
+
+        this.name = superDef.name;
+        this.emoji = superDef.emoji;
+        this.color = superDef.color;
+        this.description = superDef.description;
+
+        if (this.isPassive) {
+            // Dog Mansion
+            this.goldPerWave = superDef.goldPerWave;
+            this.auraRange = superDef.auraRange;
+            this.auraTier = 4; // special tier index
+        } else {
+            this.damage = superDef.damage;
+            this.range = superDef.range;
+            this.fireRate = superDef.fireRate;
+            this._baseFireRate = superDef.fireRate;
+            this.projectileColor = superDef.projectileColor;
+            this.projectileSpeed = superDef.projectileSpeed;
+            this.splash = superDef.splash;
+            this.slow = superDef.slow;
+            this.slowDuration = superDef.slowDuration || 0;
+            this.chainCount = superDef.chainCount || 0;
+            this.chainRange = superDef.chainRange || 0;
+            this.chainFalloff = superDef.chainFalloff || 0.6;
+        }
+    }
+
     findTarget(enemies) {
         if (this.isPassive) return null;
 
@@ -144,9 +186,28 @@ class Tower {
 
     update(dt, enemies, projectiles) {
         if (this.isPassive) return;
+        if (this.superAnim > 0) this.superAnim -= dt;
 
         this.fireCooldown -= dt;
         if (this.attackAnim > 0) this.attackAnim -= dt * 4;
+
+        // Frost Zone super perk: damage/slow all enemies in range each tick
+        if (this.superPerk === 'frostZone') {
+            if (this.fireCooldown <= 0) {
+                this.fireCooldown = this.fireRate * this.buffFireRateMult;
+                const rangePx = (this.range + this.buffRange) * this.tileSize;
+                const dmg = Math.floor(this.damage * this.buffDamageMult);
+                for (const e of enemies) {
+                    if (!e.alive || e.reachedEnd) continue;
+                    if (dist(this.x, this.y, e.x, e.y) <= rangePx) {
+                        e.takeDamage(dmg);
+                        e.applySlow(this.slow, this.slowDuration);
+                    }
+                }
+                this.attackAnim = 0.5;
+            }
+            return;
+        }
 
         const target = this.findTarget(enemies);
         const effectiveFireRate = this.fireRate * this.buffFireRateMult;
@@ -156,26 +217,55 @@ class Tower {
 
             const effectiveDamage = Math.floor(this.damage * this.buffDamageMult);
 
-            const proj = new Projectile(
-                this.x, this.y,
-                target,
-                effectiveDamage,
-                this.projectileSpeed * this.tileSize,
-                this.projectileColor,
-                this.splash * this.tileSize,
-                this.slow,
-                this.slowDuration
-            );
+            // Triple Shot super perk: fire 3 projectiles in a spread
+            const shotCount = this.superPerk === 'tripleShot' ? 3 : 1;
+            const spreadAngle = 0.25; // radians between spread shots
 
-            // Chain lightning
-            if (this.chainCount > 0) {
-                proj.chainCount = this.abilityActive ? this.chainCount * 2 : this.chainCount;
-                proj.chainRange = this.chainRange * this.tileSize;
-                proj.chainFalloff = this.chainFalloff;
-                proj.chainArcs = []; // rendered by renderer
+            for (let s = 0; s < shotCount; s++) {
+                const proj = new Projectile(
+                    this.x, this.y,
+                    target,
+                    effectiveDamage,
+                    this.projectileSpeed * this.tileSize,
+                    this.projectileColor,
+                    this.splash * this.tileSize,
+                    this.slow,
+                    this.slowDuration
+                );
+
+                // Stun super perk
+                if (this.superPerk === 'stun') {
+                    proj.stunDuration = 1.0;
+                }
+
+                // Freeze blast super perk
+                if (this.superPerk === 'freezeBlast') {
+                    proj.freezeDuration = 1.5;
+                }
+
+                // Spread offset for triple shot
+                if (shotCount > 1) {
+                    const angle = (s - 1) * spreadAngle;
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    const offset = d * Math.tan(angle);
+                    const perpX = -dy / d;
+                    const perpY = dx / d;
+                    proj.targetX += perpX * offset;
+                    proj.targetY += perpY * offset;
+                }
+
+                // Chain lightning
+                if (this.chainCount > 0) {
+                    proj.chainCount = this.abilityActive ? this.chainCount * 2 : this.chainCount;
+                    proj.chainRange = this.chainRange * this.tileSize;
+                    proj.chainFalloff = this.chainFalloff;
+                    proj.chainArcs = [];
+                }
+
+                projectiles.push(proj);
             }
-
-            projectiles.push(proj);
         }
     }
 }
