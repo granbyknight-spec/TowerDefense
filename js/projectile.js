@@ -27,18 +27,23 @@ class Projectile {
         this.stunDuration = 0;
         this.freezeDuration = 0;
 
-        // Trail history for rendering
+        // Trail history for rendering (ring buffer)
         this.trail = [];
         this._trailTimer = 0;
+        this._trailIdx = 0;
     }
 
     update(dt, enemies, particles) {
         // Decay chain arc visuals even when dead
         if (this.chainArcs.length > 0) {
-            for (const arc of this.chainArcs) {
-                arc.life -= dt;
+            let writeIdx = 0;
+            for (let i = 0; i < this.chainArcs.length; i++) {
+                this.chainArcs[i].life -= dt;
+                if (this.chainArcs[i].life > 0) {
+                    this.chainArcs[writeIdx++] = this.chainArcs[i];
+                }
             }
-            this.chainArcs = this.chainArcs.filter(a => a.life > 0);
+            this.chainArcs.length = writeIdx;
         }
         if (!this.alive) return;
 
@@ -47,15 +52,23 @@ class Projectile {
             this.targetY = this.target.y;
         }
 
-        // Record trail positions
+        // Record trail positions (ring buffer - no filter/shift)
         this._trailTimer -= dt;
         if (this._trailTimer <= 0) {
-            this._trailTimer = 0.02;
-            this.trail.push({ x: this.x, y: this.y, life: 0.2 });
-            if (this.trail.length > 10) this.trail.shift();
+            this._trailTimer = 0.03;
+            if (this.trail.length >= 8) {
+                // Reuse oldest slot
+                const slot = this.trail[this._trailIdx % 8];
+                slot.x = this.x; slot.y = this.y; slot.life = 0.2;
+                this._trailIdx++;
+            } else {
+                this.trail.push({ x: this.x, y: this.y, life: 0.2 });
+                this._trailIdx = this.trail.length;
+            }
         }
-        for (const t of this.trail) t.life -= dt;
-        this.trail = this.trail.filter(t => t.life > 0);
+        for (let i = this.trail.length - 1; i >= 0; i--) {
+            this.trail[i].life -= dt;
+        }
 
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;

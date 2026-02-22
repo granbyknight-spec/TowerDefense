@@ -123,7 +123,7 @@ const CONFIG = {
             slow: 0.5,
             slowDuration: 2,
             description: 'Rapid fire + slow',
-            ability: { name: 'ZOOMIES', desc: 'Slow all enemies 10s', cooldown: 50, duration: 10 }
+            ability: { name: 'DAZZLE', desc: 'Enemies take 2x damage 10s', cooldown: 50, duration: 10 }
         },
         husky: {
             name: 'Husky',

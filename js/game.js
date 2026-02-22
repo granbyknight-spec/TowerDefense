@@ -522,10 +522,10 @@ class Game {
 
     _applyAbilityEffect(type) {
         if (type === 'poodle') {
-            // ZOOMIES: heavy slow on all enemies
+            // DAZZLE: all enemies take 2x damage
             for (const e of this.enemies) {
                 if (e.alive && !e.reachedEnd) {
-                    e.applySlow(0.2, 1.5);
+                    e.applyDazzle(1.5);
                 }
             }
         } else if (type === 'husky') {
@@ -1132,13 +1132,22 @@ class Game {
             dn.life -= dt;
         }
         this.damageNumbers = this.damageNumbers.filter(d => d.life > 0);
+        // Cap damage numbers to prevent lag
+        if (this.damageNumbers.length > 30) {
+            this.damageNumbers = this.damageNumbers.slice(this.damageNumbers.length - 30);
+        }
 
         for (const p of this.particles) {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
+            p.vy += 60 * dt; // gravity for natural feel
             p.life -= dt;
         }
         this.particles = this.particles.filter(p => p.life > 0);
+        // Hard cap particles to prevent lag
+        if (this.particles.length > 150) {
+            this.particles = this.particles.slice(this.particles.length - 150);
+        }
 
         // Combo timer
         if (this.comboTimer > 0) {
@@ -1209,6 +1218,9 @@ class Game {
             ctx.translate(0, -pivotY);
         }
 
+        // Set entity count for LOD decisions
+        this.renderer.entityCount = this.enemies.length + this.projectiles.length + this.particles.length;
+
         this.renderer.drawGrid(this.grid);
         this.renderer.drawPath(this.grid.currentPath, this.grid);
 
@@ -1259,14 +1271,16 @@ class Game {
             this.renderer.drawTowerRange(this.ui.selectedTower);
         }
 
-        // Dynamic shadows (drawn first so they appear under entities)
-        for (const tower of this.towers) {
-            const sz = tower.isPassive ? this.tileSize * 0.4 : this.tileSize * (tower.isSuper ? 0.48 : 0.4);
-            this.renderer.drawDynamicShadow(tower.x, tower.y, sz, this.tileSize);
-        }
-        for (const enemy of this.enemies) {
-            if (enemy.alive) {
-                this.renderer.drawDynamicShadow(enemy.x, enemy.y, this.tileSize * enemy.size, this.tileSize);
+        // Dynamic shadows (skip under heavy load - purely cosmetic)
+        if (this.renderer.entityCount < 120) {
+            for (const tower of this.towers) {
+                const sz = tower.isPassive ? this.tileSize * 0.4 : this.tileSize * (tower.isSuper ? 0.48 : 0.4);
+                this.renderer.drawDynamicShadow(tower.x, tower.y, sz, this.tileSize);
+            }
+            for (const enemy of this.enemies) {
+                if (enemy.alive) {
+                    this.renderer.drawDynamicShadow(enemy.x, enemy.y, this.tileSize * enemy.size, this.tileSize);
+                }
             }
         }
 

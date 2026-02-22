@@ -5,6 +5,8 @@ class Renderer {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.tileSize = tileSize;
+        // Performance: entity counts for LOD decisions
+        this.entityCount = 0; // set each frame by game.js
     }
 
     clear() {
@@ -464,13 +466,9 @@ class Renderer {
         // Level stars
         const stars = tower.level - 1;
         if (stars > 0) {
-            ctx.save();
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 4;
             ctx.fillStyle = '#FFD700';
             ctx.font = `bold ${ts * 0.18}px Arial`;
             ctx.fillText('★'.repeat(stars), x, y - s * 1.2);
-            ctx.restore();
         }
     }
 
@@ -642,10 +640,14 @@ class Renderer {
         this._draw3DCircle(ctx, 0, 0, size, color);
 
         // Muzzle
-        const muzzleGrad = ctx.createRadialGradient(0, size * 0.15, 0, 0, size * 0.15, size * 0.35);
-        muzzleGrad.addColorStop(0, this._lighten(color, 0.4));
-        muzzleGrad.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = muzzleGrad;
+        if (this.entityCount > 100) {
+            ctx.fillStyle = this._lighten(color, 0.25);
+        } else {
+            const muzzleGrad = ctx.createRadialGradient(0, size * 0.15, 0, 0, size * 0.15, size * 0.35);
+            muzzleGrad.addColorStop(0, this._lighten(color, 0.4));
+            muzzleGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = muzzleGrad;
+        }
         ctx.beginPath();
         ctx.ellipse(0, size * 0.2, size * 0.4, size * 0.32, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -655,10 +657,14 @@ class Renderer {
         [-1, 1].forEach(side => {
             const ex = side * size * 0.3;
             const ey = -size * 0.15;
-            const eyeGrad = ctx.createRadialGradient(ex - eyeR * 0.2, ey - eyeR * 0.2, 0, ex, ey, eyeR);
-            eyeGrad.addColorStop(0, '#fff');
-            eyeGrad.addColorStop(1, '#ddd');
-            ctx.fillStyle = eyeGrad;
+            if (this.entityCount > 100) {
+                ctx.fillStyle = '#f0f0f0';
+            } else {
+                const eyeGrad = ctx.createRadialGradient(ex - eyeR * 0.2, ey - eyeR * 0.2, 0, ex, ey, eyeR);
+                eyeGrad.addColorStop(0, '#fff');
+                eyeGrad.addColorStop(1, '#ddd');
+                ctx.fillStyle = eyeGrad;
+            }
             ctx.beginPath();
             ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
             ctx.fill();
@@ -677,18 +683,16 @@ class Renderer {
         });
 
         // Nose
-        const noseGrad = ctx.createRadialGradient(-size * 0.03, size * 0.11, 0, 0, size * 0.15, size * 0.13);
-        noseGrad.addColorStop(0, '#555');
-        noseGrad.addColorStop(0.7, '#222');
-        noseGrad.addColorStop(1, '#111');
-        ctx.fillStyle = noseGrad;
+        ctx.fillStyle = '#222';
         ctx.beginPath();
         ctx.ellipse(0, size * 0.15, size * 0.13, size * 0.09, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.beginPath();
-        ctx.ellipse(-size * 0.03, size * 0.12, size * 0.05, size * 0.025, -0.3, 0, Math.PI * 2);
-        ctx.fill();
+        if (this.entityCount <= 100) {
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(-size * 0.03, size * 0.12, size * 0.05, size * 0.025, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // Mouth
         ctx.strokeStyle = '#444';
@@ -790,27 +794,27 @@ class Renderer {
             ctx.restore();
         }
 
-        // Level stars / super label
+        // Level stars / super label (no shadowBlur - expensive)
         if (tower.isSuper) {
             ctx.save();
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 6;
-            ctx.fillStyle = '#FFD700';
+            ctx.fillStyle = '#B8860B';
             ctx.font = `bold ${ts * 0.17}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            ctx.fillText('SUPER', x + 1, y - size * 1.25 + 1);
+            ctx.fillStyle = '#FFD700';
             ctx.fillText('SUPER', x, y - size * 1.25);
             ctx.restore();
         } else {
             const stars = tower.level - 1;
             if (stars > 0) {
                 ctx.save();
-                ctx.shadowColor = '#FFD700';
-                ctx.shadowBlur = 4;
-                ctx.fillStyle = '#FFD700';
+                ctx.fillStyle = '#B8860B';
                 ctx.font = `bold ${ts * 0.2}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
+                ctx.fillText('★'.repeat(stars), x + 1, y - size * 1.2 + 1);
+                ctx.fillStyle = '#FFD700';
                 ctx.fillText('★'.repeat(stars), x, y - size * 1.2);
                 ctx.restore();
             }
@@ -854,6 +858,17 @@ class Renderer {
     }
 
     _draw3DCircle(ctx, cx, cy, radius, baseColor) {
+        if (this.entityCount > 100) {
+            // Simplified: flat color with outline
+            ctx.fillStyle = baseColor;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = this._shade(baseColor, 0.4);
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            return;
+        }
         const grad = ctx.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, radius * 0.05, cx, cy, radius);
         grad.addColorStop(0, this._lighten(baseColor, 0.4));
         grad.addColorStop(0.5, baseColor);
@@ -875,20 +890,27 @@ class Renderer {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(rotation);
-        const grad = ctx.createRadialGradient(-rx * 0.2, -ry * 0.2, 0, 0, 0, Math.max(rx, ry));
-        grad.addColorStop(0, this._lighten(baseColor, 0.2));
-        grad.addColorStop(1, this._shade(baseColor, 0.45));
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = this._shade(baseColor, 0.35);
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.fillStyle = this._lighten(baseColor, 0.15);
-        ctx.beginPath();
-        ctx.ellipse(0, ry * 0.05, rx * 0.5, ry * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
+        if (this.entityCount > 100) {
+            ctx.fillStyle = baseColor;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            const grad = ctx.createRadialGradient(-rx * 0.2, -ry * 0.2, 0, 0, 0, Math.max(rx, ry));
+            grad.addColorStop(0, this._lighten(baseColor, 0.2));
+            grad.addColorStop(1, this._shade(baseColor, 0.45));
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = this._shade(baseColor, 0.35);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillStyle = this._lighten(baseColor, 0.15);
+            ctx.beginPath();
+            ctx.ellipse(0, ry * 0.05, rx * 0.5, ry * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 
@@ -969,17 +991,28 @@ class Renderer {
         ctx.fill();
 
         // Cat body
-        const bodyGrad = ctx.createRadialGradient(-size * 0.2, -size * 0.2, size * 0.05, 0, 0, size);
-        bodyGrad.addColorStop(0, this._lighten(enemy.color, 0.3));
-        bodyGrad.addColorStop(0.6, enemy.color);
-        bodyGrad.addColorStop(1, this._shade(enemy.color, 0.5));
-        ctx.fillStyle = bodyGrad;
-        ctx.beginPath();
-        ctx.arc(0, 0, size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = this._shade(enemy.color, 0.35);
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        if (this.entityCount > 80) {
+            // Simplified flat body under load
+            ctx.fillStyle = enemy.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = this._shade(enemy.color, 0.4);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        } else {
+            const bodyGrad = ctx.createRadialGradient(-size * 0.2, -size * 0.2, size * 0.05, 0, 0, size);
+            bodyGrad.addColorStop(0, this._lighten(enemy.color, 0.3));
+            bodyGrad.addColorStop(0.6, enemy.color);
+            bodyGrad.addColorStop(1, this._shade(enemy.color, 0.5));
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = this._shade(enemy.color, 0.35);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
 
         // Cat ears
         ctx.fillStyle = enemy.color;
@@ -998,18 +1031,20 @@ class Renderer {
         ctx.fill();
         ctx.stroke();
 
-        // Inner ears
-        ctx.fillStyle = enemy.type === 'ninja' ? '#444' : '#FFB6C1';
-        ctx.beginPath();
-        ctx.moveTo(-size * 0.55, -size * 0.55);
-        ctx.lineTo(-size * 0.3, -size * 0.9);
-        ctx.lineTo(-size * 0.1, -size * 0.55);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(size * 0.1, -size * 0.55);
-        ctx.lineTo(size * 0.3, -size * 0.9);
-        ctx.lineTo(size * 0.55, -size * 0.55);
-        ctx.fill();
+        if (this.entityCount <= 80) {
+            // Inner ears
+            ctx.fillStyle = enemy.type === 'ninja' ? '#444' : '#FFB6C1';
+            ctx.beginPath();
+            ctx.moveTo(-size * 0.55, -size * 0.55);
+            ctx.lineTo(-size * 0.3, -size * 0.9);
+            ctx.lineTo(-size * 0.1, -size * 0.55);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(size * 0.1, -size * 0.55);
+            ctx.lineTo(size * 0.3, -size * 0.9);
+            ctx.lineTo(size * 0.55, -size * 0.55);
+            ctx.fill();
+        }
 
         // Eyes
         ctx.fillStyle = '#fff';
@@ -1030,31 +1065,33 @@ class Renderer {
         ctx.ellipse(size * 0.3, -size * 0.1, size * 0.06, size * 0.15, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Eye glints
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.beginPath();
-        ctx.arc(-size * 0.35, -size * 0.17, size * 0.06, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(size * 0.25, -size * 0.17, size * 0.06, 0, Math.PI * 2);
-        ctx.fill();
+        if (this.entityCount <= 80) {
+            // Eye glints
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.beginPath();
+            ctx.arc(-size * 0.35, -size * 0.17, size * 0.06, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(size * 0.25, -size * 0.17, size * 0.06, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Nose
-        ctx.fillStyle = '#E91E63';
-        ctx.beginPath();
-        ctx.moveTo(0, size * 0.1);
-        ctx.lineTo(-size * 0.1, size * 0.2);
-        ctx.lineTo(size * 0.1, size * 0.2);
-        ctx.closePath();
-        ctx.fill();
+            // Nose
+            ctx.fillStyle = '#E91E63';
+            ctx.beginPath();
+            ctx.moveTo(0, size * 0.1);
+            ctx.lineTo(-size * 0.1, size * 0.2);
+            ctx.lineTo(size * 0.1, size * 0.2);
+            ctx.closePath();
+            ctx.fill();
 
-        // Whiskers
-        ctx.strokeStyle = 'rgba(80,80,80,0.6)';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath(); ctx.moveTo(-size * 0.15, size * 0.2); ctx.lineTo(-size * 0.8, size * 0.05); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-size * 0.15, size * 0.25); ctx.lineTo(-size * 0.8, size * 0.3); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(size * 0.15, size * 0.2); ctx.lineTo(size * 0.8, size * 0.05); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(size * 0.15, size * 0.25); ctx.lineTo(size * 0.8, size * 0.3); ctx.stroke();
+            // Whiskers
+            ctx.strokeStyle = 'rgba(80,80,80,0.6)';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(-size * 0.15, size * 0.2); ctx.lineTo(-size * 0.8, size * 0.05); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-size * 0.15, size * 0.25); ctx.lineTo(-size * 0.8, size * 0.3); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(size * 0.15, size * 0.2); ctx.lineTo(size * 0.8, size * 0.05); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(size * 0.15, size * 0.25); ctx.lineTo(size * 0.8, size * 0.3); ctx.stroke();
+        }
 
         // Boss: crown
         if (enemy.isBoss) {
@@ -1136,6 +1173,27 @@ class Renderer {
             ctx.restore();
         }
 
+        // Dazzle indicator (pink sparkle ring)
+        if (enemy.dazzled) {
+            ctx.strokeStyle = 'rgba(255,105,180,0.6)';
+            ctx.lineWidth = 2;
+            const dazzleR = size * (1.15 + Math.sin(Date.now() / 150) * 0.1);
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, dazzleR, 0, Math.PI * 2);
+            ctx.stroke();
+            // Sparkle dots
+            if (this.entityCount <= 80) {
+                for (let i = 0; i < 3; i++) {
+                    const a = Date.now() / 200 + i * 2.09;
+                    const r = dazzleR * 0.9;
+                    ctx.fillStyle = 'rgba(255,182,193,0.8)';
+                    ctx.beginPath();
+                    ctx.arc(enemy.x + Math.cos(a) * r, enemy.y + Math.sin(a) * r, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
         // Slow indicator
         if (enemy.slowTimer > 0 && !enemy.frozen) {
             ctx.fillStyle = 'rgba(156, 39, 176, 0.25)';
@@ -1211,6 +1269,16 @@ class Renderer {
         if (!proj.alive) return;
 
         const type = proj.towerType || '';
+        const highLoad = this.entityCount > 100;
+
+        // Under high load: simplified projectile (just a colored dot)
+        if (highLoad) {
+            ctx.fillStyle = proj.color;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
 
         // --- Type-specific trail ---
         if (proj.trail && proj.trail.length > 0) {
@@ -1362,8 +1430,6 @@ class Renderer {
         } else if (type === 'sparky') {
             // Electric ball with crackle
             ctx.save();
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 10;
             const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
             glow.addColorStop(0, 'rgba(255,235,59,0.6)');
             glow.addColorStop(1, 'rgba(255,235,59,0)');
@@ -1418,8 +1484,6 @@ class Renderer {
         ctx.globalAlpha = alpha;
         ctx.strokeStyle = '#FFEB3B';
         ctx.lineWidth = 2.5;
-        ctx.shadowColor = '#FFD700';
-        ctx.shadowBlur = 8;
 
         // Jagged lightning segments
         const dx = x2 - x1;
@@ -1543,11 +1607,7 @@ class Renderer {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Glow effect
-        ctx.shadowColor = ct.color;
-        ctx.shadowBlur = 12 + progress * 8;
-
-        // Main combo label
+        // Main combo label (use stroke outline instead of expensive shadowBlur)
         ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
         ctx.strokeStyle = 'rgba(0,0,0,0.8)';
         ctx.lineWidth = 3;
@@ -1556,7 +1616,6 @@ class Renderer {
         ctx.fillText(ct.text, ct.x, ct.y);
 
         // Bonus gold subtext
-        ctx.shadowBlur = 0;
         ctx.font = `bold ${Math.floor(12 * scale)}px system-ui, -apple-system, sans-serif`;
         ctx.strokeStyle = 'rgba(0,0,0,0.7)';
         ctx.lineWidth = 2;
@@ -1638,8 +1697,6 @@ class Renderer {
             // Main bolt from top of screen to target
             ctx.strokeStyle = '#FFEB3B';
             ctx.lineWidth = 4;
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 15;
 
             const segments = 8;
             const jitter = 15;
@@ -1806,11 +1863,11 @@ class Renderer {
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
         ctx.font = `bold ${Math.floor(28 * pulse)}px system-ui, -apple-system, sans-serif`;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 15;
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(`x${combo}`, x, y);
         ctx.fillStyle = color;
         ctx.fillText(`x${combo}`, x, y);
-        ctx.shadowBlur = 0;
 
         // "COMBO" label
         ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';

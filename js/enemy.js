@@ -49,6 +49,10 @@ class Enemy {
         this.frozen = false;
         this.frozenTimer = 0;
 
+        // Dazzled state (from Poodle DAZZLE ability - 2x damage taken)
+        this.dazzled = false;
+        this.dazzleTimer = 0;
+
         // Animation
         this.wobble = 0;
         this.wobbleSpeed = 3 + Math.random() * 2;
@@ -82,6 +86,13 @@ class Enemy {
             this.frozenTimer -= dt;
             this.frozen = true;
             if (this.frozenTimer <= 0) this.frozen = false;
+        }
+
+        // Update dazzle
+        if (this.dazzleTimer > 0) {
+            this.dazzleTimer -= dt;
+            this.dazzled = true;
+            if (this.dazzleTimer <= 0) this.dazzled = false;
         }
 
         // Update slow
@@ -155,6 +166,8 @@ class Enemy {
             this.dodgeFlash = 1;
             return;
         }
+        // Dazzled: take 2x damage
+        if (this.dazzled) amount *= 2;
         const dmg = Math.max(1, amount - this.armor);
         this.hp -= dmg;
         this.hitFlash = 1;
@@ -175,5 +188,10 @@ class Enemy {
         if (this.slowImmune) return;
         this.frozen = true;
         this.frozenTimer = duration;
+    }
+
+    applyDazzle(duration) {
+        this.dazzled = true;
+        this.dazzleTimer = duration;
     }
 }
