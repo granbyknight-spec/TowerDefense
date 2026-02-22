@@ -2,10 +2,11 @@
 // Manages navigation between hub areas and launching battles
 
 class Hub {
-    constructor(academy, onStartBattle, onStartStory) {
+    constructor(academy, onStartBattle, onStartStory, onExploreVillage) {
         this.academy = academy;
         this.onStartBattle = onStartBattle; // callback(levelIndex)
         this.onStartStory = onStartStory;   // callback(episodeId)
+        this.onExploreVillage = onExploreVillage; // callback(mapName)
 
         this.hubEl = document.getElementById('hub-screen');
         this.selectedBattle = 0;
@@ -179,6 +180,20 @@ class Hub {
             <div class="hub-section">
                 <div class="hub-section-title">Story Mode</div>
                 <div class="hub-episodes">${this._buildEpisodeCards(a)}</div>
+            </div>
+
+            <div class="hub-section">
+                <div class="hub-section-title">Explore</div>
+                <div class="hub-explore-buttons">
+                    <button class="hub-explore-btn" data-map="academy">
+                        <span class="hub-explore-icon">🏫</span>
+                        <span class="hub-explore-label">Academy Grounds</span>
+                    </button>
+                    <button class="hub-explore-btn" data-map="barksville">
+                        <span class="hub-explore-icon">🏘️</span>
+                        <span class="hub-explore-label">Barksville Town</span>
+                    </button>
+                </div>
             </div>
 
             <div class="hub-section">
@@ -397,6 +412,15 @@ class Hub {
                 }
             });
         }
+
+        // Explore village buttons
+        this.hubEl.querySelectorAll('.hub-explore-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mapName = btn.dataset.map;
+                self.hide();
+                if (self.onExploreVillage) self.onExploreVillage(mapName);
+            });
+        });
 
         // Story episode buttons
         this.hubEl.querySelectorAll('.hub-episode-card').forEach(btn => {

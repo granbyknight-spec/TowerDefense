@@ -26,8 +26,9 @@ class UI {
         this._lastTapY = 0;
 
         canvas.addEventListener('pointerdown', (e) => {
-            // Don't process game input when story engine is active
+            // Don't process game input when story engine or village is active
             if (window.storyEngine && window.storyEngine.active) return;
+            if (window.village && window.village.active) return;
 
             if (e.pointerType === 'touch') {
                 const now = performance.now();
@@ -56,6 +57,7 @@ class UI {
         });
         canvas.addEventListener('pointermove', (e) => {
             if (window.storyEngine && window.storyEngine.active) return;
+            if (window.village && window.village.active) return;
             this.onPointerMove(e);
         });
         canvas.addEventListener('pointerup', (e) => { this._panning = false; });

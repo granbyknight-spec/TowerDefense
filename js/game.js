@@ -6,7 +6,16 @@ class Game {
         this.state = 'title'; // title, playing, level_complete, won, lost
 
         this.resize();
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('resize', () => {
+            // Don't resize game canvas when village is active
+            if (window.village && window.village.active) {
+                this.canvas.width = Math.min(window.innerWidth, 480);
+                this.canvas.height = Math.min(window.innerHeight, 800);
+                window.village.ts = Math.max(24, Math.floor(this.canvas.width / 16));
+                return;
+            }
+            this.resize();
+        });
 
         this.towers = [];
         this.enemies = [];
@@ -1487,7 +1496,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const storyEngine = new StoryEngine(game.canvas, academy);
     let storyBattlePending = false; // true when story triggered a battle
 
-    // Hub launches battles, stories, and receives results
+    // Village explorer
+    const village = new Village(game.canvas);
+
+    // Hub launches battles, stories, explore, and receives results
     const hub = new Hub(academy, (levelIndex) => {
         game.startGame(levelIndex);
     }, (episodeId) => {
@@ -1510,6 +1522,67 @@ window.addEventListener('DOMContentLoaded', () => {
             // Story triggered a battle
             storyBattlePending = true;
             game.startGame(battleLevel);
+        });
+    }, (mapName) => {
+        // Explore village
+        const mapData = VILLAGE_MAPS[mapName];
+        if (!mapData) return;
+
+        GameAudio.unlock();
+        document.getElementById('hub-screen').style.display = 'none';
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
+        document.getElementById('game-controls').style.display = 'none';
+        game.canvas.style.display = 'block';
+
+        // Size canvas for village
+        game.canvas.width = Math.min(window.innerWidth, 480);
+        game.canvas.height = Math.min(window.innerHeight, 800);
+        village.ts = Math.max(24, Math.floor(game.canvas.width / 16));
+
+        village.loadMap(mapData);
+        village.start((npc) => {
+            // NPC interaction - show dialogue overlay
+            _showVillageDialogue(npc.name, npc.emoji, npc.dialogue);
+        }, (trigger) => {
+            if (trigger.action === 'changeMap') {
+                const newMap = VILLAGE_MAPS[trigger.target];
+                if (newMap) {
+                    village.stop();
+                    village.loadMap(newMap);
+                    village.start((npc2) => {
+                        _showVillageDialogue(npc2.name, npc2.emoji, npc2.dialogue);
+                    }, (trigger2) => {
+                        if (trigger2.action === 'changeMap') {
+                            // Reload map
+                            const m = VILLAGE_MAPS[trigger2.target];
+                            if (m) {
+                                village.stop();
+                                village.loadMap(m);
+                                village.start(village.onInteract, village.onTrigger);
+                            }
+                        } else if (trigger2.action === 'dialogue') {
+                            _showVillageDialogue('', '', trigger2.text);
+                        } else if (trigger2.action === 'battle') {
+                            village.stop();
+                            game.startGame(0);
+                        }
+                    });
+                }
+            } else if (trigger.action === 'dialogue') {
+                _showVillageDialogue('', '', trigger.text);
+            } else if (trigger.action === 'battle') {
+                village.stop();
+                game.startGame(0);
+            }
+        });
+
+        // Show back button
+        _showVillageBackBtn(() => {
+            village.stop();
+            game.canvas.width = CONFIG.GRID_COLS * game.tileSize;
+            game.canvas.height = CONFIG.GRID_ROWS * game.tileSize;
+            hub.show();
         });
     });
     game.hub = hub;
@@ -1614,8 +1687,49 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Village dialogue overlay
+    function _showVillageDialogue(name, emoji, text) {
+        if (!text) return;
+        let overlay = document.getElementById('village-dialogue');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'village-dialogue';
+            overlay.className = 'village-dialogue-overlay';
+            document.getElementById('game-container').appendChild(overlay);
+        }
+        overlay.innerHTML = `
+            <div class="village-dialogue-box">
+                ${name ? `<div class="village-dialogue-speaker">${emoji || ''} ${name}</div>` : ''}
+                <div class="village-dialogue-text">${text}</div>
+                <div class="village-dialogue-hint">tap to close</div>
+            </div>
+        `;
+        overlay.style.display = 'flex';
+        overlay.onclick = () => { overlay.style.display = 'none'; };
+    }
+
+    // Village back button
+    function _showVillageBackBtn(onBack) {
+        let btn = document.getElementById('village-back-btn');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'village-back-btn';
+            btn.className = 'village-back-btn';
+            btn.textContent = 'Back';
+            document.getElementById('game-container').appendChild(btn);
+        }
+        btn.style.display = 'block';
+        btn.onclick = () => {
+            btn.style.display = 'none';
+            const dlg = document.getElementById('village-dialogue');
+            if (dlg) dlg.style.display = 'none';
+            onBack();
+        };
+    }
+
     window.game = game;
     window.academy = academy;
     window.hub = hub;
     window.storyEngine = storyEngine;
+    window.village = village;
 });

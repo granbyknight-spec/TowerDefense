@@ -29,6 +29,8 @@ JS_FILES = [
     "js/academy.js",
     "js/episodes.js",
     "js/story.js",
+    "js/village.js",
+    "js/villageMaps.js",
     "js/hub.js",
     "js/game.js",
 ]
