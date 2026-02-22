@@ -288,32 +288,22 @@ class Game {
         document.getElementById('level-complete-screen').style.display = 'none';
         this.waveManager.startNextLevel();
 
-        // Load new map layout, keep existing towers that fit
+        // Refund all towers so player can rebuild on new map
+        for (const t of this.towers) {
+            this.gold += t.getSellValue();
+        }
+        this.towers = [];
+
+        // Fresh map for the new level
         const newLevelIdx = this.waveManager.currentLevel;
         this.grid = new Grid(newLevelIdx);
 
-        // Remove towers that now conflict with obstacles
-        this.towers = this.towers.filter(t => {
-            const cell = this.grid.getCellType(t.col, t.row);
-            if (cell !== 0 && cell !== 1) {
-                // Tower is on an obstacle tile, refund it
-                this.gold += t.getSellValue();
-                return false;
-            }
-            this.grid.placeTower(t.col, t.row);
-            return true;
-        });
-
-        // Reposition towers for new tileSize
-        for (const tower of this.towers) {
-            tower.tileSize = this.tileSize;
-            const pos = gridToPixel(tower.col, tower.row, this.tileSize);
-            tower.x = pos.x;
-            tower.y = pos.y;
-        }
-
         this.enemies = [];
         this.projectiles = [];
+        this.particles = [];
+        this.ui.selectedTowerType = null;
+        this.ui.selectedTower = null;
+        this.ui.hideUpgradePanel();
         this.state = 'playing';
         this._triviaShownForWave = -1;
         this.ui.updateHUD();
