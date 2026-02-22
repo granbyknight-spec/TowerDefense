@@ -1,0 +1,356 @@
+// Episode story data for Puppy Academy
+// Each episode is a series of scenes with dialogue, exploration, and battles
+
+const EPISODES = {
+    1: {
+        id: 1,
+        title: 'A Lost Pup',
+        subtitle: 'Every great adventure begins with a rainy night...',
+        requiredRank: 0,
+
+        scenes: [
+            // === SCENE 1: Rainy Night - Finding the Puppy ===
+            {
+                bg: '#1a1a2e',
+                bgEmojis: [
+                    { emoji: '🌧️', x: 0.2, y: 0.15, alpha: 0.4 },
+                    { emoji: '🌧️', x: 0.5, y: 0.1, alpha: 0.3 },
+                    { emoji: '🌧️', x: 0.8, y: 0.18, alpha: 0.4 },
+                    { emoji: '🌙', x: 0.85, y: 0.08, alpha: 0.6 },
+                    { emoji: '🏠', x: 0.15, y: 0.5, alpha: 0.2 },
+                    { emoji: '🏠', x: 0.45, y: 0.45, alpha: 0.2 },
+                    { emoji: '🌳', x: 0.7, y: 0.55, alpha: 0.15 },
+                ],
+                characters: [],
+                steps: [
+                    { type: 'narration', text: 'A cold, rainy night in the small town of Barksville...' },
+                    { type: 'narration', text: 'Thunder rumbles in the distance. Most of the dogs in town are safe and warm in their homes.' },
+                    { type: 'shake', duration: 0.4, intensity: 4 },
+                    { type: 'narration', text: 'But wait — what was that sound? A faint whimpering, barely audible over the rain...' },
+                    { type: 'enter', id: 'player', emoji: '{dogEmoji}', name: '{dogName}', x: 0.7, y: 0.65, scale: 1.2 },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: '*sniff sniff* ... I smell something. Another dog? Out here in this storm?' },
+                    { type: 'enter', id: 'puppy', emoji: '🐶', name: '???', x: 0.3, y: 0.7, scale: 0.7 },
+                    { type: 'shake', duration: 0.3, intensity: 3 },
+                    { type: 'narration', text: 'You find a tiny puppy, shivering and alone, huddled under a cardboard box.' },
+                    { type: 'dialogue', speaker: '???', emoji: '🐶', text: '*whimper* ... p-please... I\'m s-so cold...' },
+                    { type: 'choice', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'The poor little pup is soaked and trembling. What do you do?',
+                        choices: [
+                            { text: 'Come with me, little one. I\'ll keep you safe.' },
+                            { text: 'Don\'t worry! I\'ll get you somewhere warm!' },
+                        ]
+                    },
+                    { type: 'dialogue', speaker: '???', emoji: '🐶', text: '*tail wag* ... r-really? You\'d help me?' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'Of course! No pup should be out alone in weather like this. Let\'s go to the Academy!' },
+                    { type: 'narration', text: '{dogName} gently picks up the tiny puppy and carries them through the rain toward Puppy Academy...' },
+                ]
+            },
+
+            // === SCENE 2: Arriving at the Academy ===
+            {
+                bg: '#2c1810',
+                bgEmojis: [
+                    { emoji: '🏫', x: 0.5, y: 0.2, alpha: 0.4 },
+                    { emoji: '💡', x: 0.3, y: 0.35, alpha: 0.3 },
+                    { emoji: '💡', x: 0.7, y: 0.35, alpha: 0.3 },
+                    { emoji: '🦴', x: 0.15, y: 0.8, alpha: 0.15 },
+                    { emoji: '🦴', x: 0.85, y: 0.75, alpha: 0.15 },
+                ],
+                characters: [],
+                steps: [
+                    { type: 'narration', text: 'Inside Puppy Academy, the warm light of the fireplace fills the main hall.' },
+                    { type: 'enter', id: 'player', emoji: '{dogEmoji}', name: '{dogName}', x: 0.5, y: 0.7, scale: 1 },
+                    { type: 'enter', id: 'puppy', emoji: '🐶', name: 'Lost Puppy', x: 0.5, y: 0.8, scale: 0.7 },
+                    { type: 'enter', id: 'elder', emoji: '🦮', name: 'Old Rex', x: 0.5, y: 0.45, scale: 1.3 },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'Well well, {dogName}! What do we have here? You\'ve brought a little one in from the storm?' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'I found this puppy all alone in the rain, Rex. They were shivering under a box near the old park.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'Hmm... *examines the puppy carefully* This little one looks like a Golden Retriever pup. Very young, maybe 8 weeks old.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'Did you know that Golden Retrievers were originally bred in Scotland in the 1860s? Lord Tweedmouth created the breed by crossing a Yellow Retriever with a Tweed Water Spaniel.' },
+                    { type: 'narration', text: '📖 Dog Fact: Golden Retrievers are the 3rd most popular dog breed in America. They were bred to retrieve waterfowl for hunters!' },
+                    { type: 'dialogue', speaker: 'Lost Puppy', emoji: '🐶', text: '... I remember... mama and papa... we were playing in the park... then the cats came...' },
+                    { type: 'shake', duration: 0.5, intensity: 5 },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'The CATS? *growls* So it\'s true. The Cat Army has been raiding the outskirts of Barksville.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'They\'ve been kidnapping dogs and holding them in their territory. This pup\'s parents must have been taken!' },
+                    { type: 'dialogue', speaker: 'Lost Puppy', emoji: '🐶', text: '*whimper* Mama... Papa... Are they okay?' },
+                    { type: 'choice', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'The puppy looks up at you with big, hopeful eyes...',
+                        choices: [
+                            { text: 'I promise I\'ll find your parents. No matter what it takes!' },
+                            { text: 'We\'ll get them back. That\'s what the Academy is for!' },
+                        ]
+                    },
+                    { type: 'dialogue', speaker: 'Lost Puppy', emoji: '🐶', text: '*tail wags* R-really?! You mean it?!' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'Brave words, {dogName}. But the Cat Army is dangerous. You\'ll need to prepare.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'First, we should let this little one rest. And you should scout the backyard — there have been cat patrols spotted nearby.' },
+                    { type: 'reward', bones: 50, treats: 10, xp: 25 },
+                    { type: 'narration', text: '🦴 +50 Bones | 🍖 +10 Treats | ⭐ +25 XP\nThe puppy falls asleep by the fire. Time to prepare!' },
+                ]
+            },
+
+            // === SCENE 3: Exploration - Academy Grounds ===
+            {
+                type: 'explore',
+                bg: '#3D6B25',
+                map: {
+                    width: 12, height: 14,
+                    // 0=grass, 1=path, 2=water, 3=building, 4=door, 5=dark
+                    tiles: [
+                        3,3,3,3,3,3,3,3,3,3,3,3,
+                        3,3,3,3,4,3,3,4,3,3,3,3,
+                        0,0,0,1,1,1,1,1,1,0,0,0,
+                        0,0,0,1,0,0,0,0,1,0,0,0,
+                        0,0,0,1,0,0,0,0,1,0,0,0,
+                        0,0,0,1,1,1,1,1,1,0,0,0,
+                        0,0,0,0,0,1,0,0,0,0,0,0,
+                        0,0,0,0,0,1,0,0,0,0,0,0,
+                        0,2,2,0,0,1,0,0,0,0,0,0,
+                        0,2,2,0,0,1,0,0,0,0,0,0,
+                        0,0,0,0,1,1,1,0,0,0,0,0,
+                        0,0,0,0,1,0,1,0,0,0,0,0,
+                        0,0,0,1,1,0,1,1,0,0,0,0,
+                        0,0,0,0,0,0,0,0,0,0,0,0,
+                    ],
+                    decor: (() => {
+                        const d = {};
+                        d[0] = '🏫'; d[1] = '🏫'; d[2] = '🏫'; d[3] = '🏫'; d[5] = '🏫'; d[6] = '🏫'; d[7] = '🏫';
+                        d[8] = '🏫'; d[9] = '🏫'; d[10] = '🏫'; d[11] = '🏫';
+                        d[16] = '🚪'; d[19] = '🚪';
+                        d[8 * 12 + 1] = '🌊'; d[8 * 12 + 2] = '🌊';
+                        d[9 * 12 + 1] = '🌊'; d[9 * 12 + 2] = '🌊';
+                        d[3 * 12 + 0] = '🌳'; d[4 * 12 + 0] = '🌳';
+                        d[3 * 12 + 10] = '🌳'; d[4 * 12 + 10] = '🌳';
+                        d[6 * 12 + 9] = '🌻'; d[7 * 12 + 10] = '🌻';
+                        d[11 * 12 + 1] = '🌳'; d[12 * 12 + 1] = '🌳';
+                        d[13 * 12 + 9] = '🪨'; d[13 * 12 + 10] = '🪨';
+                        return d;
+                    })()
+                },
+                startX: 5, startY: 6,
+                steps: [
+                    {
+                        type: 'explore',
+                        map: null, // uses scene map
+                        startX: 5, startY: 6,
+                        npcs: [
+                            {
+                                id: 'rex', emoji: '🦮', name: 'Old Rex', x: 4, y: 2,
+                                dialogue: 'The Cat Army has been growing bolder. Scout the southern edge of our grounds — I saw movement there last night.'
+                            },
+                            {
+                                id: 'nurse', emoji: '🐩', name: 'Nurse Fifi', x: 7, y: 2,
+                                dialogue: 'The little puppy is resting in the infirmary. Did you know puppies need 18-20 hours of sleep a day? Golden Retrievers especially need their rest while growing!'
+                            },
+                            {
+                                id: 'scout', emoji: '🐕‍🦺', name: 'Scout', x: 9, y: 7,
+                                dialogue: 'I spotted cat pawprints near the south fence! Be careful, {dogName}. Cats are sneaky — they can see 6 times better than us in low light.'
+                            },
+                        ],
+                        triggers: [
+                            {
+                                x: 3, y: 12, w: 5, h: 2,
+                                visible: true,
+                                label: '⚠️ South Fence',
+                                action: 'nextStep'
+                            }
+                        ]
+                    },
+                    // After reaching south fence
+                    { type: 'endExplore' },
+                    { type: 'narration', text: 'As you approach the south fence, you hear hissing from the shadows...' },
+                    { type: 'shake', duration: 0.6, intensity: 6 },
+                    { type: 'bg', color: '#1a1a2e', emojis: [
+                        { emoji: '🌙', x: 0.8, y: 0.1, alpha: 0.5 },
+                        { emoji: '🌳', x: 0.15, y: 0.55, alpha: 0.2 },
+                        { emoji: '🌳', x: 0.85, y: 0.5, alpha: 0.2 },
+                    ]},
+                    { type: 'enter', id: 'player', emoji: '{dogEmoji}', name: '{dogName}', x: 0.5, y: 0.65, scale: 1.1 },
+                    { type: 'enter', id: 'catleader', emoji: '😼', name: 'Captain Whiskers', x: 0.5, y: 0.35, scale: 1.2 },
+                    { type: 'enter', id: 'cat1', emoji: '🐱', name: '', x: 0.25, y: 0.4, scale: 0.8 },
+                    { type: 'enter', id: 'cat2', emoji: '🐱', name: '', x: 0.75, y: 0.4, scale: 0.8 },
+                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'Well, well, well... A little puppy playing guard dog. How adorable.' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'You! You\'re the ones who took that puppy\'s parents! Where are they?!' },
+                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'Hahaha! Those Golden Retrievers? They\'re our... guests... at Cat Central. Very comfortable, I assure you. *evil grin*' },
+                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'But enough chit-chat. CATS! Show this mutt what happens when dogs get too nosy!' },
+                    { type: 'narration', text: '⚔️ BATTLE! The Cat Army attacks the Academy backyard!' },
+                    { type: 'battle', level: 0 },
+                ]
+            },
+
+            // === SCENE 4: After First Battle ===
+            {
+                bg: '#2c1810',
+                bgEmojis: [
+                    { emoji: '🏫', x: 0.5, y: 0.2, alpha: 0.3 },
+                    { emoji: '⭐', x: 0.3, y: 0.15, alpha: 0.3 },
+                    { emoji: '⭐', x: 0.7, y: 0.12, alpha: 0.3 },
+                ],
+                characters: [],
+                steps: [
+                    { type: 'enter', id: 'player', emoji: '{dogEmoji}', name: '{dogName}', x: 0.5, y: 0.65, scale: 1.1 },
+                    { type: 'enter', id: 'elder', emoji: '🦮', name: 'Old Rex', x: 0.35, y: 0.45, scale: 1.2 },
+                    { type: 'enter', id: 'puppy', emoji: '🐶', name: 'Lost Puppy', x: 0.65, y: 0.75, scale: 0.7 },
+                    { type: 'narration', text: 'The cats retreat, hissing and yowling. {dogName} defended the Academy!' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'Impressive work, {dogName}! You drove them off. But Captain Whiskers will be back with more forces.' },
+                    { type: 'dialogue', speaker: 'Lost Puppy', emoji: '🐶', text: '{dogName}! You were so brave! Did the cats say anything about... about my parents?' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'They\'re being held at a place called Cat Central. Don\'t worry, we\'ll get them back.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'Cat Central... That\'s deep in their territory. You\'ll need to go through the Park first.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'The Park has a river running through it. Cats hate water — that\'s actually true! Most cats avoid water because their fur isn\'t waterproof like a dog\'s.' },
+                    { type: 'narration', text: '📖 Dog Fact: Many dog breeds have water-resistant coats! Labrador Retrievers have a double coat with natural oils that repel water.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'I have a friend at the Park — a Husky named Frost. She patrols the bridges. Find her, and she\'ll help you cross into cat territory.' },
+                    { type: 'enter', id: 'scout', emoji: '🐕‍🦺', name: 'Scout', x: 0.15, y: 0.55, scale: 0.9 },
+                    { type: 'dialogue', speaker: 'Scout', emoji: '🐕‍🦺', text: 'I want to help too! I overheard the cats talking — they said the Golden Retrievers are being forced to fetch things for the Cat King!' },
+                    { type: 'dialogue', speaker: 'Scout', emoji: '🐕‍🦺', text: 'Fun fact about Goldens: they have such a gentle grip, they can carry a raw egg in their mouth without breaking it! The cats are exploiting their natural retrieving instinct.' },
+                    { type: 'dialogue', speaker: 'Lost Puppy', emoji: '🐶', text: 'That sounds just like Mama and Papa! They love fetching things! But not for mean cats...' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'Then it\'s settled. We head for the Park, find Frost, and push through to Cat Central.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'Be careful out there. And remember — the strength of the pack is every dog, and the strength of every dog is the pack.' },
+                    { type: 'narration', text: '📖 That\'s actually from "The Jungle Book" by Rudyard Kipling — about the Law of the Pack!' },
+                    { type: 'reward', bones: 75, treats: 15, xp: 40 },
+                    { type: 'narration', text: '🦴 +75 Bones | 🍖 +15 Treats | ⭐ +40 XP' },
+                    { type: 'flag', flag: 'ep1_met_whiskers', value: true },
+                ]
+            },
+
+            // === SCENE 5: Journey to the Park ===
+            {
+                bg: '#2d5016',
+                bgEmojis: [
+                    { emoji: '🌳', x: 0.1, y: 0.3, alpha: 0.3 },
+                    { emoji: '🌳', x: 0.9, y: 0.25, alpha: 0.3 },
+                    { emoji: '🌳', x: 0.2, y: 0.5, alpha: 0.2 },
+                    { emoji: '🌳', x: 0.8, y: 0.55, alpha: 0.2 },
+                    { emoji: '🌉', x: 0.5, y: 0.3, alpha: 0.4 },
+                    { emoji: '🌊', x: 0.4, y: 0.38, alpha: 0.3 },
+                    { emoji: '🌊', x: 0.6, y: 0.38, alpha: 0.3 },
+                ],
+                characters: [],
+                steps: [
+                    { type: 'narration', text: 'The Park — once a peaceful place where dogs and their humans played together.' },
+                    { type: 'narration', text: 'Now the Cat Army patrols its bridges and paths. But the river still runs free.' },
+                    { type: 'enter', id: 'player', emoji: '{dogEmoji}', name: '{dogName}', x: 0.3, y: 0.7, scale: 1 },
+                    { type: 'enter', id: 'frost', emoji: '🐺', name: 'Frost', x: 0.7, y: 0.45, scale: 1.2 },
+                    { type: 'dialogue', speaker: 'Frost', emoji: '🐺', text: '*AWOOOO!* Hold it right there! ... Oh, you must be from the Academy. Rex sent word you\'d be coming.' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'I\'m {dogName}. I\'m looking for two Golden Retrievers being held at Cat Central. Can you help me get across?' },
+                    { type: 'dialogue', speaker: 'Frost', emoji: '🐺', text: 'Golden Retrievers, huh? Yeah, I saw the cats dragging them through here last week. Poor things.' },
+                    { type: 'dialogue', speaker: 'Frost', emoji: '🐺', text: 'I\'m a Siberian Husky. We were originally bred by the Chukchi people of Siberia to pull sleds across frozen tundra. I can handle a little river!' },
+                    { type: 'narration', text: '📖 Husky Fact: Siberian Huskies can run up to 100 miles per day! They have a special metabolism that lets them run for hours without getting tired.' },
+                    { type: 'dialogue', speaker: 'Frost', emoji: '🐺', text: 'But there\'s a problem. The cats have set up an ambush at the main bridge. We\'ll need to fight through.' },
+                    { type: 'dialogue', speaker: 'Frost', emoji: '🐺', text: 'I\'ll join your team. My howl can freeze enemies in their tracks — literally! Huskies have a howl that can be heard from 10 miles away.' },
+                    { type: 'choice', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'Frost offers to fight alongside you.',
+                        choices: [
+                            { text: 'Welcome to the team, Frost! Let\'s do this!' },
+                            { text: 'We\'ll need all the help we can get. Thanks, Frost!' },
+                        ]
+                    },
+                    { type: 'narration', text: '⚔️ BATTLE! Fight through the Cat Army at the Park!' },
+                    { type: 'battle', level: 1 },
+                ]
+            },
+
+            // === SCENE 6: The Path to Cat Central ===
+            {
+                bg: '#1a1a2e',
+                bgEmojis: [
+                    { emoji: '🏚️', x: 0.3, y: 0.25, alpha: 0.3 },
+                    { emoji: '🏚️', x: 0.7, y: 0.2, alpha: 0.3 },
+                    { emoji: '🐱', x: 0.2, y: 0.45, alpha: 0.15 },
+                    { emoji: '🐱', x: 0.8, y: 0.5, alpha: 0.15 },
+                    { emoji: '😼', x: 0.5, y: 0.15, alpha: 0.3 },
+                ],
+                characters: [],
+                steps: [
+                    { type: 'enter', id: 'player', emoji: '{dogEmoji}', name: '{dogName}', x: 0.3, y: 0.65, scale: 1 },
+                    { type: 'enter', id: 'frost', emoji: '🐺', name: 'Frost', x: 0.2, y: 0.55, scale: 1 },
+                    { type: 'narration', text: 'You made it across the Park! But Cat Central looms ahead — a maze of alleys and rooftops ruled by the Cat King.' },
+                    { type: 'dialogue', speaker: 'Frost', emoji: '🐺', text: 'We\'re getting close. I can smell the cats — and something else. Dog fur! The Golden Retrievers must be nearby!' },
+                    { type: 'enter', id: 'catking', emoji: '👑', name: 'The Cat King', x: 0.5, y: 0.3, scale: 1.5 },
+                    { type: 'shake', duration: 0.7, intensity: 8 },
+                    { type: 'dialogue', speaker: 'The Cat King', emoji: '👑', text: 'So... the puppies from the Academy dare enter MY domain?' },
+                    { type: 'dialogue', speaker: 'The Cat King', emoji: '👑', text: 'I am the Cat King! Ruler of all felines! And those Golden Retrievers? They fetch my royal toys now! MWAHAHA!' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'Let them go! Dogs aren\'t your servants!' },
+                    { type: 'dialogue', speaker: 'The Cat King', emoji: '👑', text: 'You want them back? Then come and GET them! My entire army stands between you and your precious Golden Retrievers!' },
+                    { type: 'dialogue', speaker: 'The Cat King', emoji: '👑', text: 'Did you know cats always land on their feet? It\'s called the "righting reflex" — we developed it over millions of years. You mutts can\'t even catch your own tails! HAHA!' },
+                    { type: 'narration', text: '📖 Cat Fact: Cats DO always land on their feet! It\'s called the righting reflex, and they can rotate their bodies mid-air in less than 0.3 seconds.' },
+                    { type: 'dialogue', speaker: 'Frost', emoji: '🐺', text: '{dogName}, this is it. The final battle. Are you ready?' },
+                    { type: 'choice', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'The Cat King\'s army assembles. This is the biggest fight yet...',
+                        choices: [
+                            { text: 'For the Lost Puppy! For their parents! LET\'S GO!' },
+                            { text: 'Every dog in the Academy is counting on us. We won\'t fail!' },
+                        ]
+                    },
+                    { type: 'narration', text: '⚔️ FINAL BATTLE! Storm Cat Central and rescue the Golden Retrievers!' },
+                    { type: 'battle', level: 2 },
+                ]
+            },
+
+            // === SCENE 7: The Rescue ===
+            {
+                bg: '#1B5E20',
+                bgEmojis: [
+                    { emoji: '☀️', x: 0.5, y: 0.08, alpha: 0.6 },
+                    { emoji: '🌈', x: 0.5, y: 0.18, alpha: 0.4 },
+                    { emoji: '🌳', x: 0.1, y: 0.4, alpha: 0.2 },
+                    { emoji: '🌳', x: 0.9, y: 0.45, alpha: 0.2 },
+                    { emoji: '🦋', x: 0.3, y: 0.3, alpha: 0.3 },
+                    { emoji: '🦋', x: 0.7, y: 0.25, alpha: 0.3 },
+                ],
+                characters: [],
+                steps: [
+                    { type: 'narration', text: 'The Cat King flees! His army scatters in all directions. And there, in the back of Cat Central...' },
+                    { type: 'enter', id: 'mama', emoji: '🦮', name: 'Mama Goldie', x: 0.35, y: 0.45, scale: 1.2 },
+                    { type: 'enter', id: 'papa', emoji: '🦮', name: 'Papa Goldie', x: 0.65, y: 0.45, scale: 1.3 },
+                    { type: 'narration', text: 'Two beautiful Golden Retrievers, tired but alive, their tails starting to wag...' },
+                    { type: 'enter', id: 'player', emoji: '{dogEmoji}', name: '{dogName}', x: 0.3, y: 0.7, scale: 1 },
+                    { type: 'enter', id: 'frost', emoji: '🐺', name: 'Frost', x: 0.15, y: 0.65, scale: 0.9 },
+                    { type: 'dialogue', speaker: 'Mama Goldie', emoji: '🦮', text: 'Oh my goodness! Are you from the Academy? Is our baby safe?!' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'Your puppy is safe and warm at Puppy Academy. They\'ve been so brave, waiting for you.' },
+                    { type: 'dialogue', speaker: 'Papa Goldie', emoji: '🦮', text: '*wipes tear with paw* Thank you... thank you so much. We were so worried.' },
+                    { type: 'dialogue', speaker: 'Papa Goldie', emoji: '🦮', text: 'Those cats made us fetch things all day. They don\'t understand — we LOVE fetching, but only for people and dogs who love us back!' },
+                    { type: 'narration', text: '📖 Retriever Fact: Golden Retrievers were bred specifically to retrieve hunted game gently. Their "soft mouth" is so gentle they can carry a raw egg without cracking it!' },
+                    { type: 'shake', duration: 0.3, intensity: 3 },
+                    { type: 'narration', text: 'Back at Puppy Academy...' },
+                ]
+            },
+
+            // === SCENE 8: Reunion ===
+            {
+                bg: '#2c1810',
+                bgEmojis: [
+                    { emoji: '🏫', x: 0.5, y: 0.15, alpha: 0.3 },
+                    { emoji: '❤️', x: 0.3, y: 0.25, alpha: 0.4 },
+                    { emoji: '❤️', x: 0.7, y: 0.2, alpha: 0.4 },
+                    { emoji: '🎉', x: 0.15, y: 0.3, alpha: 0.3 },
+                    { emoji: '🎉', x: 0.85, y: 0.28, alpha: 0.3 },
+                    { emoji: '🦴', x: 0.2, y: 0.8, alpha: 0.15 },
+                    { emoji: '🦴', x: 0.8, y: 0.85, alpha: 0.15 },
+                ],
+                characters: [],
+                steps: [
+                    { type: 'enter', id: 'puppy', emoji: '🐶', name: 'Lost Puppy', x: 0.5, y: 0.65, scale: 0.8 },
+                    { type: 'enter', id: 'mama', emoji: '🦮', name: 'Mama Goldie', x: 0.35, y: 0.45, scale: 1.1 },
+                    { type: 'enter', id: 'papa', emoji: '🦮', name: 'Papa Goldie', x: 0.65, y: 0.45, scale: 1.2 },
+                    { type: 'dialogue', speaker: 'Lost Puppy', emoji: '🐶', text: 'MAMA! PAPA! *runs and jumps*' },
+                    { type: 'shake', duration: 0.3, intensity: 4 },
+                    { type: 'move', id: 'puppy', x: 0.5, y: 0.48 },
+                    { type: 'dialogue', speaker: 'Mama Goldie', emoji: '🦮', text: 'My baby! Oh, we missed you so much! *nuzzle nuzzle*' },
+                    { type: 'dialogue', speaker: 'Papa Goldie', emoji: '🦮', text: 'You\'ve been so brave, little one. We\'re so proud of you.' },
+                    { type: 'enter', id: 'player', emoji: '{dogEmoji}', name: '{dogName}', x: 0.5, y: 0.8, scale: 1 },
+                    { type: 'enter', id: 'elder', emoji: '🦮', name: 'Old Rex', x: 0.15, y: 0.55, scale: 1.1 },
+                    { type: 'enter', id: 'frost', emoji: '🐺', name: 'Frost', x: 0.85, y: 0.6, scale: 0.9 },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: '{dogName}, you\'ve done something remarkable today. You\'ve shown true courage, loyalty, and heart.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'Those are the qualities we value most at Puppy Academy. Not just in dogs — in anyone.' },
+                    { type: 'dialogue', speaker: 'Mama Goldie', emoji: '🦮', text: 'We\'d like to stay at the Academy, if you\'ll have us. And our little one too — they want to grow up to be just like {dogName}!' },
+                    { type: 'dialogue', speaker: 'Lost Puppy', emoji: '🐶', text: 'My name is Sunny! And when I grow up, I want to help rescue other dogs too!' },
+                    { type: 'reward', dog: { breed: 'goldie', name: 'Sunny' } },
+                    { type: 'narration', text: '🎉 Sunny the Golden Retriever has joined your kennel!' },
+                    { type: 'reward', bones: 200, treats: 30, xp: 100 },
+                    { type: 'narration', text: '🦴 +200 Bones | 🍖 +30 Treats | ⭐ +100 XP' },
+                    { type: 'dialogue', speaker: 'Frost', emoji: '🐺', text: 'That was quite the adventure. Count me in for the next one, {dogName}!' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'The Cat King escaped, which means he\'ll be back. But for now... let\'s celebrate.' },
+                    { type: 'dialogue', speaker: 'Old Rex', emoji: '🦮', text: 'And {dogName}? Remember what you learned today. Every dog has a story, a breed with a history, and a heart full of loyalty. Take care of them all.' },
+                    { type: 'narration', text: '📖 Final Fact: There are over 360 recognized dog breeds in the world, each with its own unique history and purpose. From tiny Chihuahuas to giant Great Danes, every dog is special!' },
+                    { type: 'dialogue', speaker: 'Sunny', emoji: '🐶', text: 'Thank you, {dogName}. You\'re the best friend a pup could have!' },
+                    { type: 'narration', text: '🐾 Episode 1: "A Lost Pup" — COMPLETE! 🐾\n\nSunny is safe. The family is reunited.\nBut the Cat King is still out there...\n\nTo be continued in Episode 2: "The Pack Grows"' },
+                    { type: 'flag', flag: 'ep1_complete', value: true },
+                ]
+            }
+        ]
+    }
+};

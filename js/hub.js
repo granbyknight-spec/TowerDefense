@@ -2,9 +2,10 @@
 // Manages navigation between hub areas and launching battles
 
 class Hub {
-    constructor(academy, onStartBattle) {
+    constructor(academy, onStartBattle, onStartStory) {
         this.academy = academy;
         this.onStartBattle = onStartBattle; // callback(levelIndex)
+        this.onStartStory = onStartStory;   // callback(episodeId)
 
         this.hubEl = document.getElementById('hub-screen');
         this.selectedBattle = 0;
@@ -176,7 +177,12 @@ class Hub {
             ` : ''}
 
             <div class="hub-section">
-                <div class="hub-section-title">Yard Patrol</div>
+                <div class="hub-section-title">Story Mode</div>
+                <div class="hub-episodes">${this._buildEpisodeCards(a)}</div>
+            </div>
+
+            <div class="hub-section">
+                <div class="hub-section-title">Yard Patrol (Free Play)</div>
                 <div class="hub-battles">${battleCards}</div>
                 <button class="hub-btn hub-go-btn" id="start-battle-btn">Start Battle!</button>
             </div>
@@ -391,5 +397,39 @@ class Hub {
                 }
             });
         }
+
+        // Story episode buttons
+        this.hubEl.querySelectorAll('.hub-episode-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const epId = parseInt(btn.dataset.episode);
+                if (btn.classList.contains('locked')) return;
+                self.hide();
+                if (self.onStartStory) self.onStartStory(epId);
+            });
+        });
+    }
+
+    _buildEpisodeCards(a) {
+        const flags = a.storyFlags || {};
+        const episodes = [
+            { id: 1, title: 'A Lost Pup', icon: '🌧️', desc: 'Rescue a puppy lost in the storm' },
+        ];
+
+        return episodes.map(ep => {
+            const epData = EPISODES[ep.id];
+            const completed = flags['ep' + ep.id + '_complete'];
+            const locked = epData && a.trainerRank < (epData.requiredRank || 0);
+            return `
+                <button class="hub-episode-card ${completed ? 'completed' : ''} ${locked ? 'locked' : ''}"
+                        data-episode="${ep.id}" ${locked ? 'disabled' : ''}>
+                    <div class="hub-episode-icon">${completed ? '⭐' : locked ? '🔒' : ep.icon}</div>
+                    <div class="hub-episode-info">
+                        <div class="hub-episode-title">Ep ${ep.id}: ${ep.title}</div>
+                        <div class="hub-episode-desc">${completed ? 'Completed!' : ep.desc}</div>
+                    </div>
+                    <div class="hub-episode-arrow">${locked ? '' : '▸'}</div>
+                </button>
+            `;
+        }).join('');
     }
 }

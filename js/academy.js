@@ -120,6 +120,10 @@ class Academy {
         this.factsLearned = [];    // breed IDs whose facts player has seen
         this.triviaCorrect = 0;
 
+        // Story progress
+        this.storyFlags = {};
+        this.storyProgress = 0;
+
         // UI state
         this.currentScreen = 'title'; // title, hub, kennel, shelter, battles, profile, save
         this.selectedDog = null;
@@ -281,6 +285,8 @@ class Academy {
         this.factsLearned = state.factsLearned || [];
         this.triviaCorrect = state.triviaCorrect || 0;
         this.activeDogId = state.activeDogId || null;
+        this.storyFlags = state.storyFlags || {};
+        this.storyProgress = state.storyProgress || 0;
 
         this.roster = [];
         if (state.roster) {
@@ -316,6 +322,8 @@ class Academy {
         this.factsLearned = [starterBreed];
         this.triviaCorrect = 0;
         this.activeDogId = null;
+        this.storyFlags = {};
+        this.storyProgress = 0;
 
         const dog = this.createDog(starterBreed);
         this.activeDogId = dog.id;

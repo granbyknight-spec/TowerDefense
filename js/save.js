@@ -63,6 +63,8 @@ const SaveSystem = {
             totalBattles: academy.totalBattles,
             factsLearned: academy.factsLearned,
             triviaCorrect: academy.triviaCorrect,
+            storyFlags: academy.storyFlags || {},
+            storyProgress: academy.storyProgress || 0,
         };
     },
 

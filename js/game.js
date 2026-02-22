@@ -1477,22 +1477,65 @@ class Game {
     }
 }
 
-// Boot - Academy is the root, Game is a battle mode within it
+// Boot - Academy is the root, Game is a battle mode, Story is the JRPG mode
 window.addEventListener('DOMContentLoaded', () => {
     const academy = new Academy();
     const game = new Game();
     game.academy = academy;
 
-    // Hub launches battles and receives results
+    // Story engine
+    const storyEngine = new StoryEngine(game.canvas, academy);
+    let storyBattlePending = false; // true when story triggered a battle
+
+    // Hub launches battles, stories, and receives results
     const hub = new Hub(academy, (levelIndex) => {
         game.startGame(levelIndex);
+    }, (episodeId) => {
+        // Start a story episode
+        const epData = EPISODES[episodeId];
+        if (!epData) return;
+
+        GameAudio.unlock();
+        // Hide hub, configure canvas
+        document.getElementById('hub-screen').style.display = 'none';
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
+        document.getElementById('game-controls').style.display = 'none';
+        game.canvas.style.display = 'block';
+
+        storyEngine.startEpisode(epData, () => {
+            // Episode complete - return to hub
+            hub.show();
+        }, (battleLevel) => {
+            // Story triggered a battle
+            storyBattlePending = true;
+            game.startGame(battleLevel);
+        });
     });
     game.hub = hub;
+
+    // Override returnToHub to check if story needs to resume
+    const originalReturnToHub = game.returnToHub.bind(game);
+    game.returnToHub = function() {
+        document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('victory-screen').style.display = 'none';
+        document.getElementById('level-complete-screen').style.display = 'none';
+
+        if (storyBattlePending) {
+            storyBattlePending = false;
+            // Resume story after battle
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('bottom-bar').style.display = 'none';
+            document.getElementById('game-controls').style.display = 'none';
+            storyEngine.resumeAfterBattle();
+        } else {
+            hub.show();
+        }
+    };
 
     // Try to load existing save
     const existingSave = SaveSystem.loadLocal();
     if (existingSave && academy.loadFromState(existingSave)) {
-        // Has a save - still show title but will auto-populate name
         const nameInput = document.getElementById('player-name');
         if (nameInput && academy.playerName) {
             nameInput.value = academy.playerName;
@@ -1518,11 +1561,9 @@ window.addEventListener('DOMContentLoaded', () => {
             const nameInput = document.getElementById('player-name');
             const name = nameInput ? nameInput.value.trim() : '';
 
-            // If existing save with a roster, go straight to hub
             if (academy.roster.length > 0) {
                 if (name) academy.playerName = name;
             } else {
-                // New game - create starter dog
                 academy.newGame(name, selectedStarter);
             }
 
@@ -1576,4 +1617,5 @@ window.addEventListener('DOMContentLoaded', () => {
     window.game = game;
     window.academy = academy;
     window.hub = hub;
+    window.storyEngine = storyEngine;
 });

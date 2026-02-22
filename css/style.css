@@ -1130,3 +1130,73 @@ body {
     from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* === Story Episode Cards === */
+.hub-episodes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hub-episode-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(156,39,176,0.15) 0%, rgba(103,58,183,0.15) 100%);
+    border: 2px solid rgba(156,39,176,0.4);
+    border-radius: 12px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    width: 100%;
+}
+
+.hub-episode-card:active {
+    transform: scale(0.97);
+}
+
+.hub-episode-card.completed {
+    border-color: rgba(255,215,0,0.5);
+    background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,152,0,0.1) 100%);
+}
+
+.hub-episode-card.locked {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.hub-episode-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+    width: 40px;
+    text-align: center;
+}
+
+.hub-episode-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.hub-episode-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #CE93D8;
+}
+
+.hub-episode-card.completed .hub-episode-title {
+    color: #FFD700;
+}
+
+.hub-episode-desc {
+    font-size: 11px;
+    color: #bcaaa4;
+    margin-top: 1px;
+}
+
+.hub-episode-arrow {
+    font-size: 18px;
+    color: rgba(255,255,255,0.4);
+    flex-shrink: 0;
+}
