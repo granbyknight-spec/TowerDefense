@@ -1210,6 +1210,131 @@ body {
     flex-shrink: 0;
 }
 
+/* === Village Explore Buttons === */
+.hub-explore-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.hub-explore-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(56,142,60,0.2) 0%, rgba(27,94,32,0.2) 100%);
+    border: 2px solid rgba(76,175,80,0.5);
+    border-radius: 12px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+    min-width: 130px;
+}
+
+.hub-explore-btn:active {
+    transform: scale(0.96);
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, rgba(56,142,60,0.35) 0%, rgba(27,94,32,0.35) 100%);
+}
+
+.hub-explore-icon {
+    font-size: 28px;
+}
+
+.hub-explore-label {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* === Village Dialogue Overlay === */
+.village-dialogue-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+    z-index: 100;
+    pointer-events: auto;
+}
+
+.village-dialogue-box {
+    background: rgba(15, 10, 8, 0.94);
+    border: 2px solid #FFD700;
+    border-radius: 12px;
+    padding: 14px 16px;
+    max-width: 420px;
+    width: 100%;
+    pointer-events: auto;
+}
+
+.village-dialogue-speaker {
+    font-size: 15px;
+    font-weight: bold;
+    color: #FFD700;
+    margin-bottom: 6px;
+}
+
+.village-dialogue-text {
+    font-size: 13px;
+    color: #e0e0e0;
+    line-height: 1.5;
+}
+
+.village-dialogue-hint {
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    text-align: right;
+    margin-top: 6px;
+}
+
+/* === Village Back Button === */
+.village-back-btn {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 90;
+    padding: 6px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
+}
+
+.village-back-btn:active {
+    background: rgba(255,255,255,0.15);
+}
+
+/* === Story Skip Button === */
+.story-skip-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 200;
+    padding: 8px 18px;
+    background: rgba(0,0,0,0.75);
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
+    letter-spacing: 1px;
+}
+
+.story-skip-btn:active {
+    background: rgba(255,255,255,0.2);
+    border-color: #FFD700;
+    color: #FFD700;
+}
+
     </style>
 </head>
 <body>
@@ -5593,8 +5718,9 @@ class UI {
         this._lastTapY = 0;
 
         canvas.addEventListener('pointerdown', (e) => {
-            // Don't process game input when story engine is active
+            // Don't process game input when story engine or village is active
             if (window.storyEngine && window.storyEngine.active) return;
+            if (window.village && window.village.active) return;
 
             if (e.pointerType === 'touch') {
                 const now = performance.now();
@@ -5623,6 +5749,7 @@ class UI {
         });
         canvas.addEventListener('pointermove', (e) => {
             if (window.storyEngine && window.storyEngine.active) return;
+            if (window.village && window.village.active) return;
             this.onPointerMove(e);
         });
         canvas.addEventListener('pointerup', (e) => { this._panning = false; });
@@ -6657,67 +6784,37 @@ const EPISODES = {
                 ]
             },
 
-            // === SCENE 3: Exploration - Academy Grounds ===
+            // === SCENE 3: Exploration - Academy Grounds (FF7-style Village) ===
             {
                 type: 'explore',
+                villageMap: 'academy',
                 bg: '#3D6B25',
-                map: {
-                    width: 12, height: 14,
-                    // 0=grass, 1=path, 2=water, 3=building, 4=door, 5=dark
-                    tiles: [
-                        3,3,3,3,3,3,3,3,3,3,3,3,
-                        3,3,3,3,4,3,3,4,3,3,3,3,
-                        0,0,0,1,1,1,1,1,1,0,0,0,
-                        0,0,0,1,0,0,0,0,1,0,0,0,
-                        0,0,0,1,0,0,0,0,1,0,0,0,
-                        0,0,0,1,1,1,1,1,1,0,0,0,
-                        0,0,0,0,0,1,0,0,0,0,0,0,
-                        0,0,0,0,0,1,0,0,0,0,0,0,
-                        0,2,2,0,0,1,0,0,0,0,0,0,
-                        0,2,2,0,0,1,0,0,0,0,0,0,
-                        0,0,0,0,1,1,1,0,0,0,0,0,
-                        0,0,0,0,1,0,1,0,0,0,0,0,
-                        0,0,0,1,1,0,1,1,0,0,0,0,
-                        0,0,0,0,0,0,0,0,0,0,0,0,
-                    ],
-                    decor: (() => {
-                        const d = {};
-                        d[0] = '🏫'; d[1] = '🏫'; d[2] = '🏫'; d[3] = '🏫'; d[5] = '🏫'; d[6] = '🏫'; d[7] = '🏫';
-                        d[8] = '🏫'; d[9] = '🏫'; d[10] = '🏫'; d[11] = '🏫';
-                        d[16] = '🚪'; d[19] = '🚪';
-                        d[8 * 12 + 1] = '🌊'; d[8 * 12 + 2] = '🌊';
-                        d[9 * 12 + 1] = '🌊'; d[9 * 12 + 2] = '🌊';
-                        d[3 * 12 + 0] = '🌳'; d[4 * 12 + 0] = '🌳';
-                        d[3 * 12 + 10] = '🌳'; d[4 * 12 + 10] = '🌳';
-                        d[6 * 12 + 9] = '🌻'; d[7 * 12 + 10] = '🌻';
-                        d[11 * 12 + 1] = '🌳'; d[12 * 12 + 1] = '🌳';
-                        d[13 * 12 + 9] = '🪨'; d[13 * 12 + 10] = '🪨';
-                        return d;
-                    })()
-                },
-                startX: 5, startY: 6,
+                startX: 14, startY: 18,
                 steps: [
                     {
                         type: 'explore',
-                        map: null, // uses scene map
-                        startX: 5, startY: 6,
+                        villageMap: 'academy',
+                        startX: 14, startY: 18,
                         npcs: [
                             {
-                                id: 'rex', emoji: '🦮', name: 'Old Rex', x: 4, y: 2,
+                                id: 'rex', emoji: '🦮', name: 'Old Rex',
+                                x: 14, y: 10, wander: true,
                                 dialogue: 'The Cat Army has been growing bolder. Scout the southern edge of our grounds — I saw movement there last night.'
                             },
                             {
-                                id: 'nurse', emoji: '🐩', name: 'Nurse Fifi', x: 7, y: 2,
+                                id: 'nurse', emoji: '🐩', name: 'Nurse Fifi',
+                                x: 24, y: 8, wander: false,
                                 dialogue: 'The little puppy is resting in the infirmary. Did you know puppies need 18-20 hours of sleep a day? Golden Retrievers especially need their rest while growing!'
                             },
                             {
-                                id: 'scout', emoji: '🐕‍🦺', name: 'Scout', x: 9, y: 7,
+                                id: 'scout', emoji: '🐕‍🦺', name: 'Scout',
+                                x: 20, y: 14, wander: true,
                                 dialogue: 'I spotted cat pawprints near the south fence! Be careful, {dogName}. Cats are sneaky — they can see 6 times better than us in low light.'
                             },
                         ],
                         triggers: [
                             {
-                                x: 3, y: 12, w: 5, h: 2,
+                                x: 13, y: 27, w: 4, h: 2,
                                 visible: true,
                                 label: '⚠️ South Fence',
                                 action: 'nextStep'
@@ -6980,6 +7077,10 @@ class StoryEngine {
         // Transition effects
         this._transition = null; // {type, progress, duration, callback}
 
+        // Village renderer reference (set externally)
+        this.village = null; // Village instance for rich exploration
+        this._villageActive = false;
+
         // Callbacks
         this.onComplete = null; // called when episode ends
         this.onBattle = null;   // called when story triggers a battle
@@ -7003,6 +7104,7 @@ class StoryEngine {
         // Show canvas, hide hub
         this.canvas.style.display = 'block';
 
+        this._showSkipBtn();
         this._bindInput();
         this._startScene(0);
         this._raf = requestAnimationFrame((t) => this._loop(t));
@@ -7011,12 +7113,14 @@ class StoryEngine {
     stop() {
         this.active = false;
         this._unbindInput();
+        this._hideSkipBtn();
         if (this._raf) cancelAnimationFrame(this._raf);
     }
 
     // Resume after a battle mid-story
     resumeAfterBattle() {
         this.active = true;
+        this._showSkipBtn();
         this._bindInput();
         this.stepIndex++;
         this._advanceStep();
@@ -7047,6 +7151,16 @@ class StoryEngine {
 
         // If scene is exploration, set up the map
         if (this.scene.type === 'explore') {
+            // Check for village map FIRST - if found, delegate entirely
+            const vMapName = this.scene.villageMap;
+            const vMaps = window.VILLAGE_MAPS;
+            if (vMapName && this.village && vMaps && vMaps[vMapName]) {
+                // Get the first explore step for NPCs/triggers
+                const exploreStep = this.scene.steps ? this.scene.steps.find(s => s.type === 'explore') : null;
+                const mergedStep = { ...this.scene, ...(exploreStep || {}) };
+                this._startVillageExploration(vMapName, mergedStep);
+                return; // Village takes over - don't advance
+            }
             this._setupExploration(this.scene);
         } else {
             this.exploring = false;
@@ -7221,6 +7335,7 @@ class StoryEngine {
     _endEpisode() {
         this.active = false;
         this._unbindInput();
+        this._hideSkipBtn();
         if (this._raf) cancelAnimationFrame(this._raf);
 
         // Mark episode complete
@@ -7235,9 +7350,88 @@ class StoryEngine {
         if (this.onComplete) this.onComplete();
     }
 
+    // === SKIP BUTTON ===
+
+    _showSkipBtn() {
+        let btn = document.getElementById('story-skip-btn');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'story-skip-btn';
+            btn.className = 'story-skip-btn';
+            btn.textContent = 'Skip >>';
+            document.getElementById('game-container').appendChild(btn);
+        }
+        btn.style.display = 'block';
+        btn.onclick = () => this._skipScene();
+    }
+
+    _hideSkipBtn() {
+        const btn = document.getElementById('story-skip-btn');
+        if (btn) btn.style.display = 'none';
+    }
+
+    _skipScene() {
+        if (!this.active || !this.scene) return;
+
+        // If village exploration is active, end it
+        if (this._villageActive) {
+            this._endVillageExploration();
+            return;
+        }
+
+        // If old-style exploration, end it
+        if (this.exploring) {
+            this.exploring = false;
+        }
+
+        // Fast-forward through remaining steps looking for the next
+        // battle or the end of the scene. Execute reward/flag steps silently.
+        const steps = this.scene.steps;
+        while (this.stepIndex < steps.length) {
+            const step = steps[this.stepIndex];
+            if (step.type === 'battle') {
+                // Can't skip battles - execute normally
+                this._executeStep(step);
+                return;
+            }
+            // Silently apply reward and flag steps
+            if (step.type === 'reward') {
+                if (step.bones) this.academy.bones += step.bones;
+                if (step.treats) this.academy.treats += step.treats;
+                if (step.xp) this.academy.addXP(step.xp);
+                if (step.dog) this.academy.createDog(step.dog.breed, step.dog.name);
+                SaveSystem.saveLocal(this.academy);
+            } else if (step.type === 'flag') {
+                if (!this.academy.storyFlags) this.academy.storyFlags = {};
+                this.academy.storyFlags[step.flag] = step.value !== undefined ? step.value : true;
+                SaveSystem.saveLocal(this.academy);
+            }
+            this.stepIndex++;
+        }
+
+        // Scene exhausted - go to next scene
+        this.dialogueText = '';
+        this.dialogueChoices = null;
+        this._transition = {
+            type: 'fade',
+            progress: 0,
+            duration: 0.3,
+            callback: () => this._startScene(this.sceneIndex + 1)
+        };
+        this.fadeTarget = 1;
+    }
+
     // === EXPLORATION ===
 
     _setupExploration(step) {
+        // Check if this explore step uses the new Village renderer
+        const villageMapName = step.villageMap || (this.scene && this.scene.villageMap);
+        const villageMaps = window.VILLAGE_MAPS || (typeof VILLAGE_MAPS !== 'undefined' ? VILLAGE_MAPS : null);
+        if (villageMapName && this.village && villageMaps && villageMaps[villageMapName]) {
+            this._startVillageExploration(villageMapName, step);
+            return;
+        }
+
         this.exploring = true;
         // Use step map, or fall back to current scene map, or keep existing
         if (step.map) {
@@ -7253,6 +7447,130 @@ class StoryEngine {
         this._moveTarget = null;
         this.dialogueText = '';
         this.dialogueSpeaker = '';
+    }
+
+    _startVillageExploration(mapName, step) {
+        // Pause story rendering - Village takes over the canvas
+        this.exploring = false;
+        this._villageActive = true;
+
+        // Unbind story input so village handles its own
+        this._unbindInput();
+
+        // Stop story loop (village has its own)
+        if (this._raf) cancelAnimationFrame(this._raf);
+
+        // Size canvas for village
+        this.canvas.width = Math.min(window.innerWidth, 480);
+        this.canvas.height = Math.min(window.innerHeight, 800);
+        this.village.ts = Math.max(24, Math.floor(this.canvas.width / 16));
+
+        // Load the village map
+        const maps = window.VILLAGE_MAPS || VILLAGE_MAPS;
+        const mapData = JSON.parse(JSON.stringify(maps[mapName]));
+
+        // Override start position if step specifies it
+        if (step.startX !== undefined) mapData.startX = step.startX;
+        if (step.startY !== undefined) mapData.startY = step.startY;
+
+        // Merge story NPCs into the village map NPCs
+        if (step.npcs && step.npcs.length) {
+            for (const npc of step.npcs) {
+                // Replace or add NPCs from the story step
+                const existing = mapData.npcs.findIndex(n => n.id === npc.id);
+                const storyNpc = {
+                    ...npc,
+                    dialogue: this._substituteVars(npc.dialogue || ''),
+                };
+                if (existing >= 0) {
+                    mapData.npcs[existing] = { ...mapData.npcs[existing], ...storyNpc };
+                } else {
+                    mapData.npcs.push(storyNpc);
+                }
+            }
+        }
+
+        // Override triggers if step specifies them
+        if (step.triggers && step.triggers.length) {
+            // Add story triggers to map triggers
+            for (const t of step.triggers) {
+                mapData.triggers.push(t);
+            }
+        }
+
+        this.village.loadMap(mapData);
+
+        // Show back button for village mode
+        let backBtn = document.getElementById('village-back-btn');
+        if (backBtn) backBtn.style.display = 'block';
+
+        const self = this;
+        this.village.start((npc) => {
+            // NPC interaction - show dialogue overlay
+            const text = npc.dialogue ? self._substituteVars(npc.dialogue) : '';
+            if (text) {
+                let overlay = document.getElementById('village-dialogue');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'village-dialogue';
+                    overlay.className = 'village-dialogue-overlay';
+                    document.getElementById('game-container').appendChild(overlay);
+                }
+                overlay.innerHTML = `
+                    <div class="village-dialogue-box">
+                        ${npc.name ? `<div class="village-dialogue-speaker">${npc.emoji || ''} ${npc.name}</div>` : ''}
+                        <div class="village-dialogue-text">${text}</div>
+                        <div class="village-dialogue-hint">tap to close</div>
+                    </div>
+                `;
+                overlay.style.display = 'flex';
+                overlay.onclick = () => {
+                    overlay.style.display = 'none';
+                    // Check if this NPC advances the story
+                    if (npc.advanceStory) {
+                        self._endVillageExploration();
+                    }
+                };
+            }
+        }, (trigger) => {
+            if (trigger.action === 'nextStep') {
+                self._endVillageExploration();
+            } else if (trigger.action === 'dialogue') {
+                let overlay = document.getElementById('village-dialogue');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'village-dialogue';
+                    overlay.className = 'village-dialogue-overlay';
+                    document.getElementById('game-container').appendChild(overlay);
+                }
+                overlay.innerHTML = `
+                    <div class="village-dialogue-box">
+                        <div class="village-dialogue-text">${self._substituteVars(trigger.text || '')}</div>
+                        <div class="village-dialogue-hint">tap to close</div>
+                    </div>
+                `;
+                overlay.style.display = 'flex';
+                overlay.onclick = () => { overlay.style.display = 'none'; };
+            }
+        });
+    }
+
+    _endVillageExploration() {
+        // Stop village, resume story
+        this.village.stop();
+        this._villageActive = false;
+
+        // Hide village UI
+        const dlg = document.getElementById('village-dialogue');
+        if (dlg) dlg.style.display = 'none';
+        const backBtn = document.getElementById('village-back-btn');
+        if (backBtn) backBtn.style.display = 'none';
+
+        // Restore canvas and resume story
+        this._bindInput();
+        this.stepIndex++;
+        this._advanceStep();
+        this._raf = requestAnimationFrame((t) => this._loop(t));
     }
 
     _handleExplorationTap(wx, wy) {
@@ -7785,15 +8103,2129 @@ class StoryEngine {
 }
 
 
+// === js/village.js ===
+// Village Renderer - FF7-style bird's-eye JRPG village
+// Rich canvas-rendered environment with lighting, shadows, and atmosphere
+
+// === TILE TYPES ===
+const TILE = {
+    GRASS:     0,
+    PATH:      1,
+    WATER:     2,
+    WALL:      3,
+    FLOOR:     4,  // indoor floor
+    FENCE:     5,
+    BRIDGE:    6,
+    FLOWERS:   7,
+    SAND:      8,
+    DARK_GRASS:9,
+    ROOF:     10,
+    DOOR:     11,
+    STONE:    12,
+};
+
+// === OBJECT TYPES (placed on top of tiles) ===
+const OBJ = {
+    NONE:       0,
+    TREE_OAK:   1,
+    TREE_PINE:  2,
+    BUSH:       3,
+    ROCK:       4,
+    BENCH:      5,
+    LAMP:       6,
+    SIGN:       7,
+    WELL:       8,
+    MAILBOX:    9,
+    DOG_HOUSE: 10,
+    FOUNTAIN:  11,
+    BARREL:    12,
+    CRATE:     13,
+    FLOWER_BED:14,
+    STATUE:    15,
+    CHIMNEY:   16,
+    WINDOW:    17,
+};
+
+class Village {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.active = false;
+
+        // Camera
+        this.camX = 0;
+        this.camY = 0;
+        this.camTargetX = 0;
+        this.camTargetY = 0;
+        this.camSmooth = 4; // lerp speed
+
+        // Time
+        this.time = 0;        // total elapsed
+        this.dayTime = 0.35;  // 0-1 day cycle (0.35 = morning)
+
+        // Tile size (pixels per tile)
+        this.ts = 32;
+
+        // Map data
+        this.mapW = 0;
+        this.mapH = 0;
+        this.tiles = [];      // ground layer
+        this.objects = [];     // object layer
+        this.roofs = [];       // roof layer (hides interiors)
+        this.collisions = [];  // walkability
+
+        // Player
+        this.playerX = 0;
+        this.playerY = 0;
+        this.playerTargetX = 0;
+        this.playerTargetY = 0;
+        this.playerDir = 0;   // 0=down,1=left,2=right,3=up
+        this.playerMoving = false;
+        this.playerAnimFrame = 0;
+        this.playerSpeed = 3.5;
+
+        // NPCs
+        this.npcs = [];
+
+        // Particles (ambient)
+        this.particles = [];
+
+        // Interaction
+        this.interactTarget = null;
+        this.onInteract = null; // callback(npc)
+        this.onTrigger = null;  // callback(trigger)
+
+        // Triggers
+        this.triggers = [];
+
+        // Cached gradients/patterns
+        this._waterOffset = 0;
+        this._grassPattern = null;
+
+        // Light sources
+        this.lights = [];
+
+        // Input
+        this._pointerHandler = null;
+        this._lastTap = null;
+    }
+
+    // === PUBLIC API ===
+
+    loadMap(mapData) {
+        this.mapW = mapData.width;
+        this.mapH = mapData.height;
+        this.tiles = mapData.tiles.slice();
+        this.objects = mapData.objects ? mapData.objects.slice() : new Array(this.mapW * this.mapH).fill(0);
+        this.roofs = mapData.roofs ? mapData.roofs.slice() : new Array(this.mapW * this.mapH).fill(0);
+        this.collisions = mapData.collisions ? mapData.collisions.slice() : this._buildCollisions();
+        this.npcs = (mapData.npcs || []).map(n => ({
+            ...n,
+            animFrame: 0,
+            animTimer: Math.random() * 2,
+            walkTimer: 0,
+            walkDir: 0,
+            origX: n.x,
+            origY: n.y,
+        }));
+        this.triggers = mapData.triggers || [];
+        this.lights = mapData.lights || [];
+        this.playerX = mapData.startX || 10;
+        this.playerY = mapData.startY || 10;
+        this.playerTargetX = this.playerX;
+        this.playerTargetY = this.playerY;
+
+        // Center camera on player
+        this.camX = this.playerX * this.ts;
+        this.camY = this.playerY * this.ts;
+        this.camTargetX = this.camX;
+        this.camTargetY = this.camY;
+
+        // Generate ambient particles
+        this._initParticles();
+    }
+
+    start(onInteract, onTrigger) {
+        this.active = true;
+        this.onInteract = onInteract;
+        this.onTrigger = onTrigger;
+        this._bindInput();
+        this._raf = requestAnimationFrame((t) => this._loop(t));
+    }
+
+    stop() {
+        this.active = false;
+        this._unbindInput();
+        if (this._raf) cancelAnimationFrame(this._raf);
+    }
+
+    // === COLLISION ===
+
+    _buildCollisions() {
+        const c = new Array(this.mapW * this.mapH).fill(0);
+        for (let i = 0; i < c.length; i++) {
+            const t = this.tiles[i];
+            if (t === TILE.WALL || t === TILE.WATER || t === TILE.ROOF) {
+                c[i] = 1; // blocked
+            }
+            const o = this.objects[i];
+            if (o === OBJ.TREE_OAK || o === OBJ.TREE_PINE || o === OBJ.ROCK ||
+                o === OBJ.WELL || o === OBJ.FOUNTAIN || o === OBJ.STATUE ||
+                o === OBJ.BARREL || o === OBJ.CRATE) {
+                c[i] = 1;
+            }
+        }
+        return c;
+    }
+
+    _isWalkable(tx, ty) {
+        if (tx < 0 || ty < 0 || tx >= this.mapW || ty >= this.mapH) return false;
+        return this.collisions[ty * this.mapW + tx] === 0;
+    }
+
+    // === INPUT ===
+
+    _bindInput() {
+        this._pointerHandler = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            this._onTap(e);
+        };
+        this.canvas.addEventListener('pointerdown', this._pointerHandler);
+    }
+
+    _unbindInput() {
+        if (this._pointerHandler) {
+            this.canvas.removeEventListener('pointerdown', this._pointerHandler);
+            this._pointerHandler = null;
+        }
+    }
+
+    _onTap(e) {
+        if (!this.active) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const sx = (e.clientX - rect.left) * (this.canvas.width / rect.width);
+        const sy = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+
+        // Convert screen to world coords
+        const wx = sx + this.camX - this.canvas.width / 2;
+        const wy = sy + this.camY - this.canvas.height / 2;
+
+        // Convert to tile coords
+        const tx = Math.floor(wx / this.ts);
+        const ty = Math.floor(wy / this.ts);
+
+        // Check NPC interaction
+        for (const npc of this.npcs) {
+            const nx = Math.round(npc.x);
+            const ny = Math.round(npc.y);
+            if (Math.abs(tx - nx) <= 1 && Math.abs(ty - ny) <= 1) {
+                const dist = Math.abs(this.playerX - npc.x) + Math.abs(this.playerY - npc.y);
+                if (dist <= 2.5) {
+                    if (this.onInteract) this.onInteract(npc);
+                    return;
+                } else {
+                    // Walk toward NPC
+                    this._setMoveTarget(nx, ny - 1);
+                    this._lastTap = { npc };
+                    return;
+                }
+            }
+        }
+
+        // Check trigger zones
+        for (const trigger of this.triggers) {
+            if (tx >= trigger.x && tx < trigger.x + (trigger.w || 1) &&
+                ty >= trigger.y && ty < trigger.y + (trigger.h || 1)) {
+                this._setMoveTarget(tx, ty);
+                this._lastTap = { trigger };
+                return;
+            }
+        }
+
+        // Move to location
+        this._setMoveTarget(tx, ty);
+        this._lastTap = null;
+    }
+
+    _setMoveTarget(tx, ty) {
+        if (this._isWalkable(tx, ty)) {
+            this.playerTargetX = tx;
+            this.playerTargetY = ty;
+            this.playerMoving = true;
+        }
+    }
+
+    // === GAME LOOP ===
+
+    _loop(timestamp) {
+        if (!this.active) return;
+        if (!this._lastTime) this._lastTime = timestamp;
+        const dt = Math.min((timestamp - this._lastTime) / 1000, 0.1);
+        this._lastTime = timestamp;
+
+        this._update(dt);
+        this._render();
+
+        this._raf = requestAnimationFrame((t) => this._loop(t));
+    }
+
+    _update(dt) {
+        this.time += dt;
+        this._waterOffset += dt * 0.5;
+
+        // Player movement
+        if (this.playerMoving) {
+            const dx = this.playerTargetX - this.playerX;
+            const dy = this.playerTargetY - this.playerY;
+            const d = Math.sqrt(dx * dx + dy * dy);
+
+            if (d < 0.08) {
+                this.playerX = this.playerTargetX;
+                this.playerY = this.playerTargetY;
+                this.playerMoving = false;
+
+                // Check if we reached an NPC or trigger
+                if (this._lastTap) {
+                    if (this._lastTap.npc && this.onInteract) {
+                        const npc = this._lastTap.npc;
+                        const dist = Math.abs(this.playerX - npc.x) + Math.abs(this.playerY - npc.y);
+                        if (dist <= 2.5) this.onInteract(npc);
+                    }
+                    if (this._lastTap.trigger && this.onTrigger) {
+                        this.onTrigger(this._lastTap.trigger);
+                    }
+                    this._lastTap = null;
+                }
+            } else {
+                const move = this.playerSpeed * dt;
+                this.playerX += (dx / d) * Math.min(move, d);
+                this.playerY += (dy / d) * Math.min(move, d);
+
+                // Update direction
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    this.playerDir = dx > 0 ? 2 : 1; // right : left
+                } else {
+                    this.playerDir = dy > 0 ? 0 : 3; // down : up
+                }
+
+                this.playerAnimFrame += dt * 8;
+            }
+        }
+
+        // Camera follow
+        this.camTargetX = this.playerX * this.ts;
+        this.camTargetY = this.playerY * this.ts;
+        this.camX += (this.camTargetX - this.camX) * this.camSmooth * dt;
+        this.camY += (this.camTargetY - this.camY) * this.camSmooth * dt;
+
+        // NPC wandering
+        for (const npc of this.npcs) {
+            npc.animTimer += dt;
+            if (npc.wander) {
+                npc.walkTimer -= dt;
+                if (npc.walkTimer <= 0) {
+                    npc.walkTimer = 2 + Math.random() * 3;
+                    const dir = Math.floor(Math.random() * 5); // 0-3 = move, 4 = stay
+                    if (dir < 4) {
+                        const ddx = [0, -1, 1, 0][dir];
+                        const ddy = [1, 0, 0, -1][dir];
+                        const nx = Math.round(npc.x) + ddx;
+                        const ny = Math.round(npc.y) + ddy;
+                        // Stay near origin
+                        const distFromHome = Math.abs(nx - npc.origX) + Math.abs(ny - npc.origY);
+                        if (distFromHome <= 3 && this._isWalkable(nx, ny)) {
+                            npc.targetX = nx;
+                            npc.targetY = ny;
+                            npc.walkDir = dir;
+                        }
+                    }
+                }
+                // Move toward target
+                if (npc.targetX !== undefined) {
+                    const dx = npc.targetX - npc.x;
+                    const dy = npc.targetY - npc.y;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d > 0.05) {
+                        npc.x += (dx / d) * 1.5 * dt;
+                        npc.y += (dy / d) * 1.5 * dt;
+                        npc.animFrame += dt * 6;
+                    } else {
+                        npc.x = npc.targetX;
+                        npc.y = npc.targetY;
+                        npc.targetX = undefined;
+                    }
+                }
+            }
+        }
+
+        // Particles
+        for (const p of this.particles) {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.life -= dt;
+            if (p.life <= 0) {
+                this._resetParticle(p);
+            }
+        }
+    }
+
+    // === RENDERING ===
+
+    _render() {
+        const ctx = this.ctx;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        const ts = this.ts;
+
+        // Calculate visible area
+        const scrollX = this.camX - cw / 2;
+        const scrollY = this.camY - ch / 2;
+
+        const startCol = Math.max(0, Math.floor(scrollX / ts) - 1);
+        const endCol = Math.min(this.mapW, Math.ceil((scrollX + cw) / ts) + 1);
+        const startRow = Math.max(0, Math.floor(scrollY / ts) - 1);
+        const endRow = Math.min(this.mapH, Math.ceil((scrollY + ch) / ts) + 1);
+
+        ctx.save();
+
+        // Sky/background gradient based on time of day
+        this._renderSky(ctx, cw, ch);
+
+        // Translate to camera
+        ctx.translate(-scrollX, -scrollY);
+
+        // === GROUND LAYER ===
+        for (let r = startRow; r < endRow; r++) {
+            for (let c = startCol; c < endCol; c++) {
+                this._renderTile(ctx, c, r, ts);
+            }
+        }
+
+        // === SHADOWS (cast by objects/NPCs/player before drawing them) ===
+        this._renderShadows(ctx, startCol, endCol, startRow, endRow, ts);
+
+        // === OBJECTS LAYER (draw bottom-to-top for correct overlap) ===
+        // Collect all drawable entities with their y-position for sorting
+        const drawables = [];
+
+        // Objects
+        for (let r = startRow; r < endRow; r++) {
+            for (let c = startCol; c < endCol; c++) {
+                const obj = this.objects[r * this.mapW + c];
+                if (obj !== OBJ.NONE) {
+                    drawables.push({ type: 'obj', obj, x: c, y: r });
+                }
+            }
+        }
+
+        // NPCs
+        for (const npc of this.npcs) {
+            if (npc.x >= startCol - 1 && npc.x <= endCol + 1 &&
+                npc.y >= startRow - 1 && npc.y <= endRow + 1) {
+                drawables.push({ type: 'npc', npc, x: npc.x, y: npc.y });
+            }
+        }
+
+        // Player
+        drawables.push({ type: 'player', x: this.playerX, y: this.playerY });
+
+        // Sort by y (bottom items drawn last = in front)
+        drawables.sort((a, b) => a.y - b.y);
+
+        for (const d of drawables) {
+            if (d.type === 'obj') this._renderObject(ctx, d.obj, d.x, d.y, ts);
+            else if (d.type === 'npc') this._renderNPC(ctx, d.npc, ts);
+            else if (d.type === 'player') this._renderPlayer(ctx, ts);
+        }
+
+        // === ROOF LAYER (hides interiors when player isn't inside) ===
+        this._renderRoofs(ctx, startCol, endCol, startRow, endRow, ts);
+
+        // === TRIGGER HIGHLIGHTS ===
+        for (const trigger of this.triggers) {
+            if (trigger.visible) {
+                const px = trigger.x * ts;
+                const py = trigger.y * ts;
+                const w = (trigger.w || 1) * ts;
+                const h = (trigger.h || 1) * ts;
+                const pulse = 0.1 + Math.sin(this.time * 3) * 0.05;
+                ctx.fillStyle = `rgba(255,215,0,${pulse})`;
+                ctx.fillRect(px, py, w, h);
+                if (trigger.label) {
+                    ctx.font = `bold ${ts * 0.3}px Arial`;
+                    ctx.fillStyle = '#FFD700';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 4;
+                    ctx.fillText(trigger.label, px + w / 2, py + h / 2);
+                    ctx.shadowBlur = 0;
+                }
+            }
+        }
+
+        // === PARTICLES ===
+        for (const p of this.particles) {
+            ctx.globalAlpha = Math.max(0, p.alpha * (p.life / p.maxLife));
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x * ts, p.y * ts, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.restore();
+
+        // === LIGHTING OVERLAY ===
+        this._renderLighting(ctx, cw, ch, scrollX, scrollY, ts);
+
+        // === VIGNETTE ===
+        this._renderVignette(ctx, cw, ch);
+
+        // NPC name plates and interaction indicators (screen-space)
+        ctx.save();
+        for (const npc of this.npcs) {
+            const sx = npc.x * ts - scrollX;
+            const sy = npc.y * ts - scrollY;
+            if (sx < -ts || sx > cw + ts || sy < -ts || sy > ch + ts) continue;
+
+            const dist = Math.abs(this.playerX - npc.x) + Math.abs(this.playerY - npc.y);
+            if (dist <= 3 && npc.name) {
+                ctx.font = `bold ${Math.max(10, ts * 0.32)}px Arial`;
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = 4;
+                ctx.fillText(npc.name, sx + ts / 2, sy - ts * 0.15);
+                ctx.shadowBlur = 0;
+
+                if (npc.dialogue && dist <= 2.5) {
+                    ctx.font = `${Math.max(8, ts * 0.28)}px Arial`;
+                    ctx.fillText('💬', sx + ts / 2 + ts * 0.45, sy - ts * 0.05);
+                }
+            }
+        }
+        ctx.restore();
+    }
+
+    // === SKY ===
+
+    _renderSky(ctx, cw, ch) {
+        // Time-of-day sky gradient
+        const t = this.dayTime;
+        let topColor, botColor;
+
+        if (t < 0.25) {
+            // Night
+            topColor = '#0a0a1a';
+            botColor = '#141428';
+        } else if (t < 0.35) {
+            // Dawn
+            const f = (t - 0.25) / 0.1;
+            topColor = this._lerpColor('#0a0a1a', '#4a6fa5', f);
+            botColor = this._lerpColor('#141428', '#e8b87d', f);
+        } else if (t < 0.7) {
+            // Day
+            topColor = '#4a6fa5';
+            botColor = '#87CEEB';
+        } else if (t < 0.8) {
+            // Dusk
+            const f = (t - 0.7) / 0.1;
+            topColor = this._lerpColor('#4a6fa5', '#2a1a3a', f);
+            botColor = this._lerpColor('#87CEEB', '#d4645c', f);
+        } else {
+            // Night
+            topColor = '#0a0a1a';
+            botColor = '#141428';
+        }
+
+        const grad = ctx.createLinearGradient(0, 0, 0, ch);
+        grad.addColorStop(0, topColor);
+        grad.addColorStop(1, botColor);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, cw, ch);
+    }
+
+    // === TILE RENDERING ===
+
+    _renderTile(ctx, col, row, ts) {
+        const idx = row * this.mapW + col;
+        const tile = this.tiles[idx];
+        const px = col * ts;
+        const py = row * ts;
+
+        switch (tile) {
+            case TILE.GRASS:
+                this._drawGrass(ctx, px, py, ts, col, row);
+                break;
+            case TILE.DARK_GRASS:
+                this._drawGrass(ctx, px, py, ts, col, row, true);
+                break;
+            case TILE.PATH:
+                this._drawPath(ctx, px, py, ts, col, row);
+                break;
+            case TILE.WATER:
+                this._drawWater(ctx, px, py, ts, col, row);
+                break;
+            case TILE.WALL:
+                this._drawWall(ctx, px, py, ts, col, row);
+                break;
+            case TILE.FLOOR:
+                this._drawFloor(ctx, px, py, ts);
+                break;
+            case TILE.FENCE:
+                this._drawFence(ctx, px, py, ts, col, row);
+                break;
+            case TILE.BRIDGE:
+                this._drawBridge(ctx, px, py, ts);
+                break;
+            case TILE.FLOWERS:
+                this._drawGrass(ctx, px, py, ts, col, row);
+                this._drawFlowers(ctx, px, py, ts, col, row);
+                break;
+            case TILE.SAND:
+                this._drawSand(ctx, px, py, ts);
+                break;
+            case TILE.ROOF:
+                this._drawRoof(ctx, px, py, ts, col, row);
+                break;
+            case TILE.DOOR:
+                this._drawFloor(ctx, px, py, ts);
+                this._drawDoor(ctx, px, py, ts);
+                break;
+            case TILE.STONE:
+                this._drawStone(ctx, px, py, ts);
+                break;
+        }
+    }
+
+    _drawGrass(ctx, x, y, ts, col, row, dark) {
+        // Rich multi-tone grass
+        const base = dark ? '#2d5016' : '#3a7a1e';
+        const alt = dark ? '#245012' : '#328a18';
+        ctx.fillStyle = (col + row) % 2 === 0 ? base : alt;
+        ctx.fillRect(x, y, ts, ts);
+
+        // Subtle grass blade details
+        const seed = (col * 7 + row * 13) % 17;
+        ctx.fillStyle = dark ? 'rgba(20,80,10,0.4)' : 'rgba(80,180,40,0.25)';
+        for (let i = 0; i < 3; i++) {
+            const gx = x + ((seed + i * 5) % ts);
+            const gy = y + ((seed * 3 + i * 7) % ts);
+            ctx.fillRect(gx, gy, 1, 2);
+        }
+    }
+
+    _drawPath(ctx, x, y, ts, col, row) {
+        // Earthy path with subtle texture
+        ctx.fillStyle = '#a08060';
+        ctx.fillRect(x, y, ts, ts);
+
+        // Lighter center
+        ctx.fillStyle = 'rgba(180,150,120,0.3)';
+        ctx.fillRect(x + ts * 0.15, y + ts * 0.15, ts * 0.7, ts * 0.7);
+
+        // Dirt speckles
+        const seed = (col * 11 + row * 7) % 13;
+        ctx.fillStyle = 'rgba(80,60,40,0.3)';
+        ctx.fillRect(x + (seed % ts), y + ((seed * 3) % ts), 2, 2);
+
+        // Path border detection - draw edge shadows where path meets grass
+        const above = row > 0 ? this.tiles[(row - 1) * this.mapW + col] : -1;
+        const below = row < this.mapH - 1 ? this.tiles[(row + 1) * this.mapW + col] : -1;
+        const left = col > 0 ? this.tiles[row * this.mapW + col - 1] : -1;
+        const right = col < this.mapW - 1 ? this.tiles[row * this.mapW + col + 1] : -1;
+
+        ctx.fillStyle = 'rgba(60,40,20,0.2)';
+        if (above !== TILE.PATH && above !== TILE.BRIDGE && above !== TILE.DOOR && above !== TILE.FLOOR) {
+            ctx.fillRect(x, y, ts, 2);
+        }
+        if (left !== TILE.PATH && left !== TILE.BRIDGE && left !== TILE.DOOR && left !== TILE.FLOOR) {
+            ctx.fillRect(x, y, 2, ts);
+        }
+    }
+
+    _drawWater(ctx, x, y, ts, col, row) {
+        // Animated water
+        const wave = Math.sin(this._waterOffset * 3 + col * 0.8 + row * 0.6);
+        const r = 30 + wave * 10;
+        const g = 100 + wave * 15;
+        const b = 200 + wave * 20;
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(x, y, ts, ts);
+
+        // Shimmer highlights
+        ctx.fillStyle = `rgba(255,255,255,${0.1 + wave * 0.08})`;
+        const sx = x + ts * 0.3 + Math.sin(this._waterOffset * 2 + col) * ts * 0.2;
+        const sy = y + ts * 0.4 + Math.cos(this._waterOffset * 1.5 + row) * ts * 0.2;
+        ctx.fillRect(sx, sy, ts * 0.15, ts * 0.06);
+        ctx.fillRect(sx + ts * 0.3, sy + ts * 0.25, ts * 0.1, ts * 0.04);
+
+        // Edge foam where water meets land
+        const above = row > 0 ? this.tiles[(row - 1) * this.mapW + col] : TILE.WATER;
+        if (above !== TILE.WATER) {
+            const foamAlpha = 0.3 + Math.sin(this._waterOffset * 4 + col) * 0.1;
+            ctx.fillStyle = `rgba(200,230,255,${foamAlpha})`;
+            ctx.fillRect(x, y, ts, ts * 0.12);
+        }
+    }
+
+    _drawWall(ctx, x, y, ts, col, row) {
+        // Stone/brick wall
+        ctx.fillStyle = '#6d5540';
+        ctx.fillRect(x, y, ts, ts);
+
+        // Brick pattern
+        const brickH = ts / 4;
+        const brickW = ts / 2;
+        ctx.strokeStyle = 'rgba(40,30,20,0.4)';
+        ctx.lineWidth = 1;
+        for (let by = 0; by < 4; by++) {
+            const offset = (by % 2) * brickW * 0.5;
+            for (let bx = -1; bx < 3; bx++) {
+                ctx.strokeRect(x + bx * brickW + offset, y + by * brickH, brickW, brickH);
+            }
+        }
+
+        // Top edge highlight
+        const below = row < this.mapH - 1 ? this.tiles[(row + 1) * this.mapW + col] : TILE.WALL;
+        if (below !== TILE.WALL && below !== TILE.ROOF) {
+            ctx.fillStyle = 'rgba(100,80,60,0.6)';
+            ctx.fillRect(x, y + ts - 3, ts, 3);
+        }
+    }
+
+    _drawFloor(ctx, x, y, ts) {
+        // Indoor wooden floor
+        ctx.fillStyle = '#b08860';
+        ctx.fillRect(x, y, ts, ts);
+
+        // Wood grain
+        ctx.strokeStyle = 'rgba(80,60,30,0.2)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            const gy = y + ts * (0.2 + i * 0.3);
+            ctx.beginPath();
+            ctx.moveTo(x, gy);
+            ctx.lineTo(x + ts, gy);
+            ctx.stroke();
+        }
+    }
+
+    _drawFence(ctx, x, y, ts, col, row) {
+        // Grass underneath
+        this._drawGrass(ctx, x, y, ts, col, row);
+
+        // Fence posts
+        ctx.fillStyle = '#8B7355';
+        ctx.fillRect(x + ts * 0.4, y, ts * 0.2, ts);
+
+        // Cross beams
+        ctx.fillRect(x, y + ts * 0.25, ts, ts * 0.1);
+        ctx.fillRect(x, y + ts * 0.65, ts, ts * 0.1);
+
+        // Post tops
+        ctx.fillStyle = '#a08868';
+        ctx.fillRect(x + ts * 0.35, y, ts * 0.3, ts * 0.08);
+    }
+
+    _drawBridge(ctx, x, y, ts) {
+        // Wooden bridge over water
+        ctx.fillStyle = '#a08055';
+        ctx.fillRect(x, y, ts, ts);
+
+        // Planks
+        ctx.strokeStyle = 'rgba(60,40,20,0.4)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(x, y + i * (ts / 4));
+            ctx.lineTo(x + ts, y + i * (ts / 4));
+            ctx.stroke();
+        }
+
+        // Rails
+        ctx.fillStyle = '#705030';
+        ctx.fillRect(x, y, ts * 0.08, ts);
+        ctx.fillRect(x + ts * 0.92, y, ts * 0.08, ts);
+    }
+
+    _drawFlowers(ctx, x, y, ts, col, row) {
+        const seed = col * 31 + row * 17;
+        const colors = ['#ff6b8a', '#ffb347', '#fff44f', '#7ec8e3', '#c9b1ff'];
+        for (let i = 0; i < 4; i++) {
+            const fx = x + ((seed + i * 11) % (ts - 4)) + 2;
+            const fy = y + ((seed * 3 + i * 13) % (ts - 4)) + 2;
+            ctx.fillStyle = colors[(seed + i) % colors.length];
+            ctx.beginPath();
+            ctx.arc(fx, fy, ts * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+            // Center
+            ctx.fillStyle = '#ffeb3b';
+            ctx.beginPath();
+            ctx.arc(fx, fy, ts * 0.03, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    _drawSand(ctx, x, y, ts) {
+        ctx.fillStyle = '#d4b896';
+        ctx.fillRect(x, y, ts, ts);
+        ctx.fillStyle = 'rgba(200,170,130,0.3)';
+        ctx.fillRect(x + 3, y + 5, 2, 1);
+        ctx.fillRect(x + ts - 6, y + ts - 4, 2, 1);
+    }
+
+    _drawRoof(ctx, x, y, ts, col, row) {
+        // Roof tiles
+        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(x, y, ts, ts);
+
+        // Shingle pattern
+        const shingleH = ts / 3;
+        ctx.fillStyle = 'rgba(100,50,10,0.3)';
+        for (let sy2 = 0; sy2 < 3; sy2++) {
+            const offset = (sy2 % 2) * ts * 0.25;
+            ctx.fillRect(x + offset, y + sy2 * shingleH, ts * 0.5, 1);
+            ctx.fillRect(x + offset + ts * 0.5, y + sy2 * shingleH, ts * 0.5, 1);
+        }
+    }
+
+    _drawDoor(ctx, x, y, ts) {
+        // Door on floor
+        ctx.fillStyle = '#6d4c2e';
+        ctx.fillRect(x + ts * 0.2, y + ts * 0.05, ts * 0.6, ts * 0.9);
+        // Door handle
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(x + ts * 0.65, y + ts * 0.5, ts * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        // Door frame
+        ctx.strokeStyle = '#4a3520';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + ts * 0.2, y + ts * 0.05, ts * 0.6, ts * 0.9);
+    }
+
+    _drawStone(ctx, x, y, ts) {
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(x, y, ts, ts);
+        // Stone pattern
+        ctx.strokeStyle = 'rgba(50,50,50,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 1, y + 1, ts * 0.45, ts * 0.45);
+        ctx.strokeRect(x + ts * 0.5, y + 1, ts * 0.48, ts * 0.48);
+        ctx.strokeRect(x + 2, y + ts * 0.5, ts * 0.5, ts * 0.48);
+    }
+
+    // === OBJECT RENDERING ===
+
+    _renderObject(ctx, obj, col, row, ts) {
+        const x = col * ts;
+        const y = row * ts;
+
+        switch (obj) {
+            case OBJ.TREE_OAK:
+                this._drawTreeOak(ctx, x, y, ts);
+                break;
+            case OBJ.TREE_PINE:
+                this._drawTreePine(ctx, x, y, ts);
+                break;
+            case OBJ.BUSH:
+                this._drawBush(ctx, x, y, ts);
+                break;
+            case OBJ.ROCK:
+                this._drawRock(ctx, x, y, ts);
+                break;
+            case OBJ.BENCH:
+                this._drawBench(ctx, x, y, ts);
+                break;
+            case OBJ.LAMP:
+                this._drawLamp(ctx, x, y, ts);
+                break;
+            case OBJ.SIGN:
+                this._drawSign(ctx, x, y, ts);
+                break;
+            case OBJ.WELL:
+                this._drawWell(ctx, x, y, ts);
+                break;
+            case OBJ.MAILBOX:
+                this._drawMailbox(ctx, x, y, ts);
+                break;
+            case OBJ.DOG_HOUSE:
+                this._drawDogHouse(ctx, x, y, ts);
+                break;
+            case OBJ.FOUNTAIN:
+                this._drawFountain(ctx, x, y, ts);
+                break;
+            case OBJ.BARREL:
+                this._drawBarrel(ctx, x, y, ts);
+                break;
+            case OBJ.CRATE:
+                this._drawCrate(ctx, x, y, ts);
+                break;
+            case OBJ.FLOWER_BED:
+                this._drawFlowerBed(ctx, x, y, ts);
+                break;
+            case OBJ.STATUE:
+                this._drawStatue(ctx, x, y, ts);
+                break;
+            case OBJ.CHIMNEY:
+                this._drawChimney(ctx, x, y, ts);
+                break;
+            case OBJ.WINDOW:
+                this._drawWindow(ctx, x, y, ts);
+                break;
+        }
+    }
+
+    _drawTreeOak(ctx, x, y, ts) {
+        // Trunk
+        ctx.fillStyle = '#5d3a1a';
+        ctx.fillRect(x + ts * 0.35, y + ts * 0.5, ts * 0.3, ts * 0.5);
+
+        // Canopy - layered circles for volume
+        const cx = x + ts * 0.5;
+        const sway = Math.sin(this.time * 0.8 + x * 0.1) * ts * 0.02;
+
+        ctx.fillStyle = '#1a6b0a';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway - ts * 0.2, y + ts * 0.3, ts * 0.28, ts * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#2a8b15';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway + ts * 0.15, y + ts * 0.28, ts * 0.3, ts * 0.27, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#35a020';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway, y + ts * 0.15, ts * 0.35, ts * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Highlight
+        ctx.fillStyle = 'rgba(100,200,50,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway - ts * 0.08, y + ts * 0.08, ts * 0.15, ts * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    _drawTreePine(ctx, x, y, ts) {
+        // Trunk
+        ctx.fillStyle = '#4a2810';
+        ctx.fillRect(x + ts * 0.4, y + ts * 0.65, ts * 0.2, ts * 0.35);
+
+        const cx = x + ts * 0.5;
+        const sway = Math.sin(this.time * 0.6 + x * 0.15) * ts * 0.015;
+
+        // Pine layers (triangles)
+        for (let i = 0; i < 3; i++) {
+            const layerY = y + ts * 0.1 + i * ts * 0.2;
+            const w = ts * (0.25 + i * 0.1);
+            ctx.fillStyle = i === 0 ? '#1a5a15' : (i === 1 ? '#1d6818' : '#206b1a');
+            ctx.beginPath();
+            ctx.moveTo(cx + sway, layerY);
+            ctx.lineTo(cx + sway - w, layerY + ts * 0.28);
+            ctx.lineTo(cx + sway + w, layerY + ts * 0.28);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    _drawBush(ctx, x, y, ts) {
+        ctx.fillStyle = '#2d7a1e';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.6, ts * 0.4, ts * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#3a9928';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.4, y + ts * 0.55, ts * 0.25, ts * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Berries sometimes
+        if ((Math.floor(x + y)) % 3 === 0) {
+            ctx.fillStyle = '#ff4444';
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.6, y + ts * 0.5, ts * 0.04, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.45, y + ts * 0.45, ts * 0.04, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    _drawRock(ctx, x, y, ts) {
+        ctx.fillStyle = '#707070';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.6, ts * 0.35, ts * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Highlight
+        ctx.fillStyle = 'rgba(180,180,180,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.4, y + ts * 0.5, ts * 0.15, ts * 0.1, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    _drawBench(ctx, x, y, ts) {
+        // Seat
+        ctx.fillStyle = '#8B6840';
+        ctx.fillRect(x + ts * 0.1, y + ts * 0.4, ts * 0.8, ts * 0.2);
+        // Legs
+        ctx.fillStyle = '#5a4030';
+        ctx.fillRect(x + ts * 0.15, y + ts * 0.6, ts * 0.08, ts * 0.3);
+        ctx.fillRect(x + ts * 0.77, y + ts * 0.6, ts * 0.08, ts * 0.3);
+        // Back
+        ctx.fillRect(x + ts * 0.1, y + ts * 0.2, ts * 0.8, ts * 0.06);
+        ctx.fillRect(x + ts * 0.12, y + ts * 0.2, ts * 0.04, ts * 0.22);
+        ctx.fillRect(x + ts * 0.84, y + ts * 0.2, ts * 0.04, ts * 0.22);
+    }
+
+    _drawLamp(ctx, x, y, ts) {
+        // Pole
+        ctx.fillStyle = '#444';
+        ctx.fillRect(x + ts * 0.45, y + ts * 0.25, ts * 0.1, ts * 0.75);
+        // Lamp head
+        ctx.fillStyle = '#666';
+        ctx.fillRect(x + ts * 0.3, y + ts * 0.15, ts * 0.4, ts * 0.15);
+        // Glow
+        ctx.fillStyle = 'rgba(255,220,100,0.5)';
+        ctx.beginPath();
+        ctx.arc(x + ts * 0.5, y + ts * 0.22, ts * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    _drawSign(ctx, x, y, ts) {
+        // Post
+        ctx.fillStyle = '#6d4c2e';
+        ctx.fillRect(x + ts * 0.45, y + ts * 0.45, ts * 0.1, ts * 0.55);
+        // Board
+        ctx.fillStyle = '#d4a56a';
+        ctx.fillRect(x + ts * 0.15, y + ts * 0.2, ts * 0.7, ts * 0.3);
+        ctx.strokeStyle = '#5a3a1a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + ts * 0.15, y + ts * 0.2, ts * 0.7, ts * 0.3);
+    }
+
+    _drawWell(ctx, x, y, ts) {
+        // Base
+        ctx.fillStyle = '#808080';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.65, ts * 0.38, ts * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Wall
+        ctx.fillStyle = '#6d6d6d';
+        ctx.fillRect(x + ts * 0.12, y + ts * 0.35, ts * 0.76, ts * 0.3);
+        // Water inside
+        ctx.fillStyle = '#2196F3';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.4, ts * 0.28, ts * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Roof posts
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(x + ts * 0.18, y + ts * 0.1, ts * 0.06, ts * 0.35);
+        ctx.fillRect(x + ts * 0.76, y + ts * 0.1, ts * 0.06, ts * 0.35);
+        // Roof
+        ctx.fillStyle = '#8b4513';
+        ctx.beginPath();
+        ctx.moveTo(x + ts * 0.5, y);
+        ctx.lineTo(x + ts * 0.1, y + ts * 0.15);
+        ctx.lineTo(x + ts * 0.9, y + ts * 0.15);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    _drawMailbox(ctx, x, y, ts) {
+        // Post
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(x + ts * 0.45, y + ts * 0.5, ts * 0.1, ts * 0.5);
+        // Box
+        ctx.fillStyle = '#1565c0';
+        ctx.fillRect(x + ts * 0.25, y + ts * 0.3, ts * 0.5, ts * 0.25);
+        // Flag
+        ctx.fillStyle = '#f44336';
+        ctx.fillRect(x + ts * 0.75, y + ts * 0.3, ts * 0.08, ts * 0.15);
+    }
+
+    _drawDogHouse(ctx, x, y, ts) {
+        // Base
+        ctx.fillStyle = '#c0825a';
+        ctx.fillRect(x + ts * 0.1, y + ts * 0.4, ts * 0.8, ts * 0.55);
+        // Door hole
+        ctx.fillStyle = '#3a2010';
+        ctx.beginPath();
+        ctx.arc(x + ts * 0.5, y + ts * 0.7, ts * 0.18, Math.PI, 0, true);
+        ctx.fillRect(x + ts * 0.32, y + ts * 0.7, ts * 0.36, ts * 0.25);
+        ctx.fill();
+        // Roof
+        ctx.fillStyle = '#8b4513';
+        ctx.beginPath();
+        ctx.moveTo(x + ts * 0.5, y + ts * 0.2);
+        ctx.lineTo(x + ts * 0.02, y + ts * 0.45);
+        ctx.lineTo(x + ts * 0.98, y + ts * 0.45);
+        ctx.closePath();
+        ctx.fill();
+        // Name plate
+        ctx.fillStyle = '#d4a56a';
+        ctx.fillRect(x + ts * 0.3, y + ts * 0.45, ts * 0.4, ts * 0.08);
+    }
+
+    _drawFountain(ctx, x, y, ts) {
+        // Base
+        ctx.fillStyle = '#909090';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.65, ts * 0.45, ts * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Water
+        ctx.fillStyle = '#4fc3f7';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.62, ts * 0.35, ts * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Center pillar
+        ctx.fillStyle = '#a0a0a0';
+        ctx.fillRect(x + ts * 0.42, y + ts * 0.2, ts * 0.16, ts * 0.45);
+        // Water spray
+        const spray = Math.sin(this.time * 4) * 0.03;
+        ctx.fillStyle = `rgba(100,200,255,${0.5 + spray})`;
+        ctx.beginPath();
+        ctx.arc(x + ts * 0.5, y + ts * 0.18, ts * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        // Droplets
+        for (let i = 0; i < 3; i++) {
+            const angle = this.time * 3 + i * 2.1;
+            const dx = Math.cos(angle) * ts * 0.15;
+            const dy = Math.sin(angle) * ts * 0.08 + ts * 0.35;
+            ctx.fillStyle = 'rgba(100,200,255,0.6)';
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.5 + dx, y + dy, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    _drawBarrel(ctx, x, y, ts) {
+        ctx.fillStyle = '#8B6840';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.65, ts * 0.28, ts * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#7a5a35';
+        ctx.fillRect(x + ts * 0.22, y + ts * 0.3, ts * 0.56, ts * 0.35);
+        // Metal bands
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.38, ts * 0.28, ts * 0.06, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        // Top
+        ctx.fillStyle = '#6d4c2e';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.5, y + ts * 0.3, ts * 0.28, ts * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    _drawCrate(ctx, x, y, ts) {
+        ctx.fillStyle = '#a08050';
+        ctx.fillRect(x + ts * 0.15, y + ts * 0.3, ts * 0.7, ts * 0.6);
+        // Cross boards
+        ctx.strokeStyle = '#705030';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + ts * 0.15, y + ts * 0.3);
+        ctx.lineTo(x + ts * 0.85, y + ts * 0.9);
+        ctx.moveTo(x + ts * 0.85, y + ts * 0.3);
+        ctx.lineTo(x + ts * 0.15, y + ts * 0.9);
+        ctx.stroke();
+        // Top
+        ctx.fillStyle = '#b09060';
+        ctx.fillRect(x + ts * 0.12, y + ts * 0.25, ts * 0.76, ts * 0.1);
+    }
+
+    _drawFlowerBed(ctx, x, y, ts) {
+        // Earth border
+        ctx.fillStyle = '#5a3a20';
+        ctx.beginPath();
+        ctx.roundRect(x + ts * 0.05, y + ts * 0.2, ts * 0.9, ts * 0.7, ts * 0.08);
+        ctx.fill();
+        // Soil
+        ctx.fillStyle = '#3a2a15';
+        ctx.beginPath();
+        ctx.roundRect(x + ts * 0.12, y + ts * 0.25, ts * 0.76, ts * 0.6, ts * 0.05);
+        ctx.fill();
+        // Flowers
+        const colors = ['#ff6b8a', '#ffb347', '#fff44f', '#c9b1ff', '#7ec8e3'];
+        for (let i = 0; i < 5; i++) {
+            const fx = x + ts * (0.2 + i * 0.15);
+            const fy = y + ts * 0.45 + Math.sin(this.time + i) * ts * 0.02;
+            ctx.fillStyle = colors[i];
+            ctx.beginPath();
+            ctx.arc(fx, fy, ts * 0.06, 0, Math.PI * 2);
+            ctx.fill();
+            // Stem
+            ctx.strokeStyle = '#2d7a1e';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(fx, fy + ts * 0.06);
+            ctx.lineTo(fx, fy + ts * 0.2);
+            ctx.stroke();
+        }
+    }
+
+    _drawStatue(ctx, x, y, ts) {
+        // Base
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(x + ts * 0.25, y + ts * 0.7, ts * 0.5, ts * 0.25);
+        // Dog figure
+        ctx.fillStyle = '#a0a0a0';
+        ctx.fillRect(x + ts * 0.35, y + ts * 0.3, ts * 0.3, ts * 0.4);
+        // Head
+        ctx.beginPath();
+        ctx.arc(x + ts * 0.5, y + ts * 0.25, ts * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        // Plaque
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(x + ts * 0.3, y + ts * 0.8, ts * 0.4, ts * 0.06);
+    }
+
+    _drawChimney(ctx, x, y, ts) {
+        ctx.fillStyle = '#6d4c41';
+        ctx.fillRect(x + ts * 0.3, y + ts * 0.1, ts * 0.4, ts * 0.5);
+        // Top
+        ctx.fillStyle = '#555';
+        ctx.fillRect(x + ts * 0.25, y + ts * 0.05, ts * 0.5, ts * 0.1);
+        // Smoke
+        const smokeAlpha = 0.15 + Math.sin(this.time * 2) * 0.05;
+        ctx.fillStyle = `rgba(180,180,180,${smokeAlpha})`;
+        ctx.beginPath();
+        ctx.arc(x + ts * 0.5 + Math.sin(this.time) * ts * 0.1, y - ts * 0.1, ts * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + ts * 0.5 + Math.sin(this.time * 0.7) * ts * 0.15, y - ts * 0.3, ts * 0.09, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    _drawWindow(ctx, x, y, ts) {
+        // Window frame
+        ctx.fillStyle = '#4a3520';
+        ctx.fillRect(x + ts * 0.15, y + ts * 0.2, ts * 0.7, ts * 0.5);
+        // Glass
+        ctx.fillStyle = 'rgba(135,206,235,0.6)';
+        ctx.fillRect(x + ts * 0.2, y + ts * 0.25, ts * 0.27, ts * 0.18);
+        ctx.fillRect(x + ts * 0.53, y + ts * 0.25, ts * 0.27, ts * 0.18);
+        ctx.fillRect(x + ts * 0.2, y + ts * 0.48, ts * 0.27, ts * 0.18);
+        ctx.fillRect(x + ts * 0.53, y + ts * 0.48, ts * 0.27, ts * 0.18);
+        // Mullion
+        ctx.fillStyle = '#4a3520';
+        ctx.fillRect(x + ts * 0.48, y + ts * 0.2, ts * 0.04, ts * 0.5);
+        ctx.fillRect(x + ts * 0.15, y + ts * 0.43, ts * 0.7, ts * 0.04);
+        // Warm glow from inside
+        ctx.fillStyle = 'rgba(255,200,100,0.2)';
+        ctx.fillRect(x + ts * 0.2, y + ts * 0.25, ts * 0.6, ts * 0.4);
+    }
+
+    // === SHADOWS ===
+
+    _renderShadows(ctx, startCol, endCol, startRow, endRow, ts) {
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+
+        for (let r = startRow; r < endRow; r++) {
+            for (let c = startCol; c < endCol; c++) {
+                const obj = this.objects[r * this.mapW + c];
+                if (obj === OBJ.TREE_OAK || obj === OBJ.TREE_PINE) {
+                    const sx = c * ts + ts * 0.3;
+                    const sy = r * ts + ts * 0.7;
+                    ctx.beginPath();
+                    ctx.ellipse(sx + ts * 0.4, sy + ts * 0.1, ts * 0.45, ts * 0.15, 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obj === OBJ.STATUE || obj === OBJ.WELL || obj === OBJ.FOUNTAIN) {
+                    ctx.beginPath();
+                    ctx.ellipse(c * ts + ts * 0.6, r * ts + ts * 0.85, ts * 0.35, ts * 0.12, 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Player shadow
+        ctx.beginPath();
+        ctx.ellipse(
+            this.playerX * ts + ts * 0.55,
+            this.playerY * ts + ts * 0.9,
+            ts * 0.25, ts * 0.08, 0, 0, Math.PI * 2
+        );
+        ctx.fill();
+
+        // NPC shadows
+        for (const npc of this.npcs) {
+            ctx.beginPath();
+            ctx.ellipse(
+                npc.x * ts + ts * 0.55,
+                npc.y * ts + ts * 0.9,
+                ts * 0.2, ts * 0.07, 0, 0, Math.PI * 2
+            );
+            ctx.fill();
+        }
+    }
+
+    // === PLAYER RENDERING ===
+
+    _renderPlayer(ctx, ts) {
+        const x = this.playerX * ts;
+        const y = this.playerY * ts;
+        const bounce = this.playerMoving ? Math.sin(this.playerAnimFrame) * ts * 0.04 : 0;
+
+        // Body
+        const bodyW = ts * 0.5;
+        const bodyH = ts * 0.35;
+        ctx.fillStyle = '#d4a054'; // golden-ish dog color
+
+        // Direction-based shape
+        const cx = x + ts * 0.5;
+        const cy = y + ts * 0.55 + bounce;
+
+        // Body ellipse
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, bodyW * 0.5, bodyH * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head (direction-dependent)
+        let headX = cx, headY = cy;
+        if (this.playerDir === 0) { headY = cy + ts * 0.15; headX = cx; } // down
+        else if (this.playerDir === 3) { headY = cy - ts * 0.2; headX = cx; } // up
+        else if (this.playerDir === 1) { headX = cx - ts * 0.2; } // left
+        else { headX = cx + ts * 0.2; } // right
+
+        ctx.fillStyle = '#c89540';
+        ctx.beginPath();
+        ctx.arc(headX, headY, ts * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ears
+        ctx.fillStyle = '#a07030';
+        if (this.playerDir === 0 || this.playerDir === 3) {
+            ctx.beginPath();
+            ctx.ellipse(headX - ts * 0.12, headY - ts * 0.08, ts * 0.06, ts * 0.1, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(headX + ts * 0.12, headY - ts * 0.08, ts * 0.06, ts * 0.1, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.playerDir === 1) {
+            ctx.beginPath();
+            ctx.ellipse(headX - ts * 0.05, headY - ts * 0.12, ts * 0.08, ts * 0.1, -0.5, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.ellipse(headX + ts * 0.05, headY - ts * 0.12, ts * 0.08, ts * 0.1, 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Eyes (only when facing down or sideways)
+        if (this.playerDir !== 3) {
+            ctx.fillStyle = '#222';
+            if (this.playerDir === 0) {
+                ctx.beginPath();
+                ctx.arc(headX - ts * 0.06, headY - ts * 0.02, ts * 0.025, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(headX + ts * 0.06, headY - ts * 0.02, ts * 0.025, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                const ex = this.playerDir === 1 ? headX - ts * 0.06 : headX + ts * 0.06;
+                ctx.beginPath();
+                ctx.arc(ex, headY - ts * 0.02, ts * 0.025, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Nose
+        ctx.fillStyle = '#222';
+        let noseX = headX, noseY = headY + ts * 0.08;
+        if (this.playerDir === 1) { noseX = headX - ts * 0.12; noseY = headY + ts * 0.02; }
+        else if (this.playerDir === 2) { noseX = headX + ts * 0.12; noseY = headY + ts * 0.02; }
+        else if (this.playerDir === 3) { noseY = headY - ts * 0.12; }
+        ctx.beginPath();
+        ctx.arc(noseX, noseY, ts * 0.03, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tail (wagging)
+        const tailAngle = Math.sin(this.time * 6) * 0.6;
+        ctx.strokeStyle = '#c89540';
+        ctx.lineWidth = ts * 0.06;
+        ctx.lineCap = 'round';
+        let tailX = cx, tailY = cy;
+        if (this.playerDir === 0) { tailY = cy - ts * 0.15; }
+        else if (this.playerDir === 3) { tailY = cy + ts * 0.18; }
+        else if (this.playerDir === 1) { tailX = cx + ts * 0.22; }
+        else { tailX = cx - ts * 0.22; }
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.quadraticCurveTo(
+            tailX + Math.sin(tailAngle) * ts * 0.15,
+            tailY - ts * 0.15,
+            tailX + Math.sin(tailAngle) * ts * 0.2,
+            tailY - ts * 0.25
+        );
+        ctx.stroke();
+
+        // Legs (simple when moving)
+        if (this.playerMoving) {
+            ctx.fillStyle = '#b08030';
+            const legPhase = this.playerAnimFrame;
+            const legOffset1 = Math.sin(legPhase) * ts * 0.06;
+            const legOffset2 = Math.sin(legPhase + Math.PI) * ts * 0.06;
+
+            if (this.playerDir === 0 || this.playerDir === 3) {
+                // Front legs
+                ctx.fillRect(cx - ts * 0.15 + legOffset1, cy + ts * 0.12, ts * 0.08, ts * 0.15);
+                ctx.fillRect(cx + ts * 0.08 + legOffset2, cy + ts * 0.12, ts * 0.08, ts * 0.15);
+                // Back legs
+                ctx.fillRect(cx - ts * 0.12 + legOffset2, cy + ts * 0.12, ts * 0.07, ts * 0.12);
+                ctx.fillRect(cx + ts * 0.06 + legOffset1, cy + ts * 0.12, ts * 0.07, ts * 0.12);
+            } else {
+                // Side view legs
+                ctx.fillRect(cx - ts * 0.08, cy + ts * 0.1 + legOffset1, ts * 0.08, ts * 0.15);
+                ctx.fillRect(cx + ts * 0.02, cy + ts * 0.1 + legOffset2, ts * 0.08, ts * 0.15);
+            }
+        }
+    }
+
+    // === NPC RENDERING ===
+
+    _renderNPC(ctx, npc, ts) {
+        const x = npc.x * ts;
+        const y = npc.y * ts;
+
+        // Simple animal body (use color)
+        const color = npc.color || '#888';
+        const cx = x + ts * 0.5;
+        const cy = y + ts * 0.55;
+
+        // Body
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, ts * 0.22, ts * 0.16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head
+        ctx.beginPath();
+        ctx.arc(cx, cy - ts * 0.12, ts * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(cx - ts * 0.05, cy - ts * 0.14, ts * 0.02, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + ts * 0.05, cy - ts * 0.14, ts * 0.02, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Emoji overlay if specified
+        if (npc.emoji) {
+            ctx.font = `${ts * 0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(npc.emoji, cx, cy);
+        }
+    }
+
+    // === ROOF LAYER ===
+
+    _renderRoofs(ctx, startCol, endCol, startRow, endRow, ts) {
+        // Check if player is inside a building (under a roof)
+        const ptx = Math.round(this.playerX);
+        const pty = Math.round(this.playerY);
+        const playerUnderRoof = ptx >= 0 && pty >= 0 && ptx < this.mapW && pty < this.mapH &&
+            this.roofs[pty * this.mapW + ptx] === 1;
+
+        for (let r = startRow; r < endRow; r++) {
+            for (let c = startCol; c < endCol; c++) {
+                if (this.roofs[r * this.mapW + c] !== 1) continue;
+
+                // If player is inside this building cluster, make roof transparent
+                if (playerUnderRoof && this._sameRoofCluster(c, r, ptx, pty)) {
+                    ctx.globalAlpha = 0.15;
+                }
+
+                const px = c * ts;
+                const py = r * ts;
+                this._drawRoof(ctx, px, py, ts, c, r);
+
+                ctx.globalAlpha = 1;
+            }
+        }
+    }
+
+    _sameRoofCluster(cx, cy, px, py) {
+        // Simple distance check - same cluster if within 5 tiles
+        return Math.abs(cx - px) <= 5 && Math.abs(cy - py) <= 5;
+    }
+
+    // === LIGHTING ===
+
+    _renderLighting(ctx, cw, ch, scrollX, scrollY, ts) {
+        const t = this.dayTime;
+
+        // Skip lighting during bright daytime
+        if (t > 0.3 && t < 0.65) return;
+
+        // Create darkness overlay
+        ctx.save();
+        ctx.globalCompositeOperation = 'multiply';
+
+        // Base darkness level
+        let darkness;
+        if (t < 0.2 || t > 0.85) {
+            darkness = 0.6; // night
+        } else if (t < 0.3) {
+            darkness = 0.6 * (1 - (t - 0.2) / 0.1); // dawn
+        } else {
+            darkness = 0.6 * ((t - 0.65) / 0.2); // dusk
+        }
+
+        // Dark tint
+        const tintR = Math.round(255 - darkness * 180);
+        const tintG = Math.round(255 - darkness * 190);
+        const tintB = Math.round(255 - darkness * 150);
+        ctx.fillStyle = `rgb(${tintR},${tintG},${tintB})`;
+        ctx.fillRect(0, 0, cw, ch);
+
+        ctx.restore();
+
+        // Light sources (additive)
+        if (darkness > 0.1) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+
+            // Lamp lights
+            for (let r = 0; r < this.mapH; r++) {
+                for (let c = 0; c < this.mapW; c++) {
+                    if (this.objects[r * this.mapW + c] === OBJ.LAMP) {
+                        const lx = c * ts + ts * 0.5 - scrollX;
+                        const ly = r * ts + ts * 0.3 - scrollY;
+                        if (lx < -100 || lx > cw + 100 || ly < -100 || ly > ch + 100) continue;
+
+                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 3);
+                        const intensity = darkness * 0.6;
+                        grad.addColorStop(0, `rgba(255,220,100,${intensity})`);
+                        grad.addColorStop(0.5, `rgba(255,180,60,${intensity * 0.3})`);
+                        grad.addColorStop(1, 'rgba(255,180,60,0)');
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(lx - ts * 3, ly - ts * 3, ts * 6, ts * 6);
+                    }
+                }
+            }
+
+            // Custom light sources
+            for (const light of this.lights) {
+                const lx = light.x * ts - scrollX;
+                const ly = light.y * ts - scrollY;
+                if (lx < -150 || lx > cw + 150 || ly < -150 || ly > ch + 150) continue;
+
+                const radius = (light.radius || 4) * ts;
+                const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, radius);
+                const lc = light.color || '255,200,100';
+                grad.addColorStop(0, `rgba(${lc},${darkness * 0.5})`);
+                grad.addColorStop(1, `rgba(${lc},0)`);
+                ctx.fillStyle = grad;
+                ctx.fillRect(lx - radius, ly - radius, radius * 2, radius * 2);
+            }
+
+            // Window glow
+            for (let r = 0; r < this.mapH; r++) {
+                for (let c = 0; c < this.mapW; c++) {
+                    if (this.objects[r * this.mapW + c] === OBJ.WINDOW) {
+                        const lx = c * ts + ts * 0.5 - scrollX;
+                        const ly = r * ts + ts * 0.4 - scrollY;
+                        if (lx < -50 || lx > cw + 50 || ly < -50 || ly > ch + 50) continue;
+
+                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 1.5);
+                        grad.addColorStop(0, `rgba(255,200,100,${darkness * 0.35})`);
+                        grad.addColorStop(1, 'rgba(255,200,100,0)');
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(lx - ts * 1.5, ly - ts * 1.5, ts * 3, ts * 3);
+                    }
+                }
+            }
+
+            ctx.restore();
+        }
+    }
+
+    // === VIGNETTE ===
+
+    _renderVignette(ctx, cw, ch) {
+        const grad = ctx.createRadialGradient(cw / 2, ch / 2, cw * 0.3, cw / 2, ch / 2, cw * 0.75);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.3)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, cw, ch);
+    }
+
+    // === PARTICLES ===
+
+    _initParticles() {
+        this.particles = [];
+        for (let i = 0; i < 20; i++) {
+            this.particles.push(this._createParticle());
+        }
+    }
+
+    _createParticle() {
+        return {
+            x: this.playerX + (Math.random() - 0.5) * 20,
+            y: this.playerY + (Math.random() - 0.5) * 15,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: -Math.random() * 0.2 - 0.05,
+            size: Math.random() * 2 + 0.5,
+            life: Math.random() * 5 + 3,
+            maxLife: 8,
+            alpha: Math.random() * 0.3 + 0.1,
+            color: Math.random() > 0.5 ? '#ffe' : '#dfd',
+        };
+    }
+
+    _resetParticle(p) {
+        p.x = this.playerX + (Math.random() - 0.5) * 20;
+        p.y = this.playerY + (Math.random() - 0.5) * 15;
+        p.vx = (Math.random() - 0.5) * 0.3;
+        p.vy = -Math.random() * 0.2 - 0.05;
+        p.life = Math.random() * 5 + 3;
+        p.alpha = Math.random() * 0.3 + 0.1;
+    }
+
+    // === UTILS ===
+
+    _lerpColor(a, b, t) {
+        const ar = parseInt(a.slice(1, 3), 16);
+        const ag = parseInt(a.slice(3, 5), 16);
+        const ab = parseInt(a.slice(5, 7), 16);
+        const br = parseInt(b.slice(1, 3), 16);
+        const bg = parseInt(b.slice(3, 5), 16);
+        const bb = parseInt(b.slice(5, 7), 16);
+        const rr = Math.round(ar + (br - ar) * t);
+        const rg = Math.round(ag + (bg - ag) * t);
+        const rb = Math.round(ab + (bb - ab) * t);
+        return `#${rr.toString(16).padStart(2, '0')}${rg.toString(16).padStart(2, '0')}${rb.toString(16).padStart(2, '0')}`;
+    }
+}
+
+
+// === js/villageMaps.js ===
+// Village Map Data - Barksville & Puppy Academy
+// Rich detailed maps for FF7-style bird's-eye exploration
+
+// Helper: fill a rectangular region in a 1D tile array
+function _fillRect(arr, w, x, y, fw, fh, val) {
+    for (let r = y; r < y + fh; r++) {
+        for (let c = x; c < x + fw; c++) {
+            arr[r * w + c] = val;
+        }
+    }
+}
+
+// ===========================
+// PUPPY ACADEMY GROUNDS
+// ===========================
+const VILLAGE_ACADEMY = (() => {
+    const W = 30, H = 30;
+    const tiles = new Array(W * H).fill(TILE.GRASS);
+    const objects = new Array(W * H).fill(OBJ.NONE);
+    const roofs = new Array(W * H).fill(0);
+    const collisions = new Array(W * H).fill(0);
+
+    // === MAIN BUILDING (Academy) - top center ===
+    // Walls
+    _fillRect(tiles, W, 10, 2, 10, 7, TILE.WALL);
+    // Interior floor
+    _fillRect(tiles, W, 11, 3, 8, 5, TILE.FLOOR);
+    // Front door
+    tiles[8 * W + 14] = TILE.DOOR;
+    tiles[8 * W + 15] = TILE.DOOR;
+    // Roof
+    _fillRect(roofs, W, 11, 3, 8, 5, 1);
+    // Windows on front wall
+    objects[7 * W + 12] = OBJ.WINDOW;
+    objects[7 * W + 17] = OBJ.WINDOW;
+    // Chimney
+    objects[2 * W + 18] = OBJ.CHIMNEY;
+
+    // === INFIRMARY - right side ===
+    _fillRect(tiles, W, 22, 4, 6, 5, TILE.WALL);
+    _fillRect(tiles, W, 23, 5, 4, 3, TILE.FLOOR);
+    tiles[8 * W + 24] = TILE.DOOR;
+    _fillRect(roofs, W, 23, 5, 4, 3, 1);
+    objects[7 * W + 25] = OBJ.WINDOW;
+
+    // === KENNEL - left side ===
+    _fillRect(tiles, W, 2, 4, 6, 5, TILE.WALL);
+    _fillRect(tiles, W, 3, 5, 4, 3, TILE.FLOOR);
+    tiles[8 * W + 4] = TILE.DOOR;
+    tiles[8 * W + 5] = TILE.DOOR;
+    _fillRect(roofs, W, 3, 5, 4, 3, 1);
+    objects[7 * W + 3] = OBJ.WINDOW;
+    objects[7 * W + 6] = OBJ.WINDOW;
+
+    // === MAIN PATH - vertical center ===
+    _fillRect(tiles, W, 13, 9, 4, 12, TILE.PATH);
+    // Horizontal path connecting buildings
+    _fillRect(tiles, W, 5, 9, 20, 2, TILE.PATH);
+    // Path to south exit
+    _fillRect(tiles, W, 14, 21, 2, 9, TILE.PATH);
+
+    // === TRAINING YARD - left side ===
+    _fillRect(tiles, W, 2, 12, 8, 6, TILE.SAND);
+    // Fence around training yard
+    _fillRect(tiles, W, 2, 12, 8, 1, TILE.FENCE);
+    _fillRect(tiles, W, 2, 17, 8, 1, TILE.FENCE);
+    _fillRect(tiles, W, 2, 12, 1, 6, TILE.FENCE);
+    _fillRect(tiles, W, 9, 12, 1, 6, TILE.FENCE);
+    // Gate opening
+    tiles[12 * W + 5] = TILE.PATH;
+    tiles[12 * W + 6] = TILE.PATH;
+    collisions[12 * W + 5] = 0;
+    collisions[12 * W + 6] = 0;
+
+    // === POND - right side ===
+    _fillRect(tiles, W, 22, 13, 6, 4, TILE.WATER);
+    // Shore flowers
+    tiles[12 * W + 22] = TILE.FLOWERS;
+    tiles[12 * W + 23] = TILE.FLOWERS;
+    tiles[12 * W + 27] = TILE.FLOWERS;
+    tiles[17 * W + 23] = TILE.FLOWERS;
+    tiles[17 * W + 26] = TILE.FLOWERS;
+
+    // === GARDEN AREA - bottom left ===
+    _fillRect(tiles, W, 2, 20, 6, 4, TILE.DARK_GRASS);
+    tiles[20 * W + 3] = TILE.FLOWERS;
+    tiles[20 * W + 6] = TILE.FLOWERS;
+    tiles[22 * W + 4] = TILE.FLOWERS;
+    tiles[23 * W + 2] = TILE.FLOWERS;
+    tiles[21 * W + 7] = TILE.FLOWERS;
+    objects[21 * W + 3] = OBJ.FLOWER_BED;
+    objects[21 * W + 6] = OBJ.FLOWER_BED;
+
+    // === STORAGE SHED - bottom right ===
+    _fillRect(tiles, W, 23, 20, 5, 4, TILE.WALL);
+    _fillRect(tiles, W, 24, 21, 3, 2, TILE.FLOOR);
+    tiles[23 * W + 25] = TILE.DOOR;
+    _fillRect(roofs, W, 24, 21, 3, 2, 1);
+
+    // === OBJECTS - Trees border ===
+    // Top border
+    for (let c = 0; c < W; c += 2) {
+        if (c < 9 || c > 20) objects[0 * W + c] = OBJ.TREE_OAK;
+        if (c < 9 || c > 20) objects[1 * W + c] = OBJ.TREE_PINE;
+    }
+    // Left border
+    for (let r = 0; r < H; r += 3) {
+        if (r < 3 || (r > 9 && r < 12) || r > 24) objects[r * W + 0] = OBJ.TREE_OAK;
+    }
+    // Right border
+    for (let r = 0; r < H; r += 3) {
+        if (r < 3 || (r > 9 && r < 12) || r > 24) objects[r * W + 29] = OBJ.TREE_PINE;
+    }
+    // Bottom border
+    for (let c = 0; c < W; c += 2) {
+        if (c < 13 || c > 16) objects[29 * W + c] = OBJ.TREE_OAK;
+    }
+
+    // Scattered trees around grounds
+    objects[11 * W + 11] = OBJ.TREE_OAK;
+    objects[15 * W + 20] = OBJ.TREE_OAK;
+    objects[19 * W + 11] = OBJ.TREE_PINE;
+    objects[25 * W + 10] = OBJ.TREE_OAK;
+    objects[25 * W + 20] = OBJ.TREE_PINE;
+
+    // Bushes
+    objects[10 * W + 10] = OBJ.BUSH;
+    objects[10 * W + 20] = OBJ.BUSH;
+    objects[18 * W + 20] = OBJ.BUSH;
+    objects[24 * W + 8] = OBJ.BUSH;
+
+    // Lamp posts along main path
+    objects[10 * W + 12] = OBJ.LAMP;
+    objects[10 * W + 17] = OBJ.LAMP;
+    objects[15 * W + 12] = OBJ.LAMP;
+    objects[20 * W + 13] = OBJ.LAMP;
+
+    // Benches
+    objects[11 * W + 18] = OBJ.BENCH;
+    objects[16 * W + 18] = OBJ.BENCH;
+
+    // Dog houses in kennel area
+    objects[6 * W + 3] = OBJ.DOG_HOUSE;
+    objects[6 * W + 5] = OBJ.DOG_HOUSE;
+
+    // Well in the center courtyard
+    objects[14 * W + 15] = OBJ.WELL;
+
+    // Fountain near pond
+    objects[13 * W + 20] = OBJ.FOUNTAIN;
+
+    // Sign at entrance
+    objects[20 * W + 15] = OBJ.SIGN;
+
+    // Mailbox near academy
+    objects[9 * W + 11] = OBJ.MAILBOX;
+
+    // Statue in garden
+    objects[22 * W + 5] = OBJ.STATUE;
+
+    // Barrels and crates near storage
+    objects[22 * W + 23] = OBJ.BARREL;
+    objects[22 * W + 27] = OBJ.CRATE;
+    objects[24 * W + 27] = OBJ.BARREL;
+
+    // Rocks
+    objects[26 * W + 2] = OBJ.ROCK;
+    objects[27 * W + 8] = OBJ.ROCK;
+    objects[18 * W + 28] = OBJ.ROCK;
+
+    // Build collision map from tiles + objects
+    for (let i = 0; i < W * H; i++) {
+        const t = tiles[i];
+        if (t === TILE.WALL || t === TILE.WATER || t === TILE.ROOF) collisions[i] = 1;
+        if (t === TILE.FENCE) collisions[i] = 1;
+        const o = objects[i];
+        if (o === OBJ.TREE_OAK || o === OBJ.TREE_PINE || o === OBJ.ROCK ||
+            o === OBJ.WELL || o === OBJ.FOUNTAIN || o === OBJ.STATUE ||
+            o === OBJ.BARREL || o === OBJ.CRATE) {
+            collisions[i] = 1;
+        }
+    }
+    // Ensure doors and paths are walkable
+    for (let i = 0; i < W * H; i++) {
+        if (tiles[i] === TILE.DOOR || tiles[i] === TILE.PATH || tiles[i] === TILE.BRIDGE) {
+            collisions[i] = 0;
+        }
+    }
+
+    return {
+        name: 'Puppy Academy',
+        width: W, height: H,
+        tiles, objects, roofs, collisions,
+        startX: 14, startY: 18,
+        npcs: [
+            {
+                id: 'rex', name: 'Old Rex', emoji: '🦮', color: '#c0925a',
+                x: 14, y: 10, wander: true,
+                dialogue: 'The Academy has been training dogs for generations. Every breed has its own unique strengths.'
+            },
+            {
+                id: 'nurse', name: 'Nurse Fifi', emoji: '🐩', color: '#e8e8e8',
+                x: 24, y: 8, wander: false,
+                dialogue: 'The infirmary is always open! Did you know puppies need 18-20 hours of sleep per day?'
+            },
+            {
+                id: 'scout', name: 'Scout', emoji: '🐕‍🦺', color: '#8B6840',
+                x: 20, y: 14, wander: true,
+                dialogue: 'I patrol the perimeter every day. Dogs have a sense of smell 40 times better than humans!'
+            },
+            {
+                id: 'chef', name: 'Chef Biscuit', emoji: '🐕', color: '#d4a060',
+                x: 4, y: 10, wander: true,
+                dialogue: 'I make the best kibble in Barksville! A healthy diet keeps every pup strong for training.'
+            },
+            {
+                id: 'gardener', name: 'Daisy', emoji: '🐶', color: '#f0d0a0',
+                x: 4, y: 21, wander: true,
+                dialogue: 'I tend the garden! Dogs actually can see some colors - they see blues and yellows best!'
+            },
+        ],
+        triggers: [
+            {
+                id: 'south_exit', x: 13, y: 28, w: 4, h: 2,
+                visible: true, label: '🚪 Barksville',
+                action: 'changeMap', target: 'barksville'
+            },
+            {
+                id: 'academy_door', x: 14, y: 8, w: 2, h: 1,
+                visible: false,
+                action: 'dialogue', text: 'The Academy main hall. Warm and inviting.'
+            },
+            {
+                id: 'training_yard', x: 3, y: 13, w: 5, h: 3,
+                visible: true, label: '⚔️ Training Yard',
+                action: 'battle'
+            },
+        ],
+        lights: [
+            { x: 14.5, y: 6, radius: 5, color: '255,200,100' },
+            { x: 25, y: 6, radius: 3, color: '255,200,100' },
+            { x: 5, y: 6, radius: 3, color: '255,200,100' },
+        ]
+    };
+})();
+
+
+// ===========================
+// BARKSVILLE TOWN
+// ===========================
+const VILLAGE_BARKSVILLE = (() => {
+    const W = 40, H = 35;
+    const tiles = new Array(W * H).fill(TILE.GRASS);
+    const objects = new Array(W * H).fill(OBJ.NONE);
+    const roofs = new Array(W * H).fill(0);
+    const collisions = new Array(W * H).fill(0);
+
+    // === MAIN STREET - horizontal through town ===
+    _fillRect(tiles, W, 0, 15, 40, 3, TILE.PATH);
+    // Cross street - vertical
+    _fillRect(tiles, W, 18, 0, 3, 35, TILE.PATH);
+
+    // === TOWN SQUARE - center intersection ===
+    _fillRect(tiles, W, 15, 12, 9, 9, TILE.STONE);
+    _fillRect(tiles, W, 17, 14, 5, 5, TILE.STONE);
+
+    // === BAKERY - northwest ===
+    _fillRect(tiles, W, 3, 4, 8, 6, TILE.WALL);
+    _fillRect(tiles, W, 4, 5, 6, 4, TILE.FLOOR);
+    tiles[9 * W + 6] = TILE.DOOR;
+    tiles[9 * W + 7] = TILE.DOOR;
+    _fillRect(roofs, W, 4, 5, 6, 4, 1);
+    objects[8 * W + 5] = OBJ.WINDOW;
+    objects[8 * W + 8] = OBJ.WINDOW;
+    objects[4 * W + 9] = OBJ.CHIMNEY;
+
+    // === PET SHOP - northeast ===
+    _fillRect(tiles, W, 25, 4, 9, 6, TILE.WALL);
+    _fillRect(tiles, W, 26, 5, 7, 4, TILE.FLOOR);
+    tiles[9 * W + 28] = TILE.DOOR;
+    tiles[9 * W + 29] = TILE.DOOR;
+    _fillRect(roofs, W, 26, 5, 7, 4, 1);
+    objects[8 * W + 27] = OBJ.WINDOW;
+    objects[8 * W + 31] = OBJ.WINDOW;
+
+    // === TOWN HALL - large building east ===
+    _fillRect(tiles, W, 28, 19, 10, 8, TILE.WALL);
+    _fillRect(tiles, W, 29, 20, 8, 6, TILE.FLOOR);
+    tiles[26 * W + 32] = TILE.DOOR;
+    tiles[26 * W + 33] = TILE.DOOR;
+    _fillRect(roofs, W, 29, 20, 8, 6, 1);
+    objects[25 * W + 30] = OBJ.WINDOW;
+    objects[25 * W + 34] = OBJ.WINDOW;
+    objects[23 * W + 30] = OBJ.WINDOW;
+    objects[23 * W + 34] = OBJ.WINDOW;
+    objects[19 * W + 36] = OBJ.CHIMNEY;
+
+    // === RESIDENTIAL - southwest houses ===
+    // House 1
+    _fillRect(tiles, W, 2, 20, 6, 5, TILE.WALL);
+    _fillRect(tiles, W, 3, 21, 4, 3, TILE.FLOOR);
+    tiles[24 * W + 5] = TILE.DOOR;
+    _fillRect(roofs, W, 3, 21, 4, 3, 1);
+    objects[23 * W + 3] = OBJ.WINDOW;
+
+    // House 2
+    _fillRect(tiles, W, 10, 20, 6, 5, TILE.WALL);
+    _fillRect(tiles, W, 11, 21, 4, 3, TILE.FLOOR);
+    tiles[24 * W + 13] = TILE.DOOR;
+    _fillRect(roofs, W, 11, 21, 4, 3, 1);
+    objects[23 * W + 12] = OBJ.WINDOW;
+    objects[20 * W + 14] = OBJ.CHIMNEY;
+
+    // Small paths to houses
+    _fillRect(tiles, W, 5, 24, 1, 3, TILE.PATH);
+    _fillRect(tiles, W, 13, 24, 1, 3, TILE.PATH);
+    _fillRect(tiles, W, 5, 15, 1, 6, TILE.PATH);
+    _fillRect(tiles, W, 13, 15, 1, 6, TILE.PATH);
+
+    // === RIVER - southern edge ===
+    _fillRect(tiles, W, 0, 30, 40, 3, TILE.WATER);
+    // Bridge over river
+    _fillRect(tiles, W, 17, 30, 5, 3, TILE.BRIDGE);
+
+    // === PARK AREA - south of river (start of park) ===
+    _fillRect(tiles, W, 12, 33, 15, 2, TILE.DARK_GRASS);
+    tiles[33 * W + 15] = TILE.FLOWERS;
+    tiles[33 * W + 20] = TILE.FLOWERS;
+    tiles[34 * W + 18] = TILE.FLOWERS;
+
+    // === NORTH PATH to Academy ===
+    _fillRect(tiles, W, 18, 0, 3, 4, TILE.PATH);
+
+    // === OBJECTS ===
+
+    // Town square fountain
+    objects[16 * W + 19] = OBJ.FOUNTAIN;
+
+    // Town square benches
+    objects[13 * W + 16] = OBJ.BENCH;
+    objects[13 * W + 22] = OBJ.BENCH;
+    objects[19 * W + 16] = OBJ.BENCH;
+    objects[19 * W + 22] = OBJ.BENCH;
+
+    // Lamp posts along main street
+    objects[14 * W + 5] = OBJ.LAMP;
+    objects[14 * W + 10] = OBJ.LAMP;
+    objects[14 * W + 25] = OBJ.LAMP;
+    objects[14 * W + 33] = OBJ.LAMP;
+    // Lamps along cross street
+    objects[7 * W + 17] = OBJ.LAMP;
+    objects[25 * W + 17] = OBJ.LAMP;
+
+    // Signs
+    objects[10 * W + 6] = OBJ.SIGN; // Bakery sign
+    objects[10 * W + 28] = OBJ.SIGN; // Pet shop sign
+
+    // Mailboxes
+    objects[24 * W + 4] = OBJ.MAILBOX;
+    objects[24 * W + 12] = OBJ.MAILBOX;
+
+    // Dog houses
+    objects[25 * W + 7] = OBJ.DOG_HOUSE;
+    objects[25 * W + 14] = OBJ.DOG_HOUSE;
+
+    // Trees all around edges
+    for (let c = 0; c < W; c += 2) {
+        if (tiles[0 * W + c] === TILE.GRASS) objects[0 * W + c] = c % 4 === 0 ? OBJ.TREE_OAK : OBJ.TREE_PINE;
+        if (tiles[1 * W + c] === TILE.GRASS) objects[1 * W + c] = c % 4 === 2 ? OBJ.TREE_OAK : OBJ.TREE_PINE;
+    }
+    for (let r = 2; r < H; r += 3) {
+        if (tiles[r * W + 0] === TILE.GRASS) objects[r * W + 0] = OBJ.TREE_OAK;
+        if (tiles[r * W + 1] === TILE.GRASS) objects[r * W + 1] = OBJ.TREE_PINE;
+        if (tiles[r * W + 38] === TILE.GRASS) objects[r * W + 38] = OBJ.TREE_OAK;
+        if (tiles[r * W + 39] === TILE.GRASS) objects[r * W + 39] = OBJ.TREE_PINE;
+    }
+
+    // Scattered trees
+    objects[11 * W + 2] = OBJ.TREE_OAK;
+    objects[11 * W + 13] = OBJ.TREE_OAK;
+    objects[12 * W + 35] = OBJ.TREE_PINE;
+    objects[27 * W + 5] = OBJ.TREE_OAK;
+    objects[28 * W + 12] = OBJ.TREE_PINE;
+    objects[27 * W + 35] = OBJ.TREE_OAK;
+
+    // Bushes
+    objects[10 * W + 15] = OBJ.BUSH;
+    objects[10 * W + 23] = OBJ.BUSH;
+    objects[12 * W + 2] = OBJ.BUSH;
+    objects[26 * W + 25] = OBJ.BUSH;
+    objects[29 * W + 7] = OBJ.BUSH;
+    objects[29 * W + 33] = OBJ.BUSH;
+
+    // Flower beds near houses
+    objects[25 * W + 3] = OBJ.FLOWER_BED;
+    objects[25 * W + 10] = OBJ.FLOWER_BED;
+
+    // Barrels and crates near shops
+    objects[10 * W + 3] = OBJ.BARREL;
+    objects[10 * W + 10] = OBJ.CRATE;
+    objects[10 * W + 33] = OBJ.BARREL;
+
+    // Rocks
+    objects[28 * W + 8] = OBJ.ROCK;
+    objects[29 * W + 25] = OBJ.ROCK;
+    objects[3 * W + 22] = OBJ.ROCK;
+
+    // Town statue in square
+    objects[14 * W + 19] = OBJ.STATUE;
+
+    // Build collision map
+    for (let i = 0; i < W * H; i++) {
+        const t = tiles[i];
+        if (t === TILE.WALL || t === TILE.WATER || t === TILE.FENCE) collisions[i] = 1;
+        const o = objects[i];
+        if (o === OBJ.TREE_OAK || o === OBJ.TREE_PINE || o === OBJ.ROCK ||
+            o === OBJ.WELL || o === OBJ.FOUNTAIN || o === OBJ.STATUE ||
+            o === OBJ.BARREL || o === OBJ.CRATE) {
+            collisions[i] = 1;
+        }
+    }
+    for (let i = 0; i < W * H; i++) {
+        if (tiles[i] === TILE.DOOR || tiles[i] === TILE.PATH ||
+            tiles[i] === TILE.BRIDGE || tiles[i] === TILE.STONE) {
+            collisions[i] = 0;
+        }
+    }
+
+    return {
+        name: 'Barksville',
+        width: W, height: H,
+        tiles, objects, roofs, collisions,
+        startX: 19, startY: 2,
+        npcs: [
+            {
+                id: 'baker', name: 'Baker Bones', emoji: '🧑‍🍳', color: '#e8c898',
+                x: 6, y: 12, wander: true,
+                dialogue: 'Fresh biscuits every morning! Dogs have about 1,700 taste buds, while humans have 9,000. But a dog\'s sense of smell more than makes up for it!'
+            },
+            {
+                id: 'shopkeeper', name: 'Mr. Pawsworth', emoji: '🧓', color: '#c0a080',
+                x: 29, y: 12, wander: true,
+                dialogue: 'Welcome to the Pet Shop! I stock the finest treats and toys. Did you know dogs have three eyelids? The third one helps keep their eyes moist!'
+            },
+            {
+                id: 'mayor', name: 'Mayor Waggins', emoji: '🎩', color: '#8B6840',
+                x: 19, y: 16, wander: true,
+                dialogue: 'Welcome to Barksville! Our town has been a safe haven for dogs for over 100 years. A group of dogs is called a pack, but did you know a group of puppies is called a litter?'
+            },
+            {
+                id: 'stray1', name: 'Patches', emoji: '🐕', color: '#a08060',
+                x: 7, y: 25, wander: true,
+                dialogue: 'I used to be a stray, but Barksville took me in! Every dog deserves a home. Dogs can dream just like humans — you might see them twitching in their sleep!'
+            },
+            {
+                id: 'guard', name: 'Sergeant Bark', emoji: '🐕‍🦺', color: '#505050',
+                x: 33, y: 24, wander: false,
+                dialogue: 'I guard the Town Hall day and night. German Shepherds like me were originally bred for herding sheep, but now we serve in police and military roles worldwide!'
+            },
+            {
+                id: 'pup_playing', name: 'Zippy', emoji: '🐶', color: '#f0d0a0',
+                x: 16, y: 17, wander: true,
+                dialogue: 'Tag, you\'re it! *zooms around* Did you know puppies are born deaf and blind? They can\'t hear or see until they\'re about two weeks old!'
+            },
+        ],
+        triggers: [
+            {
+                id: 'north_to_academy', x: 17, y: 0, w: 5, h: 2,
+                visible: true, label: '🏫 Academy',
+                action: 'changeMap', target: 'academy'
+            },
+            {
+                id: 'south_bridge', x: 17, y: 32, w: 5, h: 2,
+                visible: true, label: '🌳 The Park',
+                action: 'changeMap', target: 'park'
+            },
+            {
+                id: 'bakery_door', x: 6, y: 9, w: 2, h: 1,
+                visible: false,
+                action: 'dialogue', text: 'Bones\' Bakery — The smell of fresh dog biscuits fills the air!'
+            },
+            {
+                id: 'petshop_door', x: 28, y: 9, w: 2, h: 1,
+                visible: false,
+                action: 'dialogue', text: 'Pawsworth\'s Pet Emporium — Toys, treats, and supplies!'
+            },
+        ],
+        lights: [
+            { x: 19.5, y: 16.5, radius: 6, color: '255,220,150' }, // town square
+            { x: 7, y: 7, radius: 4, color: '255,180,80' },         // bakery
+            { x: 30, y: 7, radius: 4, color: '200,220,255' },        // pet shop
+            { x: 33, y: 23, radius: 5, color: '255,200,100' },       // town hall
+        ]
+    };
+})();
+
+// Map registry - also expose on window for cross-script access
+const VILLAGE_MAPS = {
+    academy: VILLAGE_ACADEMY,
+    barksville: VILLAGE_BARKSVILLE,
+};
+window.VILLAGE_MAPS = VILLAGE_MAPS;
+
+
 // === js/hub.js ===
 // Hub UI - renders the Academy overworld screens
 // Manages navigation between hub areas and launching battles
 
 class Hub {
-    constructor(academy, onStartBattle, onStartStory) {
+    constructor(academy, onStartBattle, onStartStory, onExploreVillage) {
         this.academy = academy;
         this.onStartBattle = onStartBattle; // callback(levelIndex)
         this.onStartStory = onStartStory;   // callback(episodeId)
+        this.onExploreVillage = onExploreVillage; // callback(mapName)
 
         this.hubEl = document.getElementById('hub-screen');
         this.selectedBattle = 0;
@@ -7967,6 +10399,20 @@ class Hub {
             <div class="hub-section">
                 <div class="hub-section-title">Story Mode</div>
                 <div class="hub-episodes">${this._buildEpisodeCards(a)}</div>
+            </div>
+
+            <div class="hub-section">
+                <div class="hub-section-title">Explore</div>
+                <div class="hub-explore-buttons">
+                    <button class="hub-explore-btn" data-map="academy">
+                        <span class="hub-explore-icon">🏫</span>
+                        <span class="hub-explore-label">Academy Grounds</span>
+                    </button>
+                    <button class="hub-explore-btn" data-map="barksville">
+                        <span class="hub-explore-icon">🏘️</span>
+                        <span class="hub-explore-label">Barksville Town</span>
+                    </button>
+                </div>
             </div>
 
             <div class="hub-section">
@@ -8186,6 +10632,15 @@ class Hub {
             });
         }
 
+        // Explore village buttons
+        this.hubEl.querySelectorAll('.hub-explore-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mapName = btn.dataset.map;
+                self.hide();
+                if (self.onExploreVillage) self.onExploreVillage(mapName);
+            });
+        });
+
         // Story episode buttons
         this.hubEl.querySelectorAll('.hub-episode-card').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -8232,7 +10687,16 @@ class Game {
         this.state = 'title'; // title, playing, level_complete, won, lost
 
         this.resize();
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('resize', () => {
+            // Don't resize game canvas when village is active
+            if (window.village && window.village.active) {
+                this.canvas.width = Math.min(window.innerWidth, 480);
+                this.canvas.height = Math.min(window.innerHeight, 800);
+                window.village.ts = Math.max(24, Math.floor(this.canvas.width / 16));
+                return;
+            }
+            this.resize();
+        });
 
         this.towers = [];
         this.enemies = [];
@@ -9713,7 +12177,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const storyEngine = new StoryEngine(game.canvas, academy);
     let storyBattlePending = false; // true when story triggered a battle
 
-    // Hub launches battles, stories, and receives results
+    // Village explorer
+    const village = new Village(game.canvas);
+
+    // Connect village to story engine so story can use rich exploration
+    storyEngine.village = village;
+
+    // Hub launches battles, stories, explore, and receives results
     const hub = new Hub(academy, (levelIndex) => {
         game.startGame(levelIndex);
     }, (episodeId) => {
@@ -9736,6 +12206,67 @@ window.addEventListener('DOMContentLoaded', () => {
             // Story triggered a battle
             storyBattlePending = true;
             game.startGame(battleLevel);
+        });
+    }, (mapName) => {
+        // Explore village
+        const mapData = VILLAGE_MAPS[mapName];
+        if (!mapData) return;
+
+        GameAudio.unlock();
+        document.getElementById('hub-screen').style.display = 'none';
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
+        document.getElementById('game-controls').style.display = 'none';
+        game.canvas.style.display = 'block';
+
+        // Size canvas for village
+        game.canvas.width = Math.min(window.innerWidth, 480);
+        game.canvas.height = Math.min(window.innerHeight, 800);
+        village.ts = Math.max(24, Math.floor(game.canvas.width / 16));
+
+        village.loadMap(mapData);
+        village.start((npc) => {
+            // NPC interaction - show dialogue overlay
+            _showVillageDialogue(npc.name, npc.emoji, npc.dialogue);
+        }, (trigger) => {
+            if (trigger.action === 'changeMap') {
+                const newMap = VILLAGE_MAPS[trigger.target];
+                if (newMap) {
+                    village.stop();
+                    village.loadMap(newMap);
+                    village.start((npc2) => {
+                        _showVillageDialogue(npc2.name, npc2.emoji, npc2.dialogue);
+                    }, (trigger2) => {
+                        if (trigger2.action === 'changeMap') {
+                            // Reload map
+                            const m = VILLAGE_MAPS[trigger2.target];
+                            if (m) {
+                                village.stop();
+                                village.loadMap(m);
+                                village.start(village.onInteract, village.onTrigger);
+                            }
+                        } else if (trigger2.action === 'dialogue') {
+                            _showVillageDialogue('', '', trigger2.text);
+                        } else if (trigger2.action === 'battle') {
+                            village.stop();
+                            game.startGame(0);
+                        }
+                    });
+                }
+            } else if (trigger.action === 'dialogue') {
+                _showVillageDialogue('', '', trigger.text);
+            } else if (trigger.action === 'battle') {
+                village.stop();
+                game.startGame(0);
+            }
+        });
+
+        // Show back button
+        _showVillageBackBtn(() => {
+            village.stop();
+            game.canvas.width = CONFIG.GRID_COLS * game.tileSize;
+            game.canvas.height = CONFIG.GRID_ROWS * game.tileSize;
+            hub.show();
         });
     });
     game.hub = hub;
@@ -9840,10 +12371,51 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Village dialogue overlay
+    function _showVillageDialogue(name, emoji, text) {
+        if (!text) return;
+        let overlay = document.getElementById('village-dialogue');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'village-dialogue';
+            overlay.className = 'village-dialogue-overlay';
+            document.getElementById('game-container').appendChild(overlay);
+        }
+        overlay.innerHTML = `
+            <div class="village-dialogue-box">
+                ${name ? `<div class="village-dialogue-speaker">${emoji || ''} ${name}</div>` : ''}
+                <div class="village-dialogue-text">${text}</div>
+                <div class="village-dialogue-hint">tap to close</div>
+            </div>
+        `;
+        overlay.style.display = 'flex';
+        overlay.onclick = () => { overlay.style.display = 'none'; };
+    }
+
+    // Village back button
+    function _showVillageBackBtn(onBack) {
+        let btn = document.getElementById('village-back-btn');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'village-back-btn';
+            btn.className = 'village-back-btn';
+            btn.textContent = 'Back';
+            document.getElementById('game-container').appendChild(btn);
+        }
+        btn.style.display = 'block';
+        btn.onclick = () => {
+            btn.style.display = 'none';
+            const dlg = document.getElementById('village-dialogue');
+            if (dlg) dlg.style.display = 'none';
+            onBack();
+        };
+    }
+
     window.game = game;
     window.academy = academy;
     window.hub = hub;
     window.storyEngine = storyEngine;
+    window.village = village;
 });
 
     </script>
