@@ -97,37 +97,11 @@ class UI {
 
         this.setupTowerButtons();
 
-        // Start button (Level 1)
-        const startBtn = document.getElementById('start-btn');
-        if (startBtn) {
-            startBtn.addEventListener('click', () => {
-                GameAudio.unlock();
-                this.game.startGame(0);
-            });
-        }
-
-        // Level select buttons
-        const levelSelect = document.getElementById('level-select');
-        if (levelSelect) {
-            CONFIG.LEVELS.forEach((lvl, idx) => {
-                if (idx === 0) return; // Skip level 1, that's the main PLAY button
-                const btn = document.createElement('button');
-                btn.className = 'screen-btn';
-                btn.style.cssText = 'padding:8px 16px;font-size:12px;background:linear-gradient(180deg,#7B1FA2 0%,#4A148C 100%)';
-                btn.textContent = `Start: ${lvl.name}`;
-                btn.addEventListener('click', () => {
-                    GameAudio.unlock();
-                    this.game.startGame(idx);
-                });
-                levelSelect.appendChild(btn);
-            });
-        }
-
-        // Restart buttons
+        // Restart buttons -> return to hub
         document.querySelectorAll('.restart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 GameAudio.unlock();
-                this.game.restart();
+                this.game.returnToHub();
             });
         });
 
@@ -225,15 +199,6 @@ class UI {
                 this.game.perspectiveMode = !this.game.perspectiveMode;
                 perspBtn.textContent = this.game.perspectiveMode ? '3D' : '2D';
                 perspBtn.title = this.game.perspectiveMode ? 'Switch to flat view' : 'Switch to 2.5D view';
-            });
-        }
-
-        // High Scores button
-        const hsBtn = document.getElementById('highscores-btn');
-        if (hsBtn) {
-            hsBtn.addEventListener('click', () => {
-                GameAudio.unlock();
-                this.game.showLeaderboard();
             });
         }
 

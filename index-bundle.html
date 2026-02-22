@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Puppy Defender</title>
+    <title>Puppy Academy</title>
     <style>
 /* Puppy Defender - Mobile-first styles */
 
@@ -648,6 +648,498 @@ body {
     font-weight: 600;
 }
 
+/* === Starter Dog Selection === */
+.starter-btn {
+    width: 64px;
+    height: 64px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.starter-btn.selected {
+    border-color: #FFD700;
+    background: rgba(255,215,0,0.2);
+    box-shadow: 0 0 12px rgba(255,215,0,0.3);
+}
+
+.starter-btn:active {
+    transform: scale(0.93);
+}
+
+/* === Hub / Academy Screen === */
+#hub-screen {
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding: 12px 10px 40px;
+    gap: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.hub-header {
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(109,76,65,0.5);
+}
+
+.hub-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: #FFD700;
+    text-shadow: 1px 1px 0 #8B4513;
+}
+
+.hub-trainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.hub-trainer-name {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.hub-trainer-rank {
+    font-size: 12px;
+    color: #FFD700;
+    background: rgba(255,215,0,0.15);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.hub-xp-bar {
+    width: 100%;
+    max-width: 200px;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 4px auto 0;
+}
+
+.hub-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FFD700, #FFA000);
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.hub-currency {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 6px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.hub-bones { color: #E8D5B7; }
+.hub-treats { color: #FF8A65; }
+
+/* Companion banner */
+.hub-companion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,152,0,0.1);
+    border: 1px solid rgba(255,152,0,0.3);
+    border-radius: 12px;
+    padding: 8px 14px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.hub-companion-emoji {
+    font-size: 32px;
+}
+
+.hub-companion-info {
+    flex: 1;
+}
+
+.hub-companion-name {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.hub-companion-breed {
+    font-size: 11px;
+    color: #bcaaa4;
+}
+
+/* Sections */
+.hub-section {
+    width: 100%;
+    max-width: 400px;
+}
+
+.hub-section-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #FFD700;
+    margin-bottom: 6px;
+    padding-left: 4px;
+}
+
+/* Battle cards */
+.hub-battles {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.hub-battle-card {
+    flex: 1;
+    min-width: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 6px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.hub-battle-card.selected {
+    border-color: #4CAF50;
+    background: rgba(76,175,80,0.2);
+    box-shadow: 0 0 8px rgba(76,175,80,0.3);
+}
+
+.hub-battle-card.completed {
+    border-color: #FFD700;
+}
+
+.hub-battle-card.locked {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.hub-battle-icon { font-size: 20px; }
+.hub-battle-name { font-weight: 700; font-size: 11px; }
+.hub-battle-waves { font-size: 10px; color: #bcaaa4; }
+
+.hub-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    color: #fff;
+    background: linear-gradient(180deg, #4CAF50 0%, #388E3C 100%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    margin-top: 6px;
+    transition: transform 0.15s;
+}
+
+.hub-btn:active {
+    transform: scale(0.95);
+}
+
+.hub-btn-cancel {
+    background: linear-gradient(180deg, #607D8B 0%, #455A64 100%);
+}
+
+.hub-go-btn {
+    width: 100%;
+    max-width: 400px;
+    font-size: 16px;
+    padding: 12px;
+}
+
+/* Dog roster cards */
+.hub-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hub-dog-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    transition: all 0.15s;
+}
+
+.hub-dog-card.active {
+    border-color: rgba(255,152,0,0.5);
+    background: rgba(255,152,0,0.08);
+}
+
+.hub-dog-emoji { font-size: 28px; }
+
+.hub-dog-info { flex: 1; min-width: 0; }
+
+.hub-dog-name {
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.hub-dog-level {
+    font-size: 10px;
+    color: #FFD700;
+    background: rgba(255,215,0,0.15);
+    padding: 1px 5px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.hub-dog-breed {
+    font-size: 10px;
+    color: #bcaaa4;
+}
+
+.hub-dog-bond-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    margin-top: 3px;
+    overflow: hidden;
+}
+
+.hub-dog-bond-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FF9800, #FF5722);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+.hub-dog-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-end;
+}
+
+.hub-small-btn {
+    padding: 3px 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.hub-small-btn:active {
+    transform: scale(0.95);
+}
+
+.hub-active-badge {
+    font-size: 9px;
+    color: #FF9800;
+    font-weight: 700;
+    padding: 2px 6px;
+    background: rgba(255,152,0,0.15);
+    border-radius: 6px;
+}
+
+/* Shelter cards */
+.hub-shelter {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.hub-shelter-card {
+    flex: 1;
+    min-width: 80px;
+    max-width: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.hub-shelter-card:active {
+    transform: scale(0.95);
+}
+
+.hub-shelter-card.unavailable {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.hub-shelter-emoji { font-size: 22px; }
+.hub-shelter-name { font-weight: 700; font-size: 10px; }
+.hub-shelter-cost { color: #E8D5B7; font-weight: 600; }
+.hub-shelter-req { color: #ef9a9a; font-size: 9px; }
+
+/* Save/Load section */
+.hub-save-area {
+    border-top: 1px solid rgba(109,76,65,0.4);
+    padding-top: 10px;
+    margin-top: 4px;
+}
+
+.hub-save-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.hub-save-section {
+    margin-top: 8px;
+    width: 100%;
+}
+
+.hub-save-label {
+    font-size: 11px;
+    color: #bcaaa4;
+    margin-bottom: 4px;
+}
+
+.hub-save-code {
+    width: 100%;
+    padding: 8px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #4FC3F7;
+    font-family: monospace;
+    font-size: 11px;
+    resize: none;
+    word-break: break-all;
+}
+
+.hub-copy-btn {
+    background: linear-gradient(180deg, #2196F3 0%, #1565C0 100%) !important;
+}
+
+/* Fact popup overlay */
+.hub-fact-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+}
+
+.hub-fact-card {
+    background: linear-gradient(180deg, #3e2723 0%, #2c1810 100%);
+    border: 2px solid #FFD700;
+    border-radius: 16px;
+    padding: 20px;
+    max-width: 340px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+
+.hub-fact-emoji { font-size: 48px; }
+
+.hub-fact-breed {
+    font-size: 20px;
+    font-weight: 800;
+    color: #FFD700;
+}
+
+.hub-fact-detail {
+    font-size: 12px;
+    color: #bcaaa4;
+}
+
+.hub-fact-fun {
+    font-size: 13px;
+    color: #fff;
+    font-style: italic;
+    background: rgba(255,152,0,0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    line-height: 1.4;
+    margin-top: 4px;
+}
+
+.hub-name-input {
+    width: 80%;
+    max-width: 240px;
+    padding: 10px;
+    border: 2px solid #6d4c41;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+}
+
+.hub-name-input:focus {
+    border-color: #FFD700;
+}
+
+.hub-empty {
+    font-size: 12px;
+    color: #8d6e63;
+    text-align: center;
+    padding: 12px;
+}
+
+/* Notification banner */
+.hub-notif {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(76,175,80,0.9);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+    z-index: 300;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    animation: hub-notif-in 0.3s ease-out;
+}
+
+@keyframes hub-notif-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
     </style>
 </head>
 <body>
@@ -655,17 +1147,31 @@ body {
         <!-- Title Screen -->
         <div id="title-screen" class="overlay-screen">
             <div class="title-dogs">🐶🐕🐩</div>
-            <div class="game-title">PUPPY DEFENDER</div>
-            <div class="game-subtitle">Build a maze of dogs to stop the cat invasion!</div>
+            <div class="game-title">PUPPY ACADEMY</div>
+            <div class="game-subtitle">Raise dogs. Learn breeds. Defend the yard!</div>
             <input id="player-name" type="text" class="name-input" placeholder="Enter your name..." maxlength="16" autocomplete="off">
-            <button id="start-btn" class="screen-btn">PLAY</button>
-            <div id="level-select" style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;justify-content:center;"></div>
-            <button id="highscores-btn" class="screen-btn" style="background:linear-gradient(180deg,#FF9800 0%,#E65100 100%);padding:10px 30px;font-size:14px;">HIGH SCORES</button>
-            <div class="sound-hint">Sound enabled on tap</div>
-            <div class="game-subtitle" style="font-size:12px; margin-top:4px;">
-                Place towers to create a maze. Cats will pathfind around them!
+            <div class="game-subtitle" style="font-size:13px; margin-top:6px; color:#FFD700;">Choose your starter dog:</div>
+            <div id="starter-select" style="display:flex;gap:8px;margin-top:2px;justify-content:center;flex-wrap:wrap;">
+                <button class="starter-btn selected" data-breed="barker">🐕<br><span style="font-size:10px">Beagle</span></button>
+                <button class="starter-btn" data-breed="poodle">🐩<br><span style="font-size:10px">Poodle</span></button>
+                <button class="starter-btn" data-breed="husky">🐺<br><span style="font-size:10px">Husky</span></button>
             </div>
+            <button id="start-btn" class="screen-btn">START ADVENTURE</button>
+            <button id="load-save-title-btn" class="screen-btn" style="background:linear-gradient(180deg,#FF9800 0%,#E65100 100%);padding:8px 24px;font-size:13px;">📂 Load Save Code</button>
+            <button id="highscores-btn" class="screen-btn" style="background:linear-gradient(180deg,#607D8B 0%,#455A64 100%);padding:8px 24px;font-size:13px;">HIGH SCORES</button>
+            <div class="sound-hint">Sound enabled on tap</div>
         </div>
+
+        <!-- Load Save Code Screen (from title) -->
+        <div id="load-save-screen" class="overlay-screen" style="display:none;">
+            <div class="end-title" style="color:#FF9800;">Load Save Code</div>
+            <textarea id="title-load-input" class="hub-save-code" rows="4" placeholder="Paste your save code here..." style="width:90%;max-width:340px;margin:8px auto;font-size:12px;"></textarea>
+            <button id="title-load-apply-btn" class="screen-btn">Load Game</button>
+            <button id="title-load-back-btn" class="screen-btn" style="background:linear-gradient(180deg,#607D8B 0%,#455A64 100%);padding:8px 24px;font-size:13px;">Back</button>
+        </div>
+
+        <!-- Hub/Academy Screen -->
+        <div id="hub-screen" class="overlay-screen" style="display:none;"></div>
 
         <!-- Leaderboard Screen -->
         <div id="leaderboard-screen" class="overlay-screen" style="display:none;">
@@ -741,8 +1247,10 @@ body {
         <div id="level-complete-screen" class="overlay-screen">
             <div style="font-size:48px;">🎉🐕🎉</div>
             <div class="end-title" style="color:#4CAF50;">LEVEL <span id="lc-level">1</span> COMPLETE!</div>
+            <div id="lc-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
             <div class="end-subtitle">Next up: <span id="lc-next"></span></div>
             <button id="next-level-btn" class="screen-btn">NEXT LEVEL</button>
+            <button class="screen-btn restart-btn" style="background:linear-gradient(180deg,#FF9800 0%,#E65100 100%);padding:10px 24px;font-size:14px;">Back to Academy</button>
         </div>
 
         <!-- Game Over Screen -->
@@ -752,8 +1260,9 @@ body {
             <div class="end-stat">Wave <span id="go-wave">0</span> | Kills: <span id="go-kills">0</span></div>
             <div class="end-stat">Best Combo: <span id="go-combo" style="color:#FF8C00;">0</span>x</div>
             <div class="end-stat">Score: <span id="go-score" style="color:#FFD700;">0</span></div>
+            <div id="go-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
             <div style="font-size:48px;">😿🐱🐈</div>
-            <button class="screen-btn restart-btn">TRY AGAIN</button>
+            <button class="screen-btn restart-btn">Back to Academy</button>
         </div>
 
         <!-- Victory Screen -->
@@ -763,8 +1272,9 @@ body {
             <div class="end-stat">Gold: <span id="vic-gold">0</span> | Kills: <span id="vic-kills">0</span></div>
             <div class="end-stat">Best Combo: <span id="vic-combo" style="color:#FF8C00;">0</span>x</div>
             <div class="end-stat">Score: <span id="vic-score" style="color:#FFD700;">0</span></div>
+            <div id="vic-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
             <div style="font-size:48px;">🎉🐶🏆</div>
-            <button class="screen-btn restart-btn">PLAY AGAIN</button>
+            <button class="screen-btn restart-btn">Back to Academy</button>
         </div>
     </div>
 
@@ -5084,37 +5594,11 @@ class UI {
 
         this.setupTowerButtons();
 
-        // Start button (Level 1)
-        const startBtn = document.getElementById('start-btn');
-        if (startBtn) {
-            startBtn.addEventListener('click', () => {
-                GameAudio.unlock();
-                this.game.startGame(0);
-            });
-        }
-
-        // Level select buttons
-        const levelSelect = document.getElementById('level-select');
-        if (levelSelect) {
-            CONFIG.LEVELS.forEach((lvl, idx) => {
-                if (idx === 0) return; // Skip level 1, that's the main PLAY button
-                const btn = document.createElement('button');
-                btn.className = 'screen-btn';
-                btn.style.cssText = 'padding:8px 16px;font-size:12px;background:linear-gradient(180deg,#7B1FA2 0%,#4A148C 100%)';
-                btn.textContent = `Start: ${lvl.name}`;
-                btn.addEventListener('click', () => {
-                    GameAudio.unlock();
-                    this.game.startGame(idx);
-                });
-                levelSelect.appendChild(btn);
-            });
-        }
-
-        // Restart buttons
+        // Restart buttons -> return to hub
         document.querySelectorAll('.restart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 GameAudio.unlock();
-                this.game.restart();
+                this.game.returnToHub();
             });
         });
 
@@ -5212,15 +5696,6 @@ class UI {
                 this.game.perspectiveMode = !this.game.perspectiveMode;
                 perspBtn.textContent = this.game.perspectiveMode ? '3D' : '2D';
                 perspBtn.title = this.game.perspectiveMode ? 'Switch to flat view' : 'Switch to 2.5D view';
-            });
-        }
-
-        // High Scores button
-        const hsBtn = document.getElementById('highscores-btn');
-        if (hsBtn) {
-            hsBtn.addEventListener('click', () => {
-                GameAudio.unlock();
-                this.game.showLeaderboard();
             });
         }
 
@@ -5565,6 +6040,843 @@ class UI {
 
         this.updateTowerButtons();
         this.updateAbilityButtons();
+    }
+}
+
+
+// === js/save.js ===
+// Save/Load system using shareable save codes
+// Encodes game state to a compact base64 string that players can copy/paste
+
+const SaveSystem = {
+    SAVE_VERSION: 1,
+    LOCAL_KEY: 'puppy_academy_save',
+
+    // === ENCODE / DECODE ===
+
+    // Compress JSON to base64 save code
+    encode(data) {
+        const json = JSON.stringify(data);
+        // Simple UTF-16 to base64 encoding
+        const bytes = new TextEncoder().encode(json);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return 'PAv1_' + btoa(binary);
+    },
+
+    // Decode base64 save code back to JSON
+    decode(code) {
+        try {
+            if (!code || !code.startsWith('PAv1_')) return null;
+            const b64 = code.slice(5);
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            const json = new TextDecoder().decode(bytes);
+            return JSON.parse(json);
+        } catch (e) {
+            console.error('Save decode error:', e);
+            return null;
+        }
+    },
+
+    // === SAVE STATE ===
+
+    // Build the full save state from the academy
+    buildSaveState(academy) {
+        return {
+            v: this.SAVE_VERSION,
+            ts: Date.now(),
+            name: academy.playerName,
+            rank: academy.trainerRank,
+            xp: academy.trainerXP,
+            bones: academy.bones,
+            treats: academy.treats,
+            roster: academy.roster.map(dog => ({
+                id: dog.id,
+                breed: dog.breed,
+                name: dog.name,
+                level: dog.level,
+                xp: dog.xp,
+                bond: dog.bond,
+                battlesWon: dog.battlesWon,
+            })),
+            activeDogId: academy.activeDogId,
+            completedLevels: academy.completedLevels,
+            totalBattles: academy.totalBattles,
+            factsLearned: academy.factsLearned,
+            triviaCorrect: academy.triviaCorrect,
+        };
+    },
+
+    // Save to localStorage
+    saveLocal(academy) {
+        try {
+            const state = this.buildSaveState(academy);
+            localStorage.setItem(this.LOCAL_KEY, JSON.stringify(state));
+            return true;
+        } catch (e) {
+            console.error('Local save error:', e);
+            return false;
+        }
+    },
+
+    // Load from localStorage
+    loadLocal() {
+        try {
+            const raw = localStorage.getItem(this.LOCAL_KEY);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+    },
+
+    // Generate a shareable save code
+    generateCode(academy) {
+        const state = this.buildSaveState(academy);
+        return this.encode(state);
+    },
+
+    // Load from a shareable save code
+    loadCode(code) {
+        return this.decode(code.trim());
+    },
+
+    // Delete local save
+    clearLocal() {
+        localStorage.removeItem(this.LOCAL_KEY);
+    }
+};
+
+
+// === js/academy.js ===
+// Puppy Academy - Hub/Overworld system
+// This is the core game. Tower Defense is a mini-game launched from here.
+
+// Dog breed database with real facts
+const DOG_BREEDS = {
+    barker: {
+        breed: 'Beagle',
+        emoji: '🐕',
+        funFact: 'Beagles have about 220 million scent receptors. Humans only have 5 million!',
+        origin: 'England',
+        trait: 'Curious & friendly',
+        group: 'Hound',
+        towerType: 'barker',
+    },
+    poodle: {
+        breed: 'Poodle',
+        emoji: '🐩',
+        funFact: 'Poodles are the 2nd smartest dog breed. Their fancy haircuts were originally to help them swim!',
+        origin: 'Germany/France',
+        trait: 'Intelligent & proud',
+        group: 'Non-Sporting',
+        towerType: 'poodle',
+    },
+    husky: {
+        breed: 'Siberian Husky',
+        emoji: '🐺',
+        funFact: 'Huskies can run 100+ miles a day in freezing temps. Their double coat keeps them warm at -60°F!',
+        origin: 'Siberia, Russia',
+        trait: 'Energetic & loyal',
+        group: 'Working',
+        towerType: 'husky',
+    },
+    bigboi: {
+        breed: 'Mastiff',
+        emoji: '🐶',
+        funFact: 'English Mastiffs can weigh over 230 pounds - the heaviest dog breed in the world!',
+        origin: 'England',
+        trait: 'Gentle giant',
+        group: 'Working',
+        towerType: 'bigboi',
+    },
+    sparky: {
+        breed: 'Border Collie',
+        emoji: '⚡',
+        funFact: 'Border Collies are the smartest dog breed. One named Chaser learned 1,022 words!',
+        origin: 'Scottish Borders',
+        trait: 'Brilliant & athletic',
+        group: 'Herding',
+        towerType: 'sparky',
+    },
+    goldie: {
+        breed: 'Golden Retriever',
+        emoji: '🦮',
+        funFact: 'Golden Retrievers have such gentle mouths they can carry a raw egg without breaking it!',
+        origin: 'Scotland',
+        trait: 'Friendly & devoted',
+        group: 'Sporting',
+        towerType: null, // future tower type
+    },
+    dalmatian: {
+        breed: 'Dalmatian',
+        emoji: '🏅',
+        funFact: 'Dalmatian puppies are born completely white! Their spots develop after 2-3 weeks.',
+        origin: 'Croatia',
+        trait: 'Playful & dignified',
+        group: 'Non-Sporting',
+        towerType: null,
+    },
+    shiba: {
+        breed: 'Shiba Inu',
+        emoji: '🐕‍🦺',
+        funFact: 'Shiba Inus are the most popular breed in Japan and are famous for the "Shiba scream"!',
+        origin: 'Japan',
+        trait: 'Alert & bold',
+        group: 'Non-Sporting',
+        towerType: null,
+    },
+};
+
+// Trainer rank titles
+const TRAINER_RANKS = [
+    { rank: 0, title: 'Puppy Walker',       xpNeeded: 0 },
+    { rank: 1, title: 'Dog Sitter',         xpNeeded: 100 },
+    { rank: 2, title: 'Junior Trainer',      xpNeeded: 300 },
+    { rank: 3, title: 'Dog Trainer',         xpNeeded: 600 },
+    { rank: 4, title: 'Senior Trainer',      xpNeeded: 1000 },
+    { rank: 5, title: 'Kennel Master',       xpNeeded: 1500 },
+    { rank: 6, title: 'Pack Leader',         xpNeeded: 2500 },
+    { rank: 7, title: 'Best in Show',        xpNeeded: 4000 },
+];
+
+// Dogs available at the shelter to recruit
+const SHELTER_DOGS = [
+    { breed: 'poodle',    cost: 150,  minRank: 0 },
+    { breed: 'husky',     cost: 250,  minRank: 1 },
+    { breed: 'sparky',    cost: 300,  minRank: 2 },
+    { breed: 'bigboi',    cost: 400,  minRank: 3 },
+    { breed: 'goldie',    cost: 350,  minRank: 2 },
+    { breed: 'dalmatian', cost: 500,  minRank: 4 },
+    { breed: 'shiba',     cost: 450,  minRank: 3 },
+];
+
+let _nextDogId = 1;
+
+class Academy {
+    constructor() {
+        this.playerName = '';
+        this.trainerRank = 0;
+        this.trainerXP = 0;
+        this.bones = 200;  // currency earned from battles
+        this.treats = 50;  // premium currency for bonding
+
+        // Dog roster
+        this.roster = [];
+        this.activeDogId = null; // your companion in battles
+
+        // Progress tracking
+        this.completedLevels = []; // level indices completed
+        this.totalBattles = 0;
+        this.factsLearned = [];    // breed IDs whose facts player has seen
+        this.triviaCorrect = 0;
+
+        // UI state
+        this.currentScreen = 'title'; // title, hub, kennel, shelter, battles, profile, save
+        this.selectedDog = null;
+        this.notification = null;
+        this._notifTimer = 0;
+    }
+
+    // Create a new dog for the roster
+    createDog(breedKey, customName) {
+        const breedData = DOG_BREEDS[breedKey];
+        if (!breedData) return null;
+
+        const dog = {
+            id: _nextDogId++,
+            breed: breedKey,
+            name: customName || breedData.breed,
+            level: 1,
+            xp: 0,
+            bond: 0,      // 0-100, increases with treats & play
+            battlesWon: 0,
+            factSeen: false,
+        };
+        this.roster.push(dog);
+
+        if (!this.activeDogId) {
+            this.activeDogId = dog.id;
+        }
+
+        return dog;
+    }
+
+    // Get the active companion dog
+    getActiveDog() {
+        return this.roster.find(d => d.id === this.activeDogId) || null;
+    }
+
+    // Get breed data for a dog
+    getBreedData(dog) {
+        return DOG_BREEDS[dog.breed] || null;
+    }
+
+    // Get current trainer title
+    getTrainerTitle() {
+        let title = TRAINER_RANKS[0].title;
+        for (const r of TRAINER_RANKS) {
+            if (this.trainerXP >= r.xpNeeded) {
+                this.trainerRank = r.rank;
+                title = r.title;
+            }
+        }
+        return title;
+    }
+
+    // XP needed for next rank
+    getNextRankXP() {
+        for (const r of TRAINER_RANKS) {
+            if (this.trainerXP < r.xpNeeded) return r.xpNeeded;
+        }
+        return TRAINER_RANKS[TRAINER_RANKS.length - 1].xpNeeded;
+    }
+
+    // Add XP and check for rank up
+    addXP(amount) {
+        const oldRank = this.trainerRank;
+        this.trainerXP += amount;
+        this.getTrainerTitle(); // recalculate rank
+        if (this.trainerRank > oldRank) {
+            this.showNotification('Rank Up! ' + this.getTrainerTitle());
+            return true; // ranked up
+        }
+        return false;
+    }
+
+    // Reward from completing a battle
+    awardBattleRewards(levelIndex, kills, livesLeft, won) {
+        this.totalBattles++;
+        const boneReward = kills * 2 + (won ? 100 : 20) + livesLeft * 5;
+        const xpReward = kills + (won ? 50 : 10);
+        const treatReward = won ? 10 : 2;
+
+        this.bones += boneReward;
+        this.treats += treatReward;
+        this.addXP(xpReward);
+
+        // Level dog companion
+        const dog = this.getActiveDog();
+        if (dog) {
+            dog.xp += xpReward;
+            if (won) dog.battlesWon++;
+            // Level up every 100 xp
+            const newLevel = Math.floor(dog.xp / 100) + 1;
+            if (newLevel > dog.level) {
+                dog.level = newLevel;
+                this.showNotification(dog.name + ' leveled up to Lv' + dog.level + '!');
+            }
+        }
+
+        if (won && !this.completedLevels.includes(levelIndex)) {
+            this.completedLevels.push(levelIndex);
+        }
+
+        SaveSystem.saveLocal(this);
+
+        return { bones: boneReward, treats: treatReward, xp: xpReward };
+    }
+
+    // Give a treat to a dog (bonding)
+    giveTreat(dogId) {
+        if (this.treats <= 0) return false;
+        const dog = this.roster.find(d => d.id === dogId);
+        if (!dog) return false;
+
+        this.treats--;
+        dog.bond = Math.min(100, dog.bond + 5);
+        SaveSystem.saveLocal(this);
+        return true;
+    }
+
+    // Adopt a dog from shelter
+    adoptDog(shelterIdx, customName) {
+        const offer = SHELTER_DOGS[shelterIdx];
+        if (!offer) return null;
+        if (this.bones < offer.cost) return null;
+        if (this.trainerRank < offer.minRank) return null;
+
+        // Check if already have 2 of this breed
+        const count = this.roster.filter(d => d.breed === offer.breed).length;
+        if (count >= 2) return null;
+
+        this.bones -= offer.cost;
+        const dog = this.createDog(offer.breed, customName);
+
+        // Mark fact as learned
+        if (!this.factsLearned.includes(offer.breed)) {
+            this.factsLearned.push(offer.breed);
+        }
+
+        SaveSystem.saveLocal(this);
+        return dog;
+    }
+
+    // Show a notification banner
+    showNotification(msg) {
+        this.notification = msg;
+        this._notifTimer = 3;
+    }
+
+    // Load state from a save object
+    loadFromState(state) {
+        if (!state || state.v !== SaveSystem.SAVE_VERSION) return false;
+
+        this.playerName = state.name || 'Anonymous';
+        this.trainerRank = state.rank || 0;
+        this.trainerXP = state.xp || 0;
+        this.bones = state.bones || 0;
+        this.treats = state.treats || 0;
+        this.completedLevels = state.completedLevels || [];
+        this.totalBattles = state.totalBattles || 0;
+        this.factsLearned = state.factsLearned || [];
+        this.triviaCorrect = state.triviaCorrect || 0;
+        this.activeDogId = state.activeDogId || null;
+
+        this.roster = [];
+        if (state.roster) {
+            for (const d of state.roster) {
+                const dog = {
+                    id: d.id,
+                    breed: d.breed,
+                    name: d.name,
+                    level: d.level || 1,
+                    xp: d.xp || 0,
+                    bond: d.bond || 0,
+                    battlesWon: d.battlesWon || 0,
+                    factSeen: false,
+                };
+                this.roster.push(dog);
+                if (d.id >= _nextDogId) _nextDogId = d.id + 1;
+            }
+        }
+
+        return true;
+    }
+
+    // Initialize fresh game - pick starter dog
+    newGame(playerName, starterBreed) {
+        this.playerName = playerName || 'Anonymous';
+        this.trainerRank = 0;
+        this.trainerXP = 0;
+        this.bones = 200;
+        this.treats = 50;
+        this.roster = [];
+        this.completedLevels = [];
+        this.totalBattles = 0;
+        this.factsLearned = [starterBreed];
+        this.triviaCorrect = 0;
+        this.activeDogId = null;
+
+        const dog = this.createDog(starterBreed);
+        this.activeDogId = dog.id;
+
+        SaveSystem.saveLocal(this);
+        return dog;
+    }
+}
+
+
+// === js/hub.js ===
+// Hub UI - renders the Academy overworld screens
+// Manages navigation between hub areas and launching battles
+
+class Hub {
+    constructor(academy, onStartBattle) {
+        this.academy = academy;
+        this.onStartBattle = onStartBattle; // callback(levelIndex)
+
+        this.hubEl = document.getElementById('hub-screen');
+        this.selectedBattle = 0;
+        this._saveCodeVisible = false;
+        this._loadInputVisible = false;
+        this._shelterNaming = null; // { idx, breed } when naming a new dog
+        this._factPopup = null; // breed key to show fact for
+    }
+
+    show() {
+        this.academy.currentScreen = 'hub';
+        this._hideAllScreens();
+        this.hubEl.style.display = 'flex';
+        this.render();
+    }
+
+    hide() {
+        this.hubEl.style.display = 'none';
+    }
+
+    _hideAllScreens() {
+        document.getElementById('title-screen').style.display = 'none';
+        document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('victory-screen').style.display = 'none';
+        document.getElementById('level-complete-screen').style.display = 'none';
+        document.getElementById('leaderboard-screen').style.display = 'none';
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
+        document.getElementById('game-controls').style.display = 'none';
+        document.getElementById('upgrade-panel').style.display = 'none';
+    }
+
+    render() {
+        const a = this.academy;
+        const dog = a.getActiveDog();
+        const breedData = dog ? a.getBreedData(dog) : null;
+        const title = a.getTrainerTitle();
+        const nextXP = a.getNextRankXP();
+        const xpPct = nextXP > 0 ? Math.min(100, Math.round((a.trainerXP / nextXP) * 100)) : 100;
+
+        // Build battle list
+        const battleCards = CONFIG.LEVELS.map((lvl, i) => {
+            const completed = a.completedLevels.includes(i);
+            const locked = i > 0 && !a.completedLevels.includes(i - 1);
+            return `
+                <button class="hub-battle-card ${completed ? 'completed' : ''} ${locked ? 'locked' : ''} ${this.selectedBattle === i ? 'selected' : ''}"
+                        data-level="${i}" ${locked ? 'disabled' : ''}>
+                    <span class="hub-battle-icon">${completed ? '⭐' : locked ? '🔒' : '⚔️'}</span>
+                    <span class="hub-battle-name">${lvl.name}</span>
+                    <span class="hub-battle-waves">${lvl.waves} waves</span>
+                </button>
+            `;
+        }).join('');
+
+        // Build roster
+        const rosterCards = a.roster.map(d => {
+            const bd = DOG_BREEDS[d.breed];
+            const isActive = d.id === a.activeDogId;
+            return `
+                <div class="hub-dog-card ${isActive ? 'active' : ''}" data-dog-id="${d.id}">
+                    <div class="hub-dog-emoji">${bd ? bd.emoji : '🐕'}</div>
+                    <div class="hub-dog-info">
+                        <div class="hub-dog-name">${d.name} <span class="hub-dog-level">Lv${d.level}</span></div>
+                        <div class="hub-dog-breed">${bd ? bd.breed : d.breed}</div>
+                        <div class="hub-dog-bond-bar"><div class="hub-dog-bond-fill" style="width:${d.bond}%"></div></div>
+                    </div>
+                    <div class="hub-dog-actions">
+                        ${!isActive ? `<button class="hub-small-btn" data-action="setactive" data-dog-id="${d.id}">Set Active</button>` : '<span class="hub-active-badge">COMPANION</span>'}
+                        <button class="hub-small-btn hub-treat-btn" data-action="treat" data-dog-id="${d.id}">🦴 Treat</button>
+                        <button class="hub-small-btn hub-fact-btn" data-action="fact" data-breed="${d.breed}">📖 Info</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Build shelter
+        const shelterCards = SHELTER_DOGS.map((s, i) => {
+            const bd = DOG_BREEDS[s.breed];
+            const canAfford = a.bones >= s.cost;
+            const hasRank = a.trainerRank >= s.minRank;
+            const ownCount = a.roster.filter(d => d.breed === s.breed).length;
+            const maxed = ownCount >= 2;
+            const available = canAfford && hasRank && !maxed;
+            return `
+                <button class="hub-shelter-card ${available ? '' : 'unavailable'}" data-shelter="${i}" ${available ? '' : 'disabled'}>
+                    <span class="hub-shelter-emoji">${bd ? bd.emoji : '?'}</span>
+                    <span class="hub-shelter-name">${bd ? bd.breed : s.breed}</span>
+                    <span class="hub-shelter-cost">🦴 ${s.cost}</span>
+                    ${!hasRank ? `<span class="hub-shelter-req">Rank ${s.minRank}+</span>` : ''}
+                    ${maxed ? '<span class="hub-shelter-req">Max owned</span>' : ''}
+                </button>
+            `;
+        }).join('');
+
+        // Save code section
+        const saveSection = this._saveCodeVisible ? `
+            <div class="hub-save-section">
+                <div class="hub-save-label">Your Save Code (copy this!):</div>
+                <textarea class="hub-save-code" id="save-code-output" readonly rows="3">${SaveSystem.generateCode(a)}</textarea>
+                <button class="hub-btn hub-copy-btn" id="copy-save-btn">📋 Copy to Clipboard</button>
+            </div>
+        ` : '';
+
+        const loadSection = this._loadInputVisible ? `
+            <div class="hub-save-section">
+                <div class="hub-save-label">Paste a Save Code:</div>
+                <textarea class="hub-save-code" id="load-code-input" rows="3" placeholder="Paste your save code here..."></textarea>
+                <button class="hub-btn" id="apply-load-btn">Load Save</button>
+            </div>
+        ` : '';
+
+        // Fact popup
+        const factPopup = this._factPopup ? (() => {
+            const bd = DOG_BREEDS[this._factPopup];
+            if (!bd) return '';
+            return `
+                <div class="hub-fact-overlay" id="fact-overlay">
+                    <div class="hub-fact-card">
+                        <div class="hub-fact-emoji">${bd.emoji}</div>
+                        <div class="hub-fact-breed">${bd.breed}</div>
+                        <div class="hub-fact-detail"><strong>Origin:</strong> ${bd.origin}</div>
+                        <div class="hub-fact-detail"><strong>Group:</strong> ${bd.group}</div>
+                        <div class="hub-fact-detail"><strong>Trait:</strong> ${bd.trait}</div>
+                        <div class="hub-fact-fun">"${bd.funFact}"</div>
+                        <button class="hub-btn" id="close-fact-btn">Close</button>
+                    </div>
+                </div>
+            `;
+        })() : '';
+
+        // Naming popup
+        const namingPopup = this._shelterNaming ? (() => {
+            const bd = DOG_BREEDS[this._shelterNaming.breed];
+            return `
+                <div class="hub-fact-overlay" id="naming-overlay">
+                    <div class="hub-fact-card">
+                        <div class="hub-fact-emoji">${bd ? bd.emoji : '🐕'}</div>
+                        <div class="hub-fact-breed">Name your new ${bd ? bd.breed : 'dog'}!</div>
+                        <input type="text" id="dog-name-input" class="hub-name-input" placeholder="${bd ? bd.breed : 'Dog'}" maxlength="16" autocomplete="off">
+                        <button class="hub-btn" id="confirm-adopt-btn">Adopt!</button>
+                        <button class="hub-btn hub-btn-cancel" id="cancel-adopt-btn">Cancel</button>
+                    </div>
+                </div>
+            `;
+        })() : '';
+
+        this.hubEl.innerHTML = `
+            <div class="hub-header">
+                <div class="hub-title">Puppy Academy</div>
+                <div class="hub-trainer">
+                    <span class="hub-trainer-name">${a.playerName}</span>
+                    <span class="hub-trainer-rank">${title}</span>
+                    <div class="hub-xp-bar"><div class="hub-xp-fill" style="width:${xpPct}%"></div></div>
+                </div>
+                <div class="hub-currency">
+                    <span class="hub-bones">🦴 ${a.bones}</span>
+                    <span class="hub-treats">🍖 ${a.treats}</span>
+                </div>
+            </div>
+
+            ${dog ? `
+            <div class="hub-companion">
+                <div class="hub-companion-emoji">${breedData ? breedData.emoji : '🐕'}</div>
+                <div class="hub-companion-info">
+                    <div class="hub-companion-name">${dog.name} <span class="hub-dog-level">Lv${dog.level}</span></div>
+                    <div class="hub-companion-breed">${breedData ? breedData.breed : ''} | Battles: ${dog.battlesWon}</div>
+                </div>
+            </div>
+            ` : ''}
+
+            <div class="hub-section">
+                <div class="hub-section-title">Yard Patrol</div>
+                <div class="hub-battles">${battleCards}</div>
+                <button class="hub-btn hub-go-btn" id="start-battle-btn">Start Battle!</button>
+            </div>
+
+            <div class="hub-section">
+                <div class="hub-section-title">Your Kennel (${a.roster.length} dogs)</div>
+                <div class="hub-roster">${rosterCards || '<div class="hub-empty">No dogs yet!</div>'}</div>
+            </div>
+
+            <div class="hub-section">
+                <div class="hub-section-title">Dog Shelter - Adopt</div>
+                <div class="hub-shelter">${shelterCards}</div>
+            </div>
+
+            <div class="hub-section hub-save-area">
+                <div class="hub-section-title">Save / Load</div>
+                <div class="hub-save-buttons">
+                    <button class="hub-btn" id="save-code-btn">📝 Get Save Code</button>
+                    <button class="hub-btn" id="load-code-btn">📂 Enter Save Code</button>
+                </div>
+                ${saveSection}
+                ${loadSection}
+            </div>
+
+            ${factPopup}
+            ${namingPopup}
+
+            ${a.notification ? `<div class="hub-notif">${a.notification}</div>` : ''}
+        `;
+
+        this._bindEvents();
+    }
+
+    _bindEvents() {
+        const self = this;
+        const a = this.academy;
+
+        // Battle selection
+        this.hubEl.querySelectorAll('.hub-battle-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const lvl = parseInt(btn.dataset.level);
+                self.selectedBattle = lvl;
+                self.render();
+            });
+        });
+
+        // Start battle
+        const startBtn = document.getElementById('start-battle-btn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                self.hide();
+                self.onStartBattle(self.selectedBattle);
+            });
+        }
+
+        // Dog actions
+        this.hubEl.querySelectorAll('[data-action="setactive"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                a.activeDogId = parseInt(btn.dataset.dogId);
+                SaveSystem.saveLocal(a);
+                self.render();
+            });
+        });
+
+        this.hubEl.querySelectorAll('[data-action="treat"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.dogId);
+                if (a.giveTreat(id)) {
+                    self.render();
+                } else {
+                    a.showNotification('No treats left!');
+                    self.render();
+                }
+            });
+        });
+
+        this.hubEl.querySelectorAll('[data-action="fact"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                self._factPopup = btn.dataset.breed;
+                if (!a.factsLearned.includes(btn.dataset.breed)) {
+                    a.factsLearned.push(btn.dataset.breed);
+                }
+                self.render();
+            });
+        });
+
+        // Close fact
+        const closeFactBtn = document.getElementById('close-fact-btn');
+        if (closeFactBtn) {
+            closeFactBtn.addEventListener('click', () => {
+                self._factPopup = null;
+                self.render();
+            });
+        }
+
+        // Fact overlay background click
+        const factOverlay = document.getElementById('fact-overlay');
+        if (factOverlay) {
+            factOverlay.addEventListener('click', (e) => {
+                if (e.target === factOverlay) {
+                    self._factPopup = null;
+                    self.render();
+                }
+            });
+        }
+
+        // Shelter adopt
+        this.hubEl.querySelectorAll('.hub-shelter-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.dataset.shelter);
+                const offer = SHELTER_DOGS[idx];
+                self._shelterNaming = { idx, breed: offer.breed };
+                self.render();
+                const input = document.getElementById('dog-name-input');
+                if (input) input.focus();
+            });
+        });
+
+        // Confirm adopt
+        const confirmAdopt = document.getElementById('confirm-adopt-btn');
+        if (confirmAdopt) {
+            confirmAdopt.addEventListener('click', () => {
+                const input = document.getElementById('dog-name-input');
+                const name = input ? input.value.trim() : '';
+                const result = a.adoptDog(self._shelterNaming.idx, name || undefined);
+                self._shelterNaming = null;
+                if (result) {
+                    a.showNotification('Welcome ' + result.name + ' to the Academy!');
+                    self._factPopup = result.breed;
+                }
+                self.render();
+            });
+        }
+
+        // Cancel adopt
+        const cancelAdopt = document.getElementById('cancel-adopt-btn');
+        if (cancelAdopt) {
+            cancelAdopt.addEventListener('click', () => {
+                self._shelterNaming = null;
+                self.render();
+            });
+        }
+
+        // Naming overlay background click
+        const namingOverlay = document.getElementById('naming-overlay');
+        if (namingOverlay) {
+            namingOverlay.addEventListener('click', (e) => {
+                if (e.target === namingOverlay) {
+                    self._shelterNaming = null;
+                    self.render();
+                }
+            });
+        }
+
+        // Save code
+        const saveBtn = document.getElementById('save-code-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                self._saveCodeVisible = !self._saveCodeVisible;
+                self._loadInputVisible = false;
+                self.render();
+            });
+        }
+
+        // Copy
+        const copyBtn = document.getElementById('copy-save-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const ta = document.getElementById('save-code-output');
+                if (ta) {
+                    ta.select();
+                    navigator.clipboard.writeText(ta.value).then(() => {
+                        a.showNotification('Save code copied!');
+                        self.render();
+                    }).catch(() => {
+                        // Fallback
+                        document.execCommand('copy');
+                        a.showNotification('Save code copied!');
+                        self.render();
+                    });
+                }
+            });
+        }
+
+        // Load code
+        const loadBtn = document.getElementById('load-code-btn');
+        if (loadBtn) {
+            loadBtn.addEventListener('click', () => {
+                self._loadInputVisible = !self._loadInputVisible;
+                self._saveCodeVisible = false;
+                self.render();
+            });
+        }
+
+        // Apply load
+        const applyLoadBtn = document.getElementById('apply-load-btn');
+        if (applyLoadBtn) {
+            applyLoadBtn.addEventListener('click', () => {
+                const ta = document.getElementById('load-code-input');
+                if (!ta || !ta.value.trim()) return;
+                const state = SaveSystem.loadCode(ta.value);
+                if (state && a.loadFromState(state)) {
+                    a.showNotification('Game loaded!');
+                    self._loadInputVisible = false;
+                    self.render();
+                } else {
+                    a.showNotification('Invalid save code!');
+                    self.render();
+                }
+            });
+        }
     }
 }
 
@@ -6309,11 +7621,26 @@ class Game {
     // === LEVEL TRANSITIONS ===
     _showLevelComplete() {
         this.state = 'level_complete';
+
+        // Award academy rewards for completing this level
+        const levelIdx = this.waveManager.currentLevel;
+        let rewards = null;
+        if (this.academy) {
+            rewards = this.academy.awardBattleRewards(levelIdx, this.kills, this.lives, true);
+        }
+
         const screen = document.getElementById('level-complete-screen');
         const lvl = this.waveManager.currentLevel + 1;
         document.getElementById('lc-level').textContent = lvl;
         const nextLevel = CONFIG.LEVELS[this.waveManager.currentLevel + 1];
         document.getElementById('lc-next').textContent = nextLevel ? nextLevel.name : '';
+
+        const lcRewards = document.getElementById('lc-rewards');
+        if (lcRewards && rewards) {
+            lcRewards.textContent = `+${rewards.bones} 🦴  +${rewards.treats} 🍖  +${rewards.xp} XP`;
+            lcRewards.style.display = 'block';
+        }
+
         screen.style.display = 'flex';
     }
 
@@ -6963,6 +8290,13 @@ class Game {
         GameAudio.stopMusic();
         const entry = this._saveScore();
 
+        // Award academy rewards
+        const levelIdx = this.waveManager.currentLevel;
+        let rewards = null;
+        if (this.academy) {
+            rewards = this.academy.awardBattleRewards(levelIdx, this.kills, this.lives, false);
+        }
+
         document.getElementById('hud').style.display = 'none';
         document.getElementById('bottom-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
@@ -6974,6 +8308,13 @@ class Game {
         document.getElementById('go-kills').textContent = this.kills;
         const goCombo = document.getElementById('go-combo');
         if (goCombo) goCombo.textContent = this.maxCombo;
+
+        // Show academy rewards
+        const goRewards = document.getElementById('go-rewards');
+        if (goRewards && rewards) {
+            goRewards.textContent = `+${rewards.bones} 🦴  +${rewards.treats} 🍖  +${rewards.xp} XP`;
+            goRewards.style.display = 'block';
+        }
     }
 
     victory() {
@@ -6981,6 +8322,13 @@ class Game {
         this._hideTrivia();
         GameAudio.stopMusic();
         const entry = this._saveScore();
+
+        // Award academy rewards
+        const levelIdx = this.waveManager.currentLevel;
+        let rewards = null;
+        if (this.academy) {
+            rewards = this.academy.awardBattleRewards(levelIdx, this.kills, this.lives, true);
+        }
 
         document.getElementById('hud').style.display = 'none';
         document.getElementById('bottom-bar').style.display = 'none';
@@ -6993,12 +8341,125 @@ class Game {
         document.getElementById('vic-kills').textContent = this.kills;
         const vicCombo = document.getElementById('vic-combo');
         if (vicCombo) vicCombo.textContent = this.maxCombo;
+
+        // Show academy rewards
+        const vicRewards = document.getElementById('vic-rewards');
+        if (vicRewards && rewards) {
+            vicRewards.textContent = `+${rewards.bones} 🦴  +${rewards.treats} 🍖  +${rewards.xp} XP`;
+            vicRewards.style.display = 'block';
+        }
+    }
+
+    // Return to hub after battle ends
+    returnToHub() {
+        document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('victory-screen').style.display = 'none';
+        document.getElementById('level-complete-screen').style.display = 'none';
+        if (this.hub) {
+            this.hub.show();
+        }
     }
 }
 
-// Boot
+// Boot - Academy is the root, Game is a battle mode within it
 window.addEventListener('DOMContentLoaded', () => {
-    window.game = new Game();
+    const academy = new Academy();
+    const game = new Game();
+    game.academy = academy;
+
+    // Hub launches battles and receives results
+    const hub = new Hub(academy, (levelIndex) => {
+        game.startGame(levelIndex);
+    });
+    game.hub = hub;
+
+    // Try to load existing save
+    const existingSave = SaveSystem.loadLocal();
+    if (existingSave && academy.loadFromState(existingSave)) {
+        // Has a save - still show title but will auto-populate name
+        const nameInput = document.getElementById('player-name');
+        if (nameInput && academy.playerName) {
+            nameInput.value = academy.playerName;
+        }
+    }
+
+    // Title screen - starter dog select
+    let selectedStarter = 'barker';
+    document.querySelectorAll('.starter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            GameAudio.unlock();
+            selectedStarter = btn.dataset.breed;
+            document.querySelectorAll('.starter-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
+
+    // Start button -> create new game and go to hub
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            GameAudio.unlock();
+            const nameInput = document.getElementById('player-name');
+            const name = nameInput ? nameInput.value.trim() : '';
+
+            // If existing save with a roster, go straight to hub
+            if (academy.roster.length > 0) {
+                if (name) academy.playerName = name;
+            } else {
+                // New game - create starter dog
+                academy.newGame(name, selectedStarter);
+            }
+
+            document.getElementById('title-screen').style.display = 'none';
+            hub.show();
+        });
+    }
+
+    // Load save from title screen
+    const loadSaveTitleBtn = document.getElementById('load-save-title-btn');
+    if (loadSaveTitleBtn) {
+        loadSaveTitleBtn.addEventListener('click', () => {
+            document.getElementById('title-screen').style.display = 'none';
+            document.getElementById('load-save-screen').style.display = 'flex';
+        });
+    }
+
+    const titleLoadApply = document.getElementById('title-load-apply-btn');
+    if (titleLoadApply) {
+        titleLoadApply.addEventListener('click', () => {
+            const input = document.getElementById('title-load-input');
+            if (!input || !input.value.trim()) return;
+            const state = SaveSystem.loadCode(input.value);
+            if (state && academy.loadFromState(state)) {
+                SaveSystem.saveLocal(academy);
+                document.getElementById('load-save-screen').style.display = 'none';
+                hub.show();
+            } else {
+                alert('Invalid save code. Please check and try again.');
+            }
+        });
+    }
+
+    const titleLoadBack = document.getElementById('title-load-back-btn');
+    if (titleLoadBack) {
+        titleLoadBack.addEventListener('click', () => {
+            document.getElementById('load-save-screen').style.display = 'none';
+            document.getElementById('title-screen').style.display = 'flex';
+        });
+    }
+
+    // High scores button
+    const hsBtn = document.getElementById('highscores-btn');
+    if (hsBtn) {
+        hsBtn.addEventListener('click', () => {
+            GameAudio.unlock();
+            game.showLeaderboard();
+        });
+    }
+
+    window.game = game;
+    window.academy = academy;
+    window.hub = hub;
 });
 
     </script>

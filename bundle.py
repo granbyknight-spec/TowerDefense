@@ -25,6 +25,9 @@ JS_FILES = [
     "js/wave.js",
     "js/renderer.js",
     "js/ui.js",
+    "js/save.js",
+    "js/academy.js",
+    "js/hub.js",
     "js/game.js",
 ]
 

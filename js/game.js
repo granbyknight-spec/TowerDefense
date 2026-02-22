@@ -737,11 +737,26 @@ class Game {
     // === LEVEL TRANSITIONS ===
     _showLevelComplete() {
         this.state = 'level_complete';
+
+        // Award academy rewards for completing this level
+        const levelIdx = this.waveManager.currentLevel;
+        let rewards = null;
+        if (this.academy) {
+            rewards = this.academy.awardBattleRewards(levelIdx, this.kills, this.lives, true);
+        }
+
         const screen = document.getElementById('level-complete-screen');
         const lvl = this.waveManager.currentLevel + 1;
         document.getElementById('lc-level').textContent = lvl;
         const nextLevel = CONFIG.LEVELS[this.waveManager.currentLevel + 1];
         document.getElementById('lc-next').textContent = nextLevel ? nextLevel.name : '';
+
+        const lcRewards = document.getElementById('lc-rewards');
+        if (lcRewards && rewards) {
+            lcRewards.textContent = `+${rewards.bones} 🦴  +${rewards.treats} 🍖  +${rewards.xp} XP`;
+            lcRewards.style.display = 'block';
+        }
+
         screen.style.display = 'flex';
     }
 
@@ -1391,6 +1406,13 @@ class Game {
         GameAudio.stopMusic();
         const entry = this._saveScore();
 
+        // Award academy rewards
+        const levelIdx = this.waveManager.currentLevel;
+        let rewards = null;
+        if (this.academy) {
+            rewards = this.academy.awardBattleRewards(levelIdx, this.kills, this.lives, false);
+        }
+
         document.getElementById('hud').style.display = 'none';
         document.getElementById('bottom-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
@@ -1402,6 +1424,13 @@ class Game {
         document.getElementById('go-kills').textContent = this.kills;
         const goCombo = document.getElementById('go-combo');
         if (goCombo) goCombo.textContent = this.maxCombo;
+
+        // Show academy rewards
+        const goRewards = document.getElementById('go-rewards');
+        if (goRewards && rewards) {
+            goRewards.textContent = `+${rewards.bones} 🦴  +${rewards.treats} 🍖  +${rewards.xp} XP`;
+            goRewards.style.display = 'block';
+        }
     }
 
     victory() {
@@ -1409,6 +1438,13 @@ class Game {
         this._hideTrivia();
         GameAudio.stopMusic();
         const entry = this._saveScore();
+
+        // Award academy rewards
+        const levelIdx = this.waveManager.currentLevel;
+        let rewards = null;
+        if (this.academy) {
+            rewards = this.academy.awardBattleRewards(levelIdx, this.kills, this.lives, true);
+        }
 
         document.getElementById('hud').style.display = 'none';
         document.getElementById('bottom-bar').style.display = 'none';
@@ -1421,10 +1457,123 @@ class Game {
         document.getElementById('vic-kills').textContent = this.kills;
         const vicCombo = document.getElementById('vic-combo');
         if (vicCombo) vicCombo.textContent = this.maxCombo;
+
+        // Show academy rewards
+        const vicRewards = document.getElementById('vic-rewards');
+        if (vicRewards && rewards) {
+            vicRewards.textContent = `+${rewards.bones} 🦴  +${rewards.treats} 🍖  +${rewards.xp} XP`;
+            vicRewards.style.display = 'block';
+        }
+    }
+
+    // Return to hub after battle ends
+    returnToHub() {
+        document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('victory-screen').style.display = 'none';
+        document.getElementById('level-complete-screen').style.display = 'none';
+        if (this.hub) {
+            this.hub.show();
+        }
     }
 }
 
-// Boot
+// Boot - Academy is the root, Game is a battle mode within it
 window.addEventListener('DOMContentLoaded', () => {
-    window.game = new Game();
+    const academy = new Academy();
+    const game = new Game();
+    game.academy = academy;
+
+    // Hub launches battles and receives results
+    const hub = new Hub(academy, (levelIndex) => {
+        game.startGame(levelIndex);
+    });
+    game.hub = hub;
+
+    // Try to load existing save
+    const existingSave = SaveSystem.loadLocal();
+    if (existingSave && academy.loadFromState(existingSave)) {
+        // Has a save - still show title but will auto-populate name
+        const nameInput = document.getElementById('player-name');
+        if (nameInput && academy.playerName) {
+            nameInput.value = academy.playerName;
+        }
+    }
+
+    // Title screen - starter dog select
+    let selectedStarter = 'barker';
+    document.querySelectorAll('.starter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            GameAudio.unlock();
+            selectedStarter = btn.dataset.breed;
+            document.querySelectorAll('.starter-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
+
+    // Start button -> create new game and go to hub
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            GameAudio.unlock();
+            const nameInput = document.getElementById('player-name');
+            const name = nameInput ? nameInput.value.trim() : '';
+
+            // If existing save with a roster, go straight to hub
+            if (academy.roster.length > 0) {
+                if (name) academy.playerName = name;
+            } else {
+                // New game - create starter dog
+                academy.newGame(name, selectedStarter);
+            }
+
+            document.getElementById('title-screen').style.display = 'none';
+            hub.show();
+        });
+    }
+
+    // Load save from title screen
+    const loadSaveTitleBtn = document.getElementById('load-save-title-btn');
+    if (loadSaveTitleBtn) {
+        loadSaveTitleBtn.addEventListener('click', () => {
+            document.getElementById('title-screen').style.display = 'none';
+            document.getElementById('load-save-screen').style.display = 'flex';
+        });
+    }
+
+    const titleLoadApply = document.getElementById('title-load-apply-btn');
+    if (titleLoadApply) {
+        titleLoadApply.addEventListener('click', () => {
+            const input = document.getElementById('title-load-input');
+            if (!input || !input.value.trim()) return;
+            const state = SaveSystem.loadCode(input.value);
+            if (state && academy.loadFromState(state)) {
+                SaveSystem.saveLocal(academy);
+                document.getElementById('load-save-screen').style.display = 'none';
+                hub.show();
+            } else {
+                alert('Invalid save code. Please check and try again.');
+            }
+        });
+    }
+
+    const titleLoadBack = document.getElementById('title-load-back-btn');
+    if (titleLoadBack) {
+        titleLoadBack.addEventListener('click', () => {
+            document.getElementById('load-save-screen').style.display = 'none';
+            document.getElementById('title-screen').style.display = 'flex';
+        });
+    }
+
+    // High scores button
+    const hsBtn = document.getElementById('highscores-btn');
+    if (hsBtn) {
+        hsBtn.addEventListener('click', () => {
+            GameAudio.unlock();
+            game.showLeaderboard();
+        });
+    }
+
+    window.game = game;
+    window.academy = academy;
+    window.hub = hub;
 });
