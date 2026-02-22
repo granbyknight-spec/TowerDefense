@@ -180,70 +180,104 @@ body {
 #ability-bar {
     display: flex;
     width: 100%;
-    padding: 2px 4px;
+    padding: 4px 8px;
     justify-content: center;
     align-items: center;
-    gap: 3px;
+    gap: 6px;
     border-bottom: 1px solid rgba(109,76,65,0.4);
 }
 
 .ability-btn {
-    flex: 1;
-    max-width: 110px;
+    position: relative;
+    width: 44px;
+    height: 44px;
     display: flex;
-    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 3px 4px;
+    padding: 0;
     background: rgba(255,152,0,0.15);
-    border: 1px solid rgba(255,152,0,0.3);
-    border-radius: 5px;
+    border: 2px solid rgba(255,152,0,0.4);
+    border-radius: 50%;
     color: #fff;
-    font-size: 10px;
     cursor: pointer;
     transition: all 0.15s;
+    overflow: hidden;
 }
 
 .ability-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.9);
 }
 
 .ability-btn .ability-btn-icon {
-    font-size: 13px;
+    font-size: 22px;
     line-height: 1;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .ability-btn .ability-btn-name {
-    font-weight: 700;
-    font-size: 8px;
-    color: #FFD700;
-    white-space: nowrap;
+    display: none;
 }
 
 .ability-btn .ability-btn-cd {
-    font-size: 8px;
-    font-weight: 600;
-    color: #a5d6a7;
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    z-index: 3;
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+    pointer-events: none;
+}
+
+/* Cooldown sweep overlay */
+.ability-btn .ability-btn-sweep {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    z-index: 1;
+    pointer-events: none;
 }
 
 .ability-btn.active {
-    background: rgba(76, 175, 80, 0.5);
+    background: rgba(76, 175, 80, 0.4);
     border-color: #4CAF50;
-    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5), inset 0 0 8px rgba(76, 175, 80, 0.3);
+    animation: ability-pulse 1s ease-in-out infinite;
+}
+
+@keyframes ability-pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
+    50% { box-shadow: 0 0 18px rgba(76, 175, 80, 0.8); }
 }
 
 .ability-btn.on-cooldown {
-    opacity: 0.45;
+    border-color: rgba(255,255,255,0.15);
     cursor: not-allowed;
+}
+
+.ability-btn.on-cooldown .ability-btn-icon {
+    opacity: 0.35;
 }
 
 .ability-btn.on-cooldown .ability-btn-cd {
     color: #ef9a9a;
 }
 
+.ability-btn.ready-glow {
+    border-color: #FFD700;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.ability-btn.ready-glow .ability-btn-cd {
+    color: #a5d6a7;
+}
+
 .ability-btn.no-towers {
-    opacity: 0.25;
+    opacity: 0.2;
     cursor: not-allowed;
 }
 
@@ -5242,9 +5276,11 @@ class UI {
             const btn = document.createElement('button');
             btn.className = 'ability-btn';
             btn.dataset.abilityType = key;
+            btn.title = state.name + ' - ' + (def.ability ? def.ability.desc : '');
             btn.innerHTML = `
                 <span class="ability-btn-icon">${def.emoji}</span>
                 <span class="ability-btn-name">${state.name}</span>
+                <div class="ability-btn-sweep"></div>
                 <span class="ability-btn-cd"></span>
             `;
             btn.addEventListener('click', () => {
@@ -5285,22 +5321,38 @@ class UI {
 
             const hasTower = this.game.towers.some(t => t.type === type);
             const cdEl = btn.querySelector('.ability-btn-cd');
+            const sweepEl = btn.querySelector('.ability-btn-sweep');
 
             if (state.active) {
                 btn.classList.add('active');
-                btn.classList.remove('on-cooldown', 'no-towers');
+                btn.classList.remove('on-cooldown', 'no-towers', 'ready-glow');
                 if (cdEl) cdEl.textContent = Math.ceil(state.timer) + 's';
+                // Show remaining duration as sweep (fills as time runs out)
+                if (sweepEl) {
+                    const pct = 1 - (state.timer / state.duration);
+                    const deg = Math.round(pct * 360);
+                    sweepEl.style.background = `conic-gradient(rgba(0,0,0,0.5) ${deg}deg, transparent ${deg}deg)`;
+                }
             } else if (state.cooldown > 0) {
                 btn.classList.add('on-cooldown');
-                btn.classList.remove('active', 'no-towers');
+                btn.classList.remove('active', 'no-towers', 'ready-glow');
                 if (cdEl) cdEl.textContent = Math.ceil(state.cooldown) + 's';
+                // Show cooldown progress as sweep (clears as cooldown expires)
+                if (sweepEl) {
+                    const pct = state.cooldown / state.cooldownMax;
+                    const deg = Math.round(pct * 360);
+                    sweepEl.style.background = `conic-gradient(rgba(0,0,0,0.55) ${deg}deg, transparent ${deg}deg)`;
+                }
             } else if (!hasTower) {
                 btn.classList.add('no-towers');
-                btn.classList.remove('active', 'on-cooldown');
+                btn.classList.remove('active', 'on-cooldown', 'ready-glow');
                 if (cdEl) cdEl.textContent = '';
+                if (sweepEl) sweepEl.style.background = 'none';
             } else {
                 btn.classList.remove('active', 'on-cooldown', 'no-towers');
-                if (cdEl) cdEl.textContent = 'READY';
+                btn.classList.add('ready-glow');
+                if (cdEl) cdEl.textContent = '';
+                if (sweepEl) sweepEl.style.background = 'none';
             }
         });
     }

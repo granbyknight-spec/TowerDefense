@@ -289,9 +289,11 @@ class UI {
             const btn = document.createElement('button');
             btn.className = 'ability-btn';
             btn.dataset.abilityType = key;
+            btn.title = state.name + ' - ' + (def.ability ? def.ability.desc : '');
             btn.innerHTML = `
                 <span class="ability-btn-icon">${def.emoji}</span>
                 <span class="ability-btn-name">${state.name}</span>
+                <div class="ability-btn-sweep"></div>
                 <span class="ability-btn-cd"></span>
             `;
             btn.addEventListener('click', () => {
@@ -332,22 +334,38 @@ class UI {
 
             const hasTower = this.game.towers.some(t => t.type === type);
             const cdEl = btn.querySelector('.ability-btn-cd');
+            const sweepEl = btn.querySelector('.ability-btn-sweep');
 
             if (state.active) {
                 btn.classList.add('active');
-                btn.classList.remove('on-cooldown', 'no-towers');
+                btn.classList.remove('on-cooldown', 'no-towers', 'ready-glow');
                 if (cdEl) cdEl.textContent = Math.ceil(state.timer) + 's';
+                // Show remaining duration as sweep (fills as time runs out)
+                if (sweepEl) {
+                    const pct = 1 - (state.timer / state.duration);
+                    const deg = Math.round(pct * 360);
+                    sweepEl.style.background = `conic-gradient(rgba(0,0,0,0.5) ${deg}deg, transparent ${deg}deg)`;
+                }
             } else if (state.cooldown > 0) {
                 btn.classList.add('on-cooldown');
-                btn.classList.remove('active', 'no-towers');
+                btn.classList.remove('active', 'no-towers', 'ready-glow');
                 if (cdEl) cdEl.textContent = Math.ceil(state.cooldown) + 's';
+                // Show cooldown progress as sweep (clears as cooldown expires)
+                if (sweepEl) {
+                    const pct = state.cooldown / state.cooldownMax;
+                    const deg = Math.round(pct * 360);
+                    sweepEl.style.background = `conic-gradient(rgba(0,0,0,0.55) ${deg}deg, transparent ${deg}deg)`;
+                }
             } else if (!hasTower) {
                 btn.classList.add('no-towers');
-                btn.classList.remove('active', 'on-cooldown');
+                btn.classList.remove('active', 'on-cooldown', 'ready-glow');
                 if (cdEl) cdEl.textContent = '';
+                if (sweepEl) sweepEl.style.background = 'none';
             } else {
                 btn.classList.remove('active', 'on-cooldown', 'no-towers');
-                if (cdEl) cdEl.textContent = 'READY';
+                btn.classList.add('ready-glow');
+                if (cdEl) cdEl.textContent = '';
+                if (sweepEl) sweepEl.style.background = 'none';
             }
         });
     }
