@@ -29,6 +29,15 @@ class Tower {
         this.isPassive = def.isPassive || false;
         this.goldPerWave = def.goldPerWave || 0;
 
+        // Chain lightning properties
+        this.chainCount = def.chainCount || 0;
+        this.chainRange = def.chainRange || 0;
+        this.chainFalloff = def.chainFalloff || 0.6;
+
+        // Dog House aura (set per-level from DOGHOUSE_TIERS)
+        this.auraRange = 0;
+        this.auraTier = 0; // index into DOGHOUSE_TIERS
+
         this.level = 1;
         this.fireCooldown = 0;
         this.target = null;
@@ -42,6 +51,12 @@ class Tower {
 
         // Bark Storm: saved original fireRate
         this._baseFireRate = def.fireRate;
+
+        // Buff modifiers (reset each frame by game.js)
+        this.buffDamageMult = 1;
+        this.buffFireRateMult = 1;
+        this.buffRange = 0;
+        this.isBuffed = false;
     }
 
     upgrade() {
@@ -51,6 +66,17 @@ class Tower {
         const upgradeCost = this.getUpgradeCost();
         this.level++;
         this.totalInvested += upgradeCost;
+
+        // Dog House: use tier-based upgrades
+        if (this.isPassive && CONFIG.DOGHOUSE_TIERS) {
+            const tier = CONFIG.DOGHOUSE_TIERS[this.level - 1];
+            if (tier) {
+                this.goldPerWave = tier.goldPerWave;
+                this.auraRange = tier.auraRange;
+                this.auraTier = this.level - 1;
+            }
+            return upgradeCost;
+        }
 
         const mult = CONFIG.UPGRADE_STAT_MULT;
         this.range *= mult;
@@ -63,8 +89,9 @@ class Tower {
             this.slow = Math.max(0.2, this.slow - 0.05);
         }
 
-        if (this.goldPerWave > 0) {
-            this.goldPerWave = Math.floor(this.goldPerWave * mult);
+        // Chain lightning: extra chain per 2 levels
+        if (this.chainCount > 0 && this.level % 2 === 0) {
+            this.chainCount++;
         }
 
         return upgradeCost;
@@ -99,7 +126,8 @@ class Tower {
 
         let closest = null;
         let closestDist = Infinity;
-        const rangePx = this.range * this.tileSize;
+        const effectiveRange = this.range + this.buffRange;
+        const rangePx = effectiveRange * this.tileSize;
 
         for (const enemy of enemies) {
             if (!enemy.alive || enemy.reachedEnd) continue;
@@ -121,20 +149,33 @@ class Tower {
         if (this.attackAnim > 0) this.attackAnim -= dt * 4;
 
         const target = this.findTarget(enemies);
+        const effectiveFireRate = this.fireRate * this.buffFireRateMult;
         if (target && this.fireCooldown <= 0) {
-            this.fireCooldown = this.fireRate;
+            this.fireCooldown = effectiveFireRate;
             this.attackAnim = 1;
 
-            projectiles.push(new Projectile(
+            const effectiveDamage = Math.floor(this.damage * this.buffDamageMult);
+
+            const proj = new Projectile(
                 this.x, this.y,
                 target,
-                this.damage,
+                effectiveDamage,
                 this.projectileSpeed * this.tileSize,
                 this.projectileColor,
                 this.splash * this.tileSize,
                 this.slow,
                 this.slowDuration
-            ));
+            );
+
+            // Chain lightning
+            if (this.chainCount > 0) {
+                proj.chainCount = this.abilityActive ? this.chainCount * 2 : this.chainCount;
+                proj.chainRange = this.chainRange * this.tileSize;
+                proj.chainFalloff = this.chainFalloff;
+                proj.chainArcs = []; // rendered by renderer
+            }
+
+            projectiles.push(proj);
         }
     }
 }

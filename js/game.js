@@ -294,6 +294,7 @@ class Game {
             }
         }
         // barker: handled by tower's rapid fireRate (already set in startAbility)
+        // sparky: handled by tower doubling chainCount when abilityActive
     }
 
     // === TRIVIA SYSTEM ===
@@ -557,6 +558,41 @@ class Game {
         }
     }
 
+    // === DOG HOUSE AURA BUFFS ===
+    _applyDogHouseAuras() {
+        // Reset all buff modifiers
+        for (const tower of this.towers) {
+            if (!tower.isPassive) {
+                tower.buffDamageMult = 1;
+                tower.buffFireRateMult = 1;
+                tower.buffRange = 0;
+                tower.isBuffed = false;
+            }
+        }
+
+        // Apply auras from each Dog House
+        for (const dh of this.towers) {
+            if (!dh.isPassive || dh.auraRange <= 0) continue;
+
+            const tier = CONFIG.DOGHOUSE_TIERS[dh.auraTier];
+            if (!tier) continue;
+
+            const auraPx = dh.auraRange * dh.tileSize;
+
+            for (const tower of this.towers) {
+                if (tower.isPassive) continue;
+                const d = dist(dh.x, dh.y, tower.x, tower.y);
+                if (d > auraPx) continue;
+
+                // Apply buffs (don't stack — use best value from any Dog House)
+                tower.isBuffed = true;
+                tower.buffFireRateMult = Math.min(tower.buffFireRateMult, tier.fireRateMult);
+                tower.buffRange = Math.max(tower.buffRange, tier.rangePlus);
+                tower.buffDamageMult = Math.max(tower.buffDamageMult, tier.damageMult);
+            }
+        }
+    }
+
     update(dt) {
         if (this.state !== 'playing') return;
 
@@ -570,6 +606,7 @@ class Game {
             return;
         }
 
+        this._applyDogHouseAuras();
         this._updateTrivia(dt);
         this._updateGlobalAbilities(dt);
         this.waveManager.update(dt, this.grid.currentPath, this.tileSize, this.enemies);
@@ -632,7 +669,7 @@ class Game {
         for (const proj of this.projectiles) {
             proj.update(dt, this.enemies, this.particles);
         }
-        this.projectiles = this.projectiles.filter(p => p.alive);
+        this.projectiles = this.projectiles.filter(p => p.alive || (p.chainArcs && p.chainArcs.length > 0));
 
         for (const p of this.particles) {
             p.x += p.vx * dt;

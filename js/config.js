@@ -142,6 +142,24 @@ const CONFIG = {
             description: 'Splash damage WOOF',
             ability: { name: 'MEGA WOOF', desc: 'Damage all enemies 10s', cooldown: 50, duration: 10 }
         },
+        sparky: {
+            name: 'Sparky',
+            emoji: '⚡',
+            cost: 75,
+            range: 2.5,
+            damage: 12,
+            fireRate: 1.4,
+            color: '#FFD700',
+            projectileColor: '#FFEB3B',
+            projectileSpeed: 8,
+            splash: 0,
+            slow: 0,
+            description: 'Chain lightning',
+            chainCount: 3,
+            chainRange: 1.5,
+            chainFalloff: 0.6,
+            ability: { name: 'THUNDER STORM', desc: 'Double chains 10s', cooldown: 50, duration: 10 }
+        },
         doghouse: {
             name: 'Dog House',
             emoji: '🏠',
@@ -154,11 +172,27 @@ const CONFIG = {
             projectileSpeed: 0,
             splash: 0,
             slow: 0,
-            description: '+8g per wave',
+            description: 'Income + aura',
             isPassive: true,
             goldPerWave: 8
         }
     },
+
+    // Dog House upgrade tiers — each level adds a new aura buff
+    DOGHOUSE_TIERS: [
+        // Level 1: income only
+        { goldPerWave: 8, auraRange: 0, fireRateMult: 1, rangePlus: 0, damageMult: 1,
+          label: '+8g/wave', next: 'Lv2: +15% Atk Speed aura' },
+        // Level 2: + attack speed aura
+        { goldPerWave: 10, auraRange: 2, fireRateMult: 0.85, rangePlus: 0, damageMult: 1,
+          label: '+10g/wave | +15% Atk Spd', next: 'Lv3: +Range aura' },
+        // Level 3: + range aura
+        { goldPerWave: 12, auraRange: 2.5, fireRateMult: 0.85, rangePlus: 0.5, damageMult: 1,
+          label: '+12g/wave | +Spd | +Range', next: 'Lv4: +20% Damage aura' },
+        // Level 4: + damage aura
+        { goldPerWave: 15, auraRange: 3, fireRateMult: 0.85, rangePlus: 0.75, damageMult: 1.2,
+          label: '+15g/wave | +Spd | +Rng | +Dmg' },
+    ],
 
     // Enemy definitions
     ENEMIES: {

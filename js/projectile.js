@@ -16,6 +16,12 @@ class Projectile {
 
         this.targetX = target.x;
         this.targetY = target.y;
+
+        // Chain lightning (set by Tower if chainCount > 0)
+        this.chainCount = 0;
+        this.chainRange = 0;
+        this.chainFalloff = 0.6;
+        this.chainArcs = []; // [{x1,y1,x2,y2,life,maxLife}] for rendering
     }
 
     update(dt, enemies, particles) {
@@ -68,10 +74,74 @@ class Projectile {
                         this.target.applySlow(this.slow, this.slowDuration);
                     }
                 }
+
+                // Chain lightning: bounce to nearby enemies
+                if (this.chainCount > 0 && this.target) {
+                    this._doChainLightning(enemies, particles);
+                }
             }
         } else {
             this.x += (dx / d) * move;
             this.y += (dy / d) * move;
+        }
+
+        // Decay chain arc visuals
+        for (const arc of this.chainArcs) {
+            arc.life -= dt;
+        }
+        this.chainArcs = this.chainArcs.filter(a => a.life > 0);
+    }
+
+    _doChainLightning(enemies, particles) {
+        const hit = new Set();
+        hit.add(this.target);
+        let prevX = this.target.x;
+        let prevY = this.target.y;
+        let chainDmg = Math.floor(this.damage * this.chainFalloff);
+
+        for (let i = 0; i < this.chainCount; i++) {
+            let nearest = null;
+            let nearDist = Infinity;
+
+            for (const e of enemies) {
+                if (!e.alive || e.reachedEnd || hit.has(e)) continue;
+                const d = dist(prevX, prevY, e.x, e.y);
+                if (d <= this.chainRange && d < nearDist) {
+                    nearest = e;
+                    nearDist = d;
+                }
+            }
+
+            if (!nearest) break;
+
+            // Store arc for rendering
+            this.chainArcs.push({
+                x1: prevX, y1: prevY,
+                x2: nearest.x, y2: nearest.y,
+                life: 0.3, maxLife: 0.3
+            });
+
+            nearest.takeDamage(chainDmg);
+            hit.add(nearest);
+
+            // Spark particles at chain point
+            if (particles) {
+                for (let j = 0; j < 3; j++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    particles.push({
+                        x: nearest.x, y: nearest.y,
+                        vx: Math.cos(angle) * 40,
+                        vy: Math.sin(angle) * 40,
+                        life: 0.25, maxLife: 0.25,
+                        color: '#FFEB3B', size: 3
+                    });
+                }
+            }
+
+            prevX = nearest.x;
+            prevY = nearest.y;
+            chainDmg = Math.floor(chainDmg * this.chainFalloff);
+            if (chainDmg < 1) chainDmg = 1;
         }
     }
 }

@@ -265,15 +265,30 @@ class UI {
 
         let statsLine;
         if (tower.isPassive) {
-            statsLine = `Income: +${tower.goldPerWave}g/wave`;
+            const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
+            statsLine = tier ? tier.label : `Income: +${tower.goldPerWave}g/wave`;
         } else {
-            const dps = (tower.damage / tower.fireRate).toFixed(1);
-            statsLine = `DPS: ${dps} | DMG: ${tower.damage} | SPD: ${tower.fireRate.toFixed(2)}s`;
+            const effDmg = Math.floor(tower.damage * tower.buffDamageMult);
+            const effRate = tower.fireRate * tower.buffFireRateMult;
+            const dps = (effDmg / effRate).toFixed(1);
+            statsLine = `DPS: ${dps} | DMG: ${effDmg} | SPD: ${effRate.toFixed(2)}s`;
         }
 
         let extraLine = '';
-        if (!tower.isPassive) {
-            extraLine = `RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}`;
+        if (tower.isPassive) {
+            const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
+            if (tier && tier.next) {
+                extraLine = `Next: ${tier.next}`;
+            }
+            if (tier && tier.auraRange > 0) {
+                extraLine = `Aura: ${tier.auraRange} tiles` + (extraLine ? ` | ${extraLine}` : '');
+            }
+        } else {
+            const effRange = tower.range + tower.buffRange;
+            extraLine = `RNG: ${effRange.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}${tower.chainCount > 0 ? ' | Chain: ' + tower.chainCount : ''}`;
+            if (tower.isBuffed) {
+                extraLine += ' | 🏠 Buffed';
+            }
         }
 
         panel.innerHTML = `

@@ -404,6 +404,30 @@ class Renderer {
         ctx.textBaseline = 'middle';
         ctx.fillText('$', x, y - s * 0.55);
 
+        // Aura ring (level 2+)
+        if (tower.auraRange > 0) {
+            const auraPx = tower.auraRange * ts;
+            const t = Date.now() / 1000;
+            const pulse = 1 + Math.sin(t * 2) * 0.03;
+
+            // Aura color by tier
+            const auraColor = tower.auraTier >= 3 ? 'rgba(255,215,0,' : // gold (damage)
+                              tower.auraTier >= 2 ? 'rgba(100,180,255,' : // blue (range)
+                              'rgba(100,255,100,'; // green (speed)
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, auraPx * pulse, 0, Math.PI * 2);
+            ctx.fillStyle = auraColor + '0.04)';
+            ctx.fill();
+            ctx.strokeStyle = auraColor + '0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
         // Level stars
         const stars = tower.level - 1;
         if (stars > 0) {
@@ -534,6 +558,24 @@ class Renderer {
             ctx.fillText('*', 0, size * 0.72);
         }
 
+        // Sparky: lightning bolt forehead mark
+        if (tower.type === 'sparky') {
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-size * 0.1, -size * 0.7);
+            ctx.lineTo(size * 0.05, -size * 0.4);
+            ctx.lineTo(-size * 0.05, -size * 0.35);
+            ctx.lineTo(size * 0.1, -size * 0.05);
+            ctx.stroke();
+            // Yellow collar
+            ctx.strokeStyle = '#FFC107';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, size * 0.05, size * 0.85, 0.4, Math.PI - 0.4);
+            ctx.stroke();
+        }
+
         ctx.restore();
 
         // Husky frost aura
@@ -547,6 +589,22 @@ class Renderer {
                 ctx.fillStyle = 'rgba(179,229,252,0.5)';
                 ctx.beginPath();
                 ctx.arc(fx, fy, size * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // Sparky electric sparks
+        if (tower.type === 'sparky') {
+            ctx.save();
+            for (let i = 0; i < 3; i++) {
+                const angle = (Date.now() / 800 + i * 2.09) % (Math.PI * 2);
+                const r = size * (1.0 + Math.sin(Date.now() / 300 + i * 1.5) * 0.2);
+                const fx = x + Math.cos(angle) * r;
+                const fy = y + Math.sin(angle) * r * 0.7;
+                ctx.fillStyle = 'rgba(255,235,59,0.7)';
+                ctx.beginPath();
+                ctx.arc(fx, fy, size * 0.07, 0, Math.PI * 2);
                 ctx.fill();
             }
             ctx.restore();
@@ -578,6 +636,18 @@ class Renderer {
             ctx.restore();
         }
 
+        // Dog House buff indicator
+        if (tower.isBuffed) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,215,0,0.35)';
+            ctx.lineWidth = 1.5;
+            const buffR = size * (1.25 + Math.sin(Date.now() / 600) * 0.05);
+            ctx.beginPath();
+            ctx.arc(x, y, buffR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         // Poodle poofy hair
         if (tower.type === 'poodle') {
             const s = scale;
@@ -591,6 +661,7 @@ class Renderer {
             ctx.save();
             const glowColor = tower.type === 'poodle' ? 'rgba(218,112,214,0.5)' :
                               tower.type === 'husky' ? 'rgba(100,200,255,0.5)' :
+                              tower.type === 'sparky' ? 'rgba(255,235,59,0.6)' :
                               'rgba(255,99,71,0.5)';
             ctx.strokeStyle = glowColor;
             ctx.lineWidth = 2;
@@ -643,11 +714,28 @@ class Renderer {
 
     // === TOWER RANGE ===
     drawTowerRange(tower) {
-        if (tower.isPassive) return;
         const ts = this.tileSize;
         const ctx = this.ctx;
+
+        if (tower.isPassive) {
+            // Show aura range for Dog House
+            if (tower.auraRange > 0) {
+                ctx.beginPath();
+                ctx.arc(tower.x, tower.y, tower.auraRange * ts, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,215,0,0.06)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            return;
+        }
+
+        const effectiveRange = tower.range + tower.buffRange;
         ctx.beginPath();
-        ctx.arc(tower.x, tower.y, tower.range * ts, 0, Math.PI * 2);
+        ctx.arc(tower.x, tower.y, effectiveRange * ts, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.08)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -903,8 +991,17 @@ class Renderer {
 
     // === PROJECTILE ===
     drawProjectile(proj) {
-        if (!proj.alive) return;
+        if (!proj.alive && (!proj.chainArcs || proj.chainArcs.length === 0)) return;
         const ctx = this.ctx;
+
+        // Draw chain lightning arcs
+        if (proj.chainArcs) {
+            for (const arc of proj.chainArcs) {
+                this._drawLightningArc(ctx, arc.x1, arc.y1, arc.x2, arc.y2, arc.life / arc.maxLife);
+            }
+        }
+
+        if (!proj.alive) return;
 
         const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
         glow.addColorStop(0, proj.color + '88');
@@ -922,6 +1019,49 @@ class Renderer {
         ctx.beginPath();
         ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
         ctx.fill();
+    }
+
+    // === CHAIN LIGHTNING ARC ===
+    _drawLightningArc(ctx, x1, y1, x2, y2, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = '#FFEB3B';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 8;
+
+        // Jagged lightning segments
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const segments = 5;
+        const jitter = 8;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        for (let i = 1; i < segments; i++) {
+            const t = i / segments;
+            const px = x1 + dx * t + (Math.random() - 0.5) * jitter;
+            const py = y1 + dy * t + (Math.random() - 0.5) * jitter;
+            ctx.lineTo(px, py);
+        }
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Thinner bright core
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        for (let i = 1; i < segments; i++) {
+            const t = i / segments;
+            const px = x1 + dx * t + (Math.random() - 0.5) * jitter * 0.5;
+            const py = y1 + dy * t + (Math.random() - 0.5) * jitter * 0.5;
+            ctx.lineTo(px, py);
+        }
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
     }
 
     // === PARTICLE ===

@@ -857,6 +857,24 @@ const CONFIG = {
             description: 'Splash damage WOOF',
             ability: { name: 'MEGA WOOF', desc: 'Damage all enemies 10s', cooldown: 50, duration: 10 }
         },
+        sparky: {
+            name: 'Sparky',
+            emoji: '⚡',
+            cost: 75,
+            range: 2.5,
+            damage: 12,
+            fireRate: 1.4,
+            color: '#FFD700',
+            projectileColor: '#FFEB3B',
+            projectileSpeed: 8,
+            splash: 0,
+            slow: 0,
+            description: 'Chain lightning',
+            chainCount: 3,
+            chainRange: 1.5,
+            chainFalloff: 0.6,
+            ability: { name: 'THUNDER STORM', desc: 'Double chains 10s', cooldown: 50, duration: 10 }
+        },
         doghouse: {
             name: 'Dog House',
             emoji: '🏠',
@@ -869,11 +887,27 @@ const CONFIG = {
             projectileSpeed: 0,
             splash: 0,
             slow: 0,
-            description: '+8g per wave',
+            description: 'Income + aura',
             isPassive: true,
             goldPerWave: 8
         }
     },
+
+    // Dog House upgrade tiers — each level adds a new aura buff
+    DOGHOUSE_TIERS: [
+        // Level 1: income only
+        { goldPerWave: 8, auraRange: 0, fireRateMult: 1, rangePlus: 0, damageMult: 1,
+          label: '+8g/wave', next: 'Lv2: +15% Atk Speed aura' },
+        // Level 2: + attack speed aura
+        { goldPerWave: 10, auraRange: 2, fireRateMult: 0.85, rangePlus: 0, damageMult: 1,
+          label: '+10g/wave | +15% Atk Spd', next: 'Lv3: +Range aura' },
+        // Level 3: + range aura
+        { goldPerWave: 12, auraRange: 2.5, fireRateMult: 0.85, rangePlus: 0.5, damageMult: 1,
+          label: '+12g/wave | +Spd | +Range', next: 'Lv4: +20% Damage aura' },
+        // Level 4: + damage aura
+        { goldPerWave: 15, auraRange: 3, fireRateMult: 0.85, rangePlus: 0.75, damageMult: 1.2,
+          label: '+15g/wave | +Spd | +Rng | +Dmg' },
+    ],
 
     // Enemy definitions
     ENEMIES: {
@@ -1702,6 +1736,15 @@ class Tower {
         this.isPassive = def.isPassive || false;
         this.goldPerWave = def.goldPerWave || 0;
 
+        // Chain lightning properties
+        this.chainCount = def.chainCount || 0;
+        this.chainRange = def.chainRange || 0;
+        this.chainFalloff = def.chainFalloff || 0.6;
+
+        // Dog House aura (set per-level from DOGHOUSE_TIERS)
+        this.auraRange = 0;
+        this.auraTier = 0; // index into DOGHOUSE_TIERS
+
         this.level = 1;
         this.fireCooldown = 0;
         this.target = null;
@@ -1715,6 +1758,12 @@ class Tower {
 
         // Bark Storm: saved original fireRate
         this._baseFireRate = def.fireRate;
+
+        // Buff modifiers (reset each frame by game.js)
+        this.buffDamageMult = 1;
+        this.buffFireRateMult = 1;
+        this.buffRange = 0;
+        this.isBuffed = false;
     }
 
     upgrade() {
@@ -1724,6 +1773,17 @@ class Tower {
         const upgradeCost = this.getUpgradeCost();
         this.level++;
         this.totalInvested += upgradeCost;
+
+        // Dog House: use tier-based upgrades
+        if (this.isPassive && CONFIG.DOGHOUSE_TIERS) {
+            const tier = CONFIG.DOGHOUSE_TIERS[this.level - 1];
+            if (tier) {
+                this.goldPerWave = tier.goldPerWave;
+                this.auraRange = tier.auraRange;
+                this.auraTier = this.level - 1;
+            }
+            return upgradeCost;
+        }
 
         const mult = CONFIG.UPGRADE_STAT_MULT;
         this.range *= mult;
@@ -1736,8 +1796,9 @@ class Tower {
             this.slow = Math.max(0.2, this.slow - 0.05);
         }
 
-        if (this.goldPerWave > 0) {
-            this.goldPerWave = Math.floor(this.goldPerWave * mult);
+        // Chain lightning: extra chain per 2 levels
+        if (this.chainCount > 0 && this.level % 2 === 0) {
+            this.chainCount++;
         }
 
         return upgradeCost;
@@ -1772,7 +1833,8 @@ class Tower {
 
         let closest = null;
         let closestDist = Infinity;
-        const rangePx = this.range * this.tileSize;
+        const effectiveRange = this.range + this.buffRange;
+        const rangePx = effectiveRange * this.tileSize;
 
         for (const enemy of enemies) {
             if (!enemy.alive || enemy.reachedEnd) continue;
@@ -1794,20 +1856,33 @@ class Tower {
         if (this.attackAnim > 0) this.attackAnim -= dt * 4;
 
         const target = this.findTarget(enemies);
+        const effectiveFireRate = this.fireRate * this.buffFireRateMult;
         if (target && this.fireCooldown <= 0) {
-            this.fireCooldown = this.fireRate;
+            this.fireCooldown = effectiveFireRate;
             this.attackAnim = 1;
 
-            projectiles.push(new Projectile(
+            const effectiveDamage = Math.floor(this.damage * this.buffDamageMult);
+
+            const proj = new Projectile(
                 this.x, this.y,
                 target,
-                this.damage,
+                effectiveDamage,
                 this.projectileSpeed * this.tileSize,
                 this.projectileColor,
                 this.splash * this.tileSize,
                 this.slow,
                 this.slowDuration
-            ));
+            );
+
+            // Chain lightning
+            if (this.chainCount > 0) {
+                proj.chainCount = this.abilityActive ? this.chainCount * 2 : this.chainCount;
+                proj.chainRange = this.chainRange * this.tileSize;
+                proj.chainFalloff = this.chainFalloff;
+                proj.chainArcs = []; // rendered by renderer
+            }
+
+            projectiles.push(proj);
         }
     }
 }
@@ -1832,6 +1907,12 @@ class Projectile {
 
         this.targetX = target.x;
         this.targetY = target.y;
+
+        // Chain lightning (set by Tower if chainCount > 0)
+        this.chainCount = 0;
+        this.chainRange = 0;
+        this.chainFalloff = 0.6;
+        this.chainArcs = []; // [{x1,y1,x2,y2,life,maxLife}] for rendering
     }
 
     update(dt, enemies, particles) {
@@ -1884,10 +1965,74 @@ class Projectile {
                         this.target.applySlow(this.slow, this.slowDuration);
                     }
                 }
+
+                // Chain lightning: bounce to nearby enemies
+                if (this.chainCount > 0 && this.target) {
+                    this._doChainLightning(enemies, particles);
+                }
             }
         } else {
             this.x += (dx / d) * move;
             this.y += (dy / d) * move;
+        }
+
+        // Decay chain arc visuals
+        for (const arc of this.chainArcs) {
+            arc.life -= dt;
+        }
+        this.chainArcs = this.chainArcs.filter(a => a.life > 0);
+    }
+
+    _doChainLightning(enemies, particles) {
+        const hit = new Set();
+        hit.add(this.target);
+        let prevX = this.target.x;
+        let prevY = this.target.y;
+        let chainDmg = Math.floor(this.damage * this.chainFalloff);
+
+        for (let i = 0; i < this.chainCount; i++) {
+            let nearest = null;
+            let nearDist = Infinity;
+
+            for (const e of enemies) {
+                if (!e.alive || e.reachedEnd || hit.has(e)) continue;
+                const d = dist(prevX, prevY, e.x, e.y);
+                if (d <= this.chainRange && d < nearDist) {
+                    nearest = e;
+                    nearDist = d;
+                }
+            }
+
+            if (!nearest) break;
+
+            // Store arc for rendering
+            this.chainArcs.push({
+                x1: prevX, y1: prevY,
+                x2: nearest.x, y2: nearest.y,
+                life: 0.3, maxLife: 0.3
+            });
+
+            nearest.takeDamage(chainDmg);
+            hit.add(nearest);
+
+            // Spark particles at chain point
+            if (particles) {
+                for (let j = 0; j < 3; j++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    particles.push({
+                        x: nearest.x, y: nearest.y,
+                        vx: Math.cos(angle) * 40,
+                        vy: Math.sin(angle) * 40,
+                        life: 0.25, maxLife: 0.25,
+                        color: '#FFEB3B', size: 3
+                    });
+                }
+            }
+
+            prevX = nearest.x;
+            prevY = nearest.y;
+            chainDmg = Math.floor(chainDmg * this.chainFalloff);
+            if (chainDmg < 1) chainDmg = 1;
         }
     }
 }
@@ -2493,6 +2638,30 @@ class Renderer {
         ctx.textBaseline = 'middle';
         ctx.fillText('$', x, y - s * 0.55);
 
+        // Aura ring (level 2+)
+        if (tower.auraRange > 0) {
+            const auraPx = tower.auraRange * ts;
+            const t = Date.now() / 1000;
+            const pulse = 1 + Math.sin(t * 2) * 0.03;
+
+            // Aura color by tier
+            const auraColor = tower.auraTier >= 3 ? 'rgba(255,215,0,' : // gold (damage)
+                              tower.auraTier >= 2 ? 'rgba(100,180,255,' : // blue (range)
+                              'rgba(100,255,100,'; // green (speed)
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, auraPx * pulse, 0, Math.PI * 2);
+            ctx.fillStyle = auraColor + '0.04)';
+            ctx.fill();
+            ctx.strokeStyle = auraColor + '0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
         // Level stars
         const stars = tower.level - 1;
         if (stars > 0) {
@@ -2623,6 +2792,24 @@ class Renderer {
             ctx.fillText('*', 0, size * 0.72);
         }
 
+        // Sparky: lightning bolt forehead mark
+        if (tower.type === 'sparky') {
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-size * 0.1, -size * 0.7);
+            ctx.lineTo(size * 0.05, -size * 0.4);
+            ctx.lineTo(-size * 0.05, -size * 0.35);
+            ctx.lineTo(size * 0.1, -size * 0.05);
+            ctx.stroke();
+            // Yellow collar
+            ctx.strokeStyle = '#FFC107';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, size * 0.05, size * 0.85, 0.4, Math.PI - 0.4);
+            ctx.stroke();
+        }
+
         ctx.restore();
 
         // Husky frost aura
@@ -2636,6 +2823,22 @@ class Renderer {
                 ctx.fillStyle = 'rgba(179,229,252,0.5)';
                 ctx.beginPath();
                 ctx.arc(fx, fy, size * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // Sparky electric sparks
+        if (tower.type === 'sparky') {
+            ctx.save();
+            for (let i = 0; i < 3; i++) {
+                const angle = (Date.now() / 800 + i * 2.09) % (Math.PI * 2);
+                const r = size * (1.0 + Math.sin(Date.now() / 300 + i * 1.5) * 0.2);
+                const fx = x + Math.cos(angle) * r;
+                const fy = y + Math.sin(angle) * r * 0.7;
+                ctx.fillStyle = 'rgba(255,235,59,0.7)';
+                ctx.beginPath();
+                ctx.arc(fx, fy, size * 0.07, 0, Math.PI * 2);
                 ctx.fill();
             }
             ctx.restore();
@@ -2667,6 +2870,18 @@ class Renderer {
             ctx.restore();
         }
 
+        // Dog House buff indicator
+        if (tower.isBuffed) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,215,0,0.35)';
+            ctx.lineWidth = 1.5;
+            const buffR = size * (1.25 + Math.sin(Date.now() / 600) * 0.05);
+            ctx.beginPath();
+            ctx.arc(x, y, buffR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         // Poodle poofy hair
         if (tower.type === 'poodle') {
             const s = scale;
@@ -2680,6 +2895,7 @@ class Renderer {
             ctx.save();
             const glowColor = tower.type === 'poodle' ? 'rgba(218,112,214,0.5)' :
                               tower.type === 'husky' ? 'rgba(100,200,255,0.5)' :
+                              tower.type === 'sparky' ? 'rgba(255,235,59,0.6)' :
                               'rgba(255,99,71,0.5)';
             ctx.strokeStyle = glowColor;
             ctx.lineWidth = 2;
@@ -2732,11 +2948,28 @@ class Renderer {
 
     // === TOWER RANGE ===
     drawTowerRange(tower) {
-        if (tower.isPassive) return;
         const ts = this.tileSize;
         const ctx = this.ctx;
+
+        if (tower.isPassive) {
+            // Show aura range for Dog House
+            if (tower.auraRange > 0) {
+                ctx.beginPath();
+                ctx.arc(tower.x, tower.y, tower.auraRange * ts, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,215,0,0.06)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            return;
+        }
+
+        const effectiveRange = tower.range + tower.buffRange;
         ctx.beginPath();
-        ctx.arc(tower.x, tower.y, tower.range * ts, 0, Math.PI * 2);
+        ctx.arc(tower.x, tower.y, effectiveRange * ts, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.08)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -2992,8 +3225,17 @@ class Renderer {
 
     // === PROJECTILE ===
     drawProjectile(proj) {
-        if (!proj.alive) return;
+        if (!proj.alive && (!proj.chainArcs || proj.chainArcs.length === 0)) return;
         const ctx = this.ctx;
+
+        // Draw chain lightning arcs
+        if (proj.chainArcs) {
+            for (const arc of proj.chainArcs) {
+                this._drawLightningArc(ctx, arc.x1, arc.y1, arc.x2, arc.y2, arc.life / arc.maxLife);
+            }
+        }
+
+        if (!proj.alive) return;
 
         const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
         glow.addColorStop(0, proj.color + '88');
@@ -3011,6 +3253,49 @@ class Renderer {
         ctx.beginPath();
         ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
         ctx.fill();
+    }
+
+    // === CHAIN LIGHTNING ARC ===
+    _drawLightningArc(ctx, x1, y1, x2, y2, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = '#FFEB3B';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 8;
+
+        // Jagged lightning segments
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const segments = 5;
+        const jitter = 8;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        for (let i = 1; i < segments; i++) {
+            const t = i / segments;
+            const px = x1 + dx * t + (Math.random() - 0.5) * jitter;
+            const py = y1 + dy * t + (Math.random() - 0.5) * jitter;
+            ctx.lineTo(px, py);
+        }
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Thinner bright core
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        for (let i = 1; i < segments; i++) {
+            const t = i / segments;
+            const px = x1 + dx * t + (Math.random() - 0.5) * jitter * 0.5;
+            const py = y1 + dy * t + (Math.random() - 0.5) * jitter * 0.5;
+            ctx.lineTo(px, py);
+        }
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
     }
 
     // === PARTICLE ===
@@ -3303,15 +3588,30 @@ class UI {
 
         let statsLine;
         if (tower.isPassive) {
-            statsLine = `Income: +${tower.goldPerWave}g/wave`;
+            const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
+            statsLine = tier ? tier.label : `Income: +${tower.goldPerWave}g/wave`;
         } else {
-            const dps = (tower.damage / tower.fireRate).toFixed(1);
-            statsLine = `DPS: ${dps} | DMG: ${tower.damage} | SPD: ${tower.fireRate.toFixed(2)}s`;
+            const effDmg = Math.floor(tower.damage * tower.buffDamageMult);
+            const effRate = tower.fireRate * tower.buffFireRateMult;
+            const dps = (effDmg / effRate).toFixed(1);
+            statsLine = `DPS: ${dps} | DMG: ${effDmg} | SPD: ${effRate.toFixed(2)}s`;
         }
 
         let extraLine = '';
-        if (!tower.isPassive) {
-            extraLine = `RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}`;
+        if (tower.isPassive) {
+            const tier = CONFIG.DOGHOUSE_TIERS ? CONFIG.DOGHOUSE_TIERS[tower.auraTier] : null;
+            if (tier && tier.next) {
+                extraLine = `Next: ${tier.next}`;
+            }
+            if (tier && tier.auraRange > 0) {
+                extraLine = `Aura: ${tier.auraRange} tiles` + (extraLine ? ` | ${extraLine}` : '');
+            }
+        } else {
+            const effRange = tower.range + tower.buffRange;
+            extraLine = `RNG: ${effRange.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}${tower.chainCount > 0 ? ' | Chain: ' + tower.chainCount : ''}`;
+            if (tower.isBuffed) {
+                extraLine += ' | 🏠 Buffed';
+            }
         }
 
         panel.innerHTML = `
@@ -3673,6 +3973,7 @@ class Game {
             }
         }
         // barker: handled by tower's rapid fireRate (already set in startAbility)
+        // sparky: handled by tower doubling chainCount when abilityActive
     }
 
     // === TRIVIA SYSTEM ===
@@ -3936,6 +4237,41 @@ class Game {
         }
     }
 
+    // === DOG HOUSE AURA BUFFS ===
+    _applyDogHouseAuras() {
+        // Reset all buff modifiers
+        for (const tower of this.towers) {
+            if (!tower.isPassive) {
+                tower.buffDamageMult = 1;
+                tower.buffFireRateMult = 1;
+                tower.buffRange = 0;
+                tower.isBuffed = false;
+            }
+        }
+
+        // Apply auras from each Dog House
+        for (const dh of this.towers) {
+            if (!dh.isPassive || dh.auraRange <= 0) continue;
+
+            const tier = CONFIG.DOGHOUSE_TIERS[dh.auraTier];
+            if (!tier) continue;
+
+            const auraPx = dh.auraRange * dh.tileSize;
+
+            for (const tower of this.towers) {
+                if (tower.isPassive) continue;
+                const d = dist(dh.x, dh.y, tower.x, tower.y);
+                if (d > auraPx) continue;
+
+                // Apply buffs (don't stack — use best value from any Dog House)
+                tower.isBuffed = true;
+                tower.buffFireRateMult = Math.min(tower.buffFireRateMult, tier.fireRateMult);
+                tower.buffRange = Math.max(tower.buffRange, tier.rangePlus);
+                tower.buffDamageMult = Math.max(tower.buffDamageMult, tier.damageMult);
+            }
+        }
+    }
+
     update(dt) {
         if (this.state !== 'playing') return;
 
@@ -3949,6 +4285,7 @@ class Game {
             return;
         }
 
+        this._applyDogHouseAuras();
         this._updateTrivia(dt);
         this._updateGlobalAbilities(dt);
         this.waveManager.update(dt, this.grid.currentPath, this.tileSize, this.enemies);
@@ -4011,7 +4348,7 @@ class Game {
         for (const proj of this.projectiles) {
             proj.update(dt, this.enemies, this.particles);
         }
-        this.projectiles = this.projectiles.filter(p => p.alive);
+        this.projectiles = this.projectiles.filter(p => p.alive || (p.chainArcs && p.chainArcs.length > 0));
 
         for (const p of this.particles) {
             p.x += p.vx * dt;
