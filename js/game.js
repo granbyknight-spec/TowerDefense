@@ -892,7 +892,7 @@ class Game {
         ctx.translate(-cw / 2 + this.camX, -ch / 2 + this.camY);
 
         this.renderer.drawGrid(this.grid);
-        this.renderer.drawPath(this.grid.currentPath);
+        this.renderer.drawPath(this.grid.currentPath, this.grid);
 
         if (this.ui.selectedTowerType && this.state === 'playing') {
             const canPlace = this.grid.canPlace(this.ui.hoverCol, this.ui.hoverRow);

@@ -2817,13 +2817,19 @@ class Renderer {
     }
 
     // === PATH ===
-    drawPath(path) {
+    drawPath(path, grid) {
         if (!path || path.length < 2) return;
         const ts = this.tileSize;
         const ctx = this.ctx;
 
         for (const node of path) {
-            this._drawPathTile(ctx, node.col, node.row, ts);
+            const cellType = grid ? grid.getCellType(node.col, node.row) : 0;
+            if (cellType === 5) {
+                // Bridge cell: draw subtle path markers over the bridge instead of covering it
+                this._drawBridgePathOverlay(ctx, node.col, node.row, ts);
+            } else {
+                this._drawPathTile(ctx, node.col, node.row, ts);
+            }
         }
 
         ctx.strokeStyle = 'rgba(255,255,220,0.15)';
@@ -2870,6 +2876,14 @@ class Renderer {
             ctx.ellipse(sx - sr * 0.2, sy - sr * 0.2, sr * 0.4, sr * 0.3, 0, 0, Math.PI * 2);
             ctx.fill();
         }
+    }
+
+    _drawBridgePathOverlay(ctx, c, r, ts) {
+        const x = c * ts;
+        const y = r * ts;
+        // Subtle footprint marks on the bridge to show the path crosses here
+        ctx.fillStyle = 'rgba(60,40,20,0.25)';
+        ctx.fillRect(x + ts * 0.2, y + ts * 0.3, ts * 0.6, ts * 0.4);
     }
 
     // === PLACEMENT PREVIEW ===
@@ -5229,7 +5243,7 @@ class Game {
         ctx.translate(-cw / 2 + this.camX, -ch / 2 + this.camY);
 
         this.renderer.drawGrid(this.grid);
-        this.renderer.drawPath(this.grid.currentPath);
+        this.renderer.drawPath(this.grid.currentPath, this.grid);
 
         if (this.ui.selectedTowerType && this.state === 'playing') {
             const canPlace = this.grid.canPlace(this.ui.hoverCol, this.ui.hoverRow);
