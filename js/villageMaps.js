@@ -494,8 +494,9 @@ const VILLAGE_BARKSVILLE = (() => {
     };
 })();
 
-// Map registry
+// Map registry - also expose on window for cross-script access
 const VILLAGE_MAPS = {
     academy: VILLAGE_ACADEMY,
     barksville: VILLAGE_BARKSVILLE,
 };
+window.VILLAGE_MAPS = VILLAGE_MAPS;

@@ -123,9 +123,17 @@ class StoryEngine {
 
         // If scene is exploration, set up the map
         if (this.scene.type === 'explore') {
+            // Check for village map FIRST - if found, delegate entirely
+            const vMapName = this.scene.villageMap;
+            const vMaps = window.VILLAGE_MAPS;
+            if (vMapName && this.village && vMaps && vMaps[vMapName]) {
+                // Get the first explore step for NPCs/triggers
+                const exploreStep = this.scene.steps ? this.scene.steps.find(s => s.type === 'explore') : null;
+                const mergedStep = { ...this.scene, ...(exploreStep || {}) };
+                this._startVillageExploration(vMapName, mergedStep);
+                return; // Village takes over - don't advance
+            }
             this._setupExploration(this.scene);
-            // If village took over, don't advance (village will callback)
-            if (this._villageActive) return;
         } else {
             this.exploring = false;
         }
@@ -390,7 +398,8 @@ class StoryEngine {
     _setupExploration(step) {
         // Check if this explore step uses the new Village renderer
         const villageMapName = step.villageMap || (this.scene && this.scene.villageMap);
-        if (villageMapName && this.village && typeof VILLAGE_MAPS !== 'undefined' && VILLAGE_MAPS[villageMapName]) {
+        const villageMaps = window.VILLAGE_MAPS || (typeof VILLAGE_MAPS !== 'undefined' ? VILLAGE_MAPS : null);
+        if (villageMapName && this.village && villageMaps && villageMaps[villageMapName]) {
             this._startVillageExploration(villageMapName, step);
             return;
         }
@@ -429,7 +438,8 @@ class StoryEngine {
         this.village.ts = Math.max(24, Math.floor(this.canvas.width / 16));
 
         // Load the village map
-        const mapData = JSON.parse(JSON.stringify(VILLAGE_MAPS[mapName]));
+        const maps = window.VILLAGE_MAPS || VILLAGE_MAPS;
+        const mapData = JSON.parse(JSON.stringify(maps[mapName]));
 
         // Override start position if step specifies it
         if (step.startX !== undefined) mapData.startX = step.startX;
