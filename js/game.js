@@ -97,6 +97,7 @@ class Game {
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
+        GameAudio.startMusic(0);
         this.ui.updateHUD();
     }
 
@@ -139,6 +140,7 @@ class Game {
         this.gameSpeed = 1;
         const speedBtn = document.getElementById('speed-btn');
         if (speedBtn) speedBtn.textContent = '1x';
+        GameAudio.startMusic(0);
         this.ui.updateHUD();
     }
 
@@ -291,7 +293,8 @@ class Game {
 
     // === TRIVIA SYSTEM ===
     _pickTrivia() {
-        const pool = CONFIG.TRIVIA;
+        const levelIdx = this.waveManager.currentLevel;
+        const pool = CONFIG.TRIVIA[levelIdx] || CONFIG.TRIVIA[0];
         if (this.triviaUsed.length >= pool.length) {
             this.triviaUsed = [];
         }
@@ -444,6 +447,7 @@ class Game {
 
         this.state = 'playing';
         this._triviaShownForWave = -1;
+        GameAudio.startMusic(newLevelIdx);
         this.ui.updateHUD();
     }
 
@@ -688,6 +692,7 @@ class Game {
     gameOver() {
         this.state = 'lost';
         this._hideTrivia();
+        GameAudio.stopMusic();
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
@@ -704,6 +709,7 @@ class Game {
     victory() {
         this.state = 'won';
         this._hideTrivia();
+        GameAudio.stopMusic();
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';

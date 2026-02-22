@@ -946,35 +946,79 @@ const CONFIG = {
     WAVE_DELAY: 5,
     SPAWN_INTERVAL: 0.6,
 
-    // Trivia
+    // Trivia - themed pools per level (20 questions each)
     TRIVIA_TIME: 3,     // seconds to answer
     TRIVIA_REWARD: 100,  // gold for correct answer
     TRIVIA: [
-        { q: "What breed is the world's fastest dog?", a: ['Greyhound', 'Whippet', 'Saluki', 'Dalmatian'], c: 0 },
-        { q: "How many teeth does an adult dog have?", a: ['42', '36', '28', '48'], c: 0 },
-        { q: "What is a group of puppies called?", a: ['A litter', 'A pack', 'A herd', 'A pod'], c: 0 },
-        { q: "Which breed is the smallest?", a: ['Chihuahua', 'Yorkie', 'Pomeranian', 'Papillon'], c: 0 },
-        { q: "What breed was Lassie?", a: ['Rough Collie', 'Sheltie', 'Golden Retriever', 'Beagle'], c: 0 },
-        { q: "How many eyelids does a dog have per eye?", a: ['Three', 'Two', 'One', 'Four'], c: 0 },
-        { q: "Which sense is strongest in dogs?", a: ['Smell', 'Hearing', 'Sight', 'Taste'], c: 0 },
-        { q: "What breed is known as the 'Wiener Dog'?", a: ['Dachshund', 'Corgi', 'Basset Hound', 'Beagle'], c: 0 },
-        { q: "Dalmatian puppies are born what color?", a: ['White', 'Spotted', 'Black', 'Gray'], c: 0 },
-        { q: "Which breed has a blue-black tongue?", a: ['Chow Chow', 'Akita', 'Shar Pei', 'Husky'], c: 0 },
-        { q: "Which breed can't bark?", a: ['Basenji', 'Shiba Inu', 'Whippet', 'Borzoi'], c: 0 },
-        { q: "Which breed is the tallest?", a: ['Great Dane', 'Irish Wolfhound', 'Mastiff', 'St. Bernard'], c: 0 },
-        { q: "Which breed is the heaviest?", a: ['English Mastiff', 'Great Dane', 'St. Bernard', 'Newfoundland'], c: 0 },
-        { q: "Dogs can see which colors best?", a: ['Blue & yellow', 'Red & green', 'All colors', 'Only gray'], c: 0 },
-        { q: "Which breed was bred for Alpine rescue?", a: ['St. Bernard', 'Bernese Mountain', 'Husky', 'Malamute'], c: 0 },
-        { q: "How many muscles control a dog's ear?", a: ['18', '6', '12', '24'], c: 0 },
-        { q: "What breed is Scooby-Doo?", a: ['Great Dane', 'Bloodhound', 'Mastiff', 'Boxer'], c: 0 },
-        { q: "Dogs sweat mainly through their...?", a: ['Paw pads', 'Tongue', 'Nose', 'Belly'], c: 0 },
-        { q: "Which is the 'Firehouse Dog' breed?", a: ['Dalmatian', 'Lab', 'German Shepherd', 'Boxer'], c: 0 },
-        { q: "A dog's nose print is unique like a...?", a: ['Fingerprint', 'Snowflake', 'DNA strand', 'Retina'], c: 0 },
-        { q: "How many bones does a dog have?", a: ['~320', '~200', '~400', '~260'], c: 0 },
-        { q: "Which breed is the most popular in the US?", a: ['Labrador Retriever', 'German Shepherd', 'Golden Retriever', 'Bulldog'], c: 0 },
-        { q: "What is a female dog called?", a: ['A dam', 'A queen', 'A hen', 'A mare'], c: 0 },
-        { q: "Puppies are born deaf and...?", a: ['Blind', 'Hairless', 'Toothless', 'Tailless'], c: 0 },
-        { q: "Which breed is known for herding sheep?", a: ['Border Collie', 'Poodle', 'Beagle', 'Boxer'], c: 0 },
+        // Level 1: The Backyard - Basic dog breed facts
+        [
+            { q: "What breed is the world's fastest dog?", a: ['Greyhound', 'Whippet', 'Saluki', 'Dalmatian'], c: 0 },
+            { q: "Which breed is the smallest?", a: ['Chihuahua', 'Yorkie', 'Pomeranian', 'Papillon'], c: 0 },
+            { q: "What breed was Lassie?", a: ['Rough Collie', 'Sheltie', 'Golden Retriever', 'Beagle'], c: 0 },
+            { q: "What breed is known as the 'Wiener Dog'?", a: ['Dachshund', 'Corgi', 'Basset Hound', 'Beagle'], c: 0 },
+            { q: "Which breed has a blue-black tongue?", a: ['Chow Chow', 'Akita', 'Shar Pei', 'Husky'], c: 0 },
+            { q: "Which breed can't bark?", a: ['Basenji', 'Shiba Inu', 'Whippet', 'Borzoi'], c: 0 },
+            { q: "Which breed is the tallest?", a: ['Great Dane', 'Irish Wolfhound', 'Mastiff', 'St. Bernard'], c: 0 },
+            { q: "Which breed is the heaviest?", a: ['English Mastiff', 'Great Dane', 'St. Bernard', 'Newfoundland'], c: 0 },
+            { q: "Which breed was bred for Alpine rescue?", a: ['St. Bernard', 'Bernese Mountain', 'Husky', 'Malamute'], c: 0 },
+            { q: "What breed is Scooby-Doo?", a: ['Great Dane', 'Bloodhound', 'Mastiff', 'Boxer'], c: 0 },
+            { q: "Which is the 'Firehouse Dog' breed?", a: ['Dalmatian', 'Lab', 'German Shepherd', 'Boxer'], c: 0 },
+            { q: "Which breed is most popular in the US?", a: ['Labrador Retriever', 'German Shepherd', 'Golden Retriever', 'Bulldog'], c: 0 },
+            { q: "Which breed is known for herding sheep?", a: ['Border Collie', 'Poodle', 'Beagle', 'Boxer'], c: 0 },
+            { q: "Dalmatian puppies are born what color?", a: ['White', 'Spotted', 'Black', 'Gray'], c: 0 },
+            { q: "Which breed has 'lion' in its name?", a: ['Leonberger', 'Rhodesian', 'Tibetan Mastiff', 'Chow Chow'], c: 0 },
+            { q: "What breed is Toto from Oz?", a: ['Cairn Terrier', 'Yorkie', 'Schnauzer', 'Maltese'], c: 0 },
+            { q: "Which breed is known as 'Velcro dog'?", a: ['Vizsla', 'Weimaraner', 'Lab', 'Golden Retriever'], c: 0 },
+            { q: "Which breed originated in Japan?", a: ['Shiba Inu', 'Chow Chow', 'Shar Pei', 'Lhasa Apso'], c: 0 },
+            { q: "What breed is known for its wrinkles?", a: ['Shar Pei', 'Bulldog', 'Pug', 'Mastiff'], c: 0 },
+            { q: "Which breed has webbed feet for swimming?", a: ['Labrador', 'Dalmatian', 'Beagle', 'Poodle'], c: 0 },
+        ],
+        // Level 2: The Park - Dog behavior, training & anatomy
+        [
+            { q: "How many teeth does an adult dog have?", a: ['42', '36', '28', '48'], c: 0 },
+            { q: "What is a group of puppies called?", a: ['A litter', 'A pack', 'A herd', 'A pod'], c: 0 },
+            { q: "How many eyelids does a dog have per eye?", a: ['Three', 'Two', 'One', 'Four'], c: 0 },
+            { q: "Which sense is strongest in dogs?", a: ['Smell', 'Hearing', 'Sight', 'Taste'], c: 0 },
+            { q: "Dogs can see which colors best?", a: ['Blue & yellow', 'Red & green', 'All colors', 'Only gray'], c: 0 },
+            { q: "How many muscles control a dog's ear?", a: ['18', '6', '12', '24'], c: 0 },
+            { q: "Dogs sweat mainly through their...?", a: ['Paw pads', 'Tongue', 'Nose', 'Belly'], c: 0 },
+            { q: "A dog's nose print is unique like a...?", a: ['Fingerprint', 'Snowflake', 'DNA strand', 'Retina'], c: 0 },
+            { q: "How many bones does a dog have?", a: ['~320', '~200', '~400', '~260'], c: 0 },
+            { q: "What is a female dog called?", a: ['A dam', 'A queen', 'A hen', 'A mare'], c: 0 },
+            { q: "Puppies are born deaf and...?", a: ['Blind', 'Hairless', 'Toothless', 'Tailless'], c: 0 },
+            { q: "A wagging tail always means happy?", a: ['No', 'Yes', 'Only for puppies', 'Only small dogs'], c: 0 },
+            { q: "Dogs curl up when sleeping to...?", a: ['Protect organs', 'Stay warm', 'Feel safe', 'All of these'], c: 3 },
+            { q: "How far can a dog smell?", a: ['Up to 12 miles', 'Up to 1 mile', 'Up to 100 feet', 'Up to 50 miles'], c: 0 },
+            { q: "Why do dogs tilt their heads?", a: ['To hear better', 'They are confused', 'To see around their muzzle', 'To look cute'], c: 2 },
+            { q: "What does a play bow signal?", a: ['Want to play', 'Submission', 'Fear', 'Hunger'], c: 0 },
+            { q: "How many taste buds do dogs have?", a: ['~1,700', '~10,000', '~500', '~5,000'], c: 0 },
+            { q: "Dogs dream during which sleep phase?", a: ['REM sleep', 'Deep sleep', 'Light sleep', 'Dogs don\'t dream'], c: 0 },
+            { q: "A dog's normal temperature is about...?", a: ['101-102\u00B0F', '98.6\u00B0F', '104-106\u00B0F', '95-97\u00B0F'], c: 0 },
+            { q: "Puppies open their eyes at about...?", a: ['2 weeks', '1 day', '1 week', '1 month'], c: 0 },
+        ],
+        // Level 3: Cat Central - Advanced dog trivia + cat facts
+        [
+            { q: "How many hours a day do cats sleep?", a: ['12-16', '6-8', '8-10', '18-22'], c: 0 },
+            { q: "Cats can rotate their ears how far?", a: ['180 degrees', '90 degrees', '360 degrees', '45 degrees'], c: 0 },
+            { q: "How many whiskers does a cat have?", a: ['About 24', 'About 12', 'About 50', 'About 6'], c: 0 },
+            { q: "A group of cats is called a...?", a: ['Clowder', 'Pack', 'Litter', 'Murder'], c: 0 },
+            { q: "Cats can't taste which flavor?", a: ['Sweet', 'Sour', 'Bitter', 'Salty'], c: 0 },
+            { q: "What is a cat's top running speed?", a: ['30 mph', '15 mph', '45 mph', '60 mph'], c: 0 },
+            { q: "How many toes does a normal cat have?", a: ['18', '16', '20', '14'], c: 0 },
+            { q: "Cat purring frequency can promote...?", a: ['Bone healing', 'Hair growth', 'Weight loss', 'Nothing'], c: 0 },
+            { q: "Cats spend what % of time grooming?", a: ['30-50%', '5-10%', '10-15%', '70-80%'], c: 0 },
+            { q: "A cat's brain is most similar to a...?", a: ['Human\'s', 'Dog\'s', 'Bird\'s', 'Fish\'s'], c: 0 },
+            { q: "Dogs have how many more smell receptors than humans?", a: ['~50x more', '~5x more', '~10x more', '~100x more'], c: 0 },
+            { q: "The oldest known dog lived to be...?", a: ['31 years', '25 years', '22 years', '29 years'], c: 0 },
+            { q: "Which US president had the most dogs?", a: ['Theodore Roosevelt', 'George Washington', 'Obama', 'Biden'], c: 0 },
+            { q: "Dogs can understand about how many words?", a: ['Up to 250', 'Up to 50', 'Up to 25', 'Up to 1000'], c: 0 },
+            { q: "A dog's hearing range goes up to...?", a: ['65,000 Hz', '20,000 Hz', '40,000 Hz', '100,000 Hz'], c: 0 },
+            { q: "Which country has the most pet dogs?", a: ['USA', 'China', 'Brazil', 'Russia'], c: 0 },
+            { q: "Cats have how many vertebrae?", a: ['53', '33', '42', '26'], c: 0 },
+            { q: "Dogs were domesticated roughly how long ago?", a: ['15,000 years', '5,000 years', '1,000 years', '50,000 years'], c: 0 },
+            { q: "Cats land on their feet due to their...?", a: ['Righting reflex', 'Light bones', 'Tail balance', 'Flexible spine'], c: 0 },
+            { q: "A dog's sense of smell is how much better than ours?", a: ['10,000-100,000x', '100-500x', '10-50x', '1,000x'], c: 0 },
+        ],
     ],
 
     // Score
@@ -1029,14 +1073,19 @@ function pixelToGrid(x, y, tileSize) {
 
 
 // === js/audio.js ===
-// Minimal sound - soft pop on enemy death only
-// Procedural WAV synthesis, no Web Audio API dependency
+// Sound effects + procedural ambient background music per level
+// All audio is synthesized as WAV blobs - no external files needed
 
 const GameAudio = (() => {
     const SR = 22050;
     let urls = {};
     let muted = false;
     let volume = 0.5;
+
+    // Background music state
+    let bgMusic = null;
+    let currentMusicLevel = -1;
+    const musicVolume = 0.18;
 
     // === WAV ENCODER ===
     function _writeStr(v, off, s) {
@@ -1072,12 +1121,35 @@ const GameAudio = (() => {
         let phase = 0;
         for (let i = 0; i < n; i++) {
             const t = i / SR;
-            const env = vol * (1 - t / dur) * (1 - t / dur); // quadratic fade for softness
+            const env = vol * (1 - t / dur) * (1 - t / dur);
             let f = freq;
             if (freqEnd) f = freq * Math.pow(Math.max(freqEnd, 20) / freq, t / dur);
             const s = Math.sin(phase);
             out[i] = s * env;
             phase += 2 * Math.PI * f / SR;
+        }
+        return out;
+    }
+
+    // Soft pad tone - sine with gentle attack/release envelope
+    function _pad(freq, dur, vol) {
+        const n = (SR * dur) | 0;
+        const out = new Float32Array(n);
+        const attack = 0.3;
+        const release = 0.4;
+        let phase = 0;
+        for (let i = 0; i < n; i++) {
+            const t = i / SR;
+            // Smooth envelope: fade in, sustain, fade out
+            let env = vol;
+            if (t < attack) env *= t / attack;
+            if (t > dur - release) env *= (dur - t) / release;
+            // Layered sines for warmth (fundamental + soft octave + fifth)
+            const s = Math.sin(phase)
+                    + 0.3 * Math.sin(phase * 2)
+                    + 0.15 * Math.sin(phase * 1.5);
+            out[i] = s * env * 0.5;
+            phase += 2 * Math.PI * freq / SR;
         }
         return out;
     }
@@ -1096,24 +1168,85 @@ const GameAudio = (() => {
                 out[off + i] += s[i];
             }
         }
+        // Crossfade loop point: blend last 0.3s with first 0.3s for seamless loop
+        const fadeLen = (SR * 0.3) | 0;
+        if (out.length > fadeLen * 2) {
+            for (let i = 0; i < fadeLen; i++) {
+                const t = i / fadeLen;
+                out[i] = out[i] * t + out[out.length - fadeLen + i] * (1 - t);
+            }
+            // Trim the crossfade tail
+            const trimmed = new Float32Array(out.length - fadeLen);
+            trimmed.set(out.subarray(0, trimmed.length));
+            for (let i = 0; i < trimmed.length; i++) {
+                trimmed[i] = Math.max(-1, Math.min(1, trimmed[i]));
+            }
+            return trimmed;
+        }
         for (let i = 0; i < out.length; i++) {
             out[i] = Math.max(-1, Math.min(1, out[i]));
         }
         return out;
     }
 
+    // Generate a music loop from a chord progression
+    // chords: array of [freq1, freq2, freq3] (3-note chords)
+    // beatDur: seconds per chord, vol: amplitude
+    function _generateMusicLoop(chords, beatDur, vol) {
+        const parts = [];
+        for (let c = 0; c < chords.length; c++) {
+            const chord = chords[c];
+            const offset = c * beatDur;
+            for (const freq of chord) {
+                parts.push({ samples: _pad(freq, beatDur + 0.1, vol), offset });
+            }
+        }
+        return _mix(parts);
+    }
+
     function _generateAll() {
-        // Soft delightful pop - gentle rising sine with quick fade
+        // SFX
         urls.pop = _toWavUrl(_mix([
             { samples: _tone(600, 'sine', 0.08, 0.25, 1200) },
             { samples: _tone(900, 'sine', 0.06, 0.15, 1400), offset: 0.02 }
         ]));
 
-        // Gentle ability activation - subtle chime
         urls.ability = _toWavUrl(_mix([
             { samples: _tone(800, 'sine', 0.1, 0.15, 1200) },
             { samples: _tone(1000, 'sine', 0.08, 0.1, 1400), offset: 0.05 }
         ]));
+
+        // Background music loops (one per level)
+        // Note frequencies
+        const C4=261.63, D4=293.66, E4=329.63, F4=349.23, G4=392.00, A4=440.00, B4=493.88;
+        const C3=130.81, D3=146.83, E3=164.81, F3=174.61, G3=196.00, A3=220.00, B3=246.94;
+        const Bb3=233.08, Eb4=311.13;
+
+        // Level 1: The Backyard - warm, cheerful C major (C-Am-F-G)
+        const v = 0.12;
+        const bd = 3.0; // seconds per chord
+        urls.music0 = _toWavUrl(_generateMusicLoop([
+            [C3, E3, G3],     // C major
+            [A3, C4, E4],     // A minor
+            [F3, A3, C4],     // F major
+            [G3, B3, D4],     // G major
+        ], bd, v));
+
+        // Level 2: The Park - cooler, more serious D minor (Dm-Bb-C-Am)
+        urls.music1 = _toWavUrl(_generateMusicLoop([
+            [D3, F3, A3],     // D minor
+            [Bb3, D4, F4],    // Bb major
+            [C3, E3, G3],     // C major
+            [A3, C4, E4],     // A minor
+        ], bd, v));
+
+        // Level 3: Cat Central - tense, dramatic A minor (Am-F-Dm-E)
+        urls.music2 = _toWavUrl(_generateMusicLoop([
+            [A3, C4, E4],     // A minor
+            [F3, A3, C4],     // F major
+            [D3, F3, A3],     // D minor
+            [E3, G3, B3],     // E minor (resolve tension gently)
+        ], 2.5, v * 1.1));
     }
 
     function _play(name) {
@@ -1123,6 +1256,35 @@ const GameAudio = (() => {
             a.volume = volume;
             a.play().catch(() => {});
         } catch (e) {}
+    }
+
+    function _startMusic(level) {
+        if (currentMusicLevel === level && bgMusic && !bgMusic.paused) return;
+        _stopMusic();
+        const key = 'music' + level;
+        if (!urls[key]) return;
+        currentMusicLevel = level;
+        try {
+            bgMusic = new Audio(urls[key]);
+            bgMusic.loop = true;
+            bgMusic.volume = muted ? 0 : musicVolume;
+            bgMusic.play().catch(() => {});
+        } catch (e) {}
+    }
+
+    function _stopMusic() {
+        if (bgMusic) {
+            bgMusic.pause();
+            bgMusic.src = '';
+            bgMusic = null;
+        }
+        currentMusicLevel = -1;
+    }
+
+    function _updateMusicMute() {
+        if (bgMusic) {
+            bgMusic.volume = muted ? 0 : musicVolume;
+        }
     }
 
     function init() {
@@ -1137,7 +1299,6 @@ const GameAudio = (() => {
         } catch (e) {}
     }
 
-    // No-ops for removed sounds
     const noop = () => {};
 
     return {
@@ -1157,7 +1318,9 @@ const GameAudio = (() => {
         goldEarned:   noop,
         ability:      () => _play('ability'),
         bossRoar:     noop,
-        toggleMute:   () => { muted = !muted; return muted; },
+        startMusic:   (level) => _startMusic(level),
+        stopMusic:    () => _stopMusic(),
+        toggleMute:   () => { muted = !muted; _updateMusicMute(); return muted; },
         isMuted:      () => muted
     };
 })();
@@ -3305,6 +3468,7 @@ class Game {
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
+        GameAudio.startMusic(0);
         this.ui.updateHUD();
     }
 
@@ -3347,6 +3511,7 @@ class Game {
         this.gameSpeed = 1;
         const speedBtn = document.getElementById('speed-btn');
         if (speedBtn) speedBtn.textContent = '1x';
+        GameAudio.startMusic(0);
         this.ui.updateHUD();
     }
 
@@ -3499,7 +3664,8 @@ class Game {
 
     // === TRIVIA SYSTEM ===
     _pickTrivia() {
-        const pool = CONFIG.TRIVIA;
+        const levelIdx = this.waveManager.currentLevel;
+        const pool = CONFIG.TRIVIA[levelIdx] || CONFIG.TRIVIA[0];
         if (this.triviaUsed.length >= pool.length) {
             this.triviaUsed = [];
         }
@@ -3652,6 +3818,7 @@ class Game {
 
         this.state = 'playing';
         this._triviaShownForWave = -1;
+        GameAudio.startMusic(newLevelIdx);
         this.ui.updateHUD();
     }
 
@@ -3896,6 +4063,7 @@ class Game {
     gameOver() {
         this.state = 'lost';
         this._hideTrivia();
+        GameAudio.stopMusic();
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
@@ -3912,6 +4080,7 @@ class Game {
     victory() {
         this.state = 'won';
         this._hideTrivia();
+        GameAudio.stopMusic();
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
