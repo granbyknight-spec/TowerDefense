@@ -28,6 +28,14 @@ class Game {
         this.playerName = '';
         this.kills = 0;
 
+        // Combo kill system
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.comboTexts = [];   // floating milestone text effects
+        this.shakeTimer = 0;
+        this.shakeIntensity = 0;
+        this.maxCombo = 0;      // best combo this game
+
         // Setup countdown (time to place towers before waves start)
         this.setupTimer = 0;
 
@@ -143,6 +151,10 @@ class Game {
         const nameInput = document.getElementById('player-name');
         this.playerName = (nameInput ? nameInput.value.trim() : '') || 'Anonymous';
         this.kills = 0;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.comboTexts = [];
+        this.maxCombo = 0;
 
         this.state = 'playing';
         this.setupTimer = CONFIG.SETUP_TIME;
@@ -183,6 +195,14 @@ class Game {
         this.triviaUsed = [];
         this._triviaShownForWave = -1;
         this._hideTrivia();
+
+        // Reset combo state
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.comboTexts = [];
+        this.shakeTimer = 0;
+        this.shakeIntensity = 0;
+        this.maxCombo = 0;
 
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'none';
@@ -838,6 +858,45 @@ class Game {
                         color: enemy.color, size: 4
                     });
                 }
+
+                // Combo kill tracking
+                this.combo++;
+                this.comboTimer = CONFIG.COMBO.WINDOW;
+                if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+                // Check for combo milestone
+                const thresholds = CONFIG.COMBO.THRESHOLDS;
+                for (let ti = thresholds.length - 1; ti >= 0; ti--) {
+                    if (this.combo === thresholds[ti].count) {
+                        this.gold += thresholds[ti].bonus;
+                        GameAudio.combo();
+                        this.comboTexts.push({
+                            x: enemy.x, y: enemy.y - 10,
+                            text: `${thresholds[ti].label} x${this.combo}!`,
+                            subtext: `+${thresholds[ti].bonus}g`,
+                            color: thresholds[ti].color,
+                            life: 2.0, maxLife: 2.0
+                        });
+                        // Screen shake on big combos
+                        if (this.combo >= CONFIG.COMBO.SHAKE_MIN) {
+                            this.shakeTimer = CONFIG.COMBO.SHAKE_DURATION;
+                            this.shakeIntensity = Math.min(3 + this.combo * 0.3, 8);
+                        }
+                        // Extra gold particle burst
+                        const burstCount = Math.min(this.combo, 20);
+                        for (let bi = 0; bi < burstCount; bi++) {
+                            const a = Math.random() * Math.PI * 2;
+                            const sp = 50 + Math.random() * 80;
+                            this.particles.push({
+                                x: enemy.x, y: enemy.y,
+                                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                                life: 0.8, maxLife: 0.8,
+                                color: '#FFD700', size: 3
+                            });
+                        }
+                        break;
+                    }
+                }
             }
         }
 
@@ -884,6 +943,22 @@ class Game {
         }
         this.particles = this.particles.filter(p => p.life > 0);
 
+        // Combo timer
+        if (this.comboTimer > 0) {
+            this.comboTimer -= dt;
+            if (this.comboTimer <= 0) {
+                this.combo = 0;
+            }
+        }
+        // Screen shake timer
+        if (this.shakeTimer > 0) this.shakeTimer -= dt;
+        // Combo floating texts
+        for (const ct of this.comboTexts) {
+            ct.y -= 25 * dt;
+            ct.life -= dt;
+        }
+        this.comboTexts = this.comboTexts.filter(ct => ct.life > 0);
+
         // Wave income + dog house income
         if (this.waveManager.betweenWaves && !this.waveManager._incomeGiven) {
             this.waveManager._incomeGiven = true;
@@ -909,9 +984,14 @@ class Game {
 
         this.renderer.clear();
 
-        // Apply camera transform
+        // Apply camera transform (with screen shake)
         ctx.save();
-        ctx.translate(cw / 2, ch / 2);
+        let shakeX = 0, shakeY = 0;
+        if (this.shakeTimer > 0) {
+            shakeX = (Math.random() - 0.5) * 2 * this.shakeIntensity;
+            shakeY = (Math.random() - 0.5) * 2 * this.shakeIntensity;
+        }
+        ctx.translate(cw / 2 + shakeX, ch / 2 + shakeY);
         ctx.scale(this.zoom, this.zoom);
         ctx.translate(-cw / 2 + this.camX, -ch / 2 + this.camY);
 
@@ -990,6 +1070,11 @@ class Game {
             this.renderer.drawDamageNumber(dn);
         }
 
+        // Floating combo milestone texts
+        for (const ct of this.comboTexts) {
+            this.renderer.drawComboText(ct);
+        }
+
         ctx.restore(); // end camera transform
 
         // Zoom indicator (when not 1x)
@@ -1003,6 +1088,11 @@ class Game {
             ctx.textBaseline = 'middle';
             ctx.fillText(this.zoom.toFixed(1) + 'x', 33, ch - 18);
             ctx.restore();
+        }
+
+        // Combo HUD (screen space) - show when combo >= 2
+        if (this.combo >= 2) {
+            this.renderer.drawComboHUD(this.combo, this.comboTimer, CONFIG.COMBO.WINDOW, CONFIG.COMBO.THRESHOLDS);
         }
 
         // Setup countdown overlay (screen space)
@@ -1061,6 +1151,8 @@ class Game {
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
         document.getElementById('go-score').textContent = entry.score;
         document.getElementById('go-kills').textContent = this.kills;
+        const goCombo = document.getElementById('go-combo');
+        if (goCombo) goCombo.textContent = this.maxCombo;
     }
 
     victory() {
@@ -1078,6 +1170,8 @@ class Game {
         document.getElementById('vic-gold').textContent = this.gold;
         document.getElementById('vic-score').textContent = entry.score;
         document.getElementById('vic-kills').textContent = this.kills;
+        const vicCombo = document.getElementById('vic-combo');
+        if (vicCombo) vicCombo.textContent = this.maxCombo;
     }
 }
 

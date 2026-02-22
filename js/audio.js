@@ -363,6 +363,13 @@ const GameAudio = (() => {
             { samples: _tone(500, 'sine', 0.05, 0.1, 700), offset: 0.03 }
         ]));
 
+        // Combo milestone chime - ascending bright arpeggio
+        urls.combo = _toWavUrl(_mix([
+            { samples: _tone(800, 'sine', 0.08, 0.2, 1200) },
+            { samples: _tone(1000, 'sine', 0.08, 0.18, 1400), offset: 0.06 },
+            { samples: _tone(1200, 'sine', 0.12, 0.15, 1600), offset: 0.12 }
+        ]));
+
         // Note frequencies
         const C5=523.25, D5=587.33, E5=659.26, F5=698.46, G5=783.99, A5=880.00, B5=987.77;
         const C4=261.63, D4=293.66, E4=329.63, F4=349.23, G4=392.00, A4=440.00, B4=493.88;
@@ -814,6 +821,7 @@ const GameAudio = (() => {
         buttonClick:  noop,
         goldEarned:   noop,
         ability:      () => _play('ability'),
+        combo:        () => _play('combo'),
         bossRoar:     noop,
         startMusic:   (level) => _startMusic(level),
         stopMusic:    () => _stopMusic(),

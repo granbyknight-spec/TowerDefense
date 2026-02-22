@@ -15,6 +15,20 @@ const CONFIG = {
     SEND_EARLY_BONUS: 30,
     SELL_REFUND: 0.5,
 
+    // Combo kill system
+    COMBO: {
+        WINDOW: 1.5,       // seconds between kills to maintain combo
+        THRESHOLDS: [
+            { count: 3,  label: 'COMBO',         color: '#FFD700', bonus: 5 },
+            { count: 5,  label: 'SUPER COMBO',   color: '#FF8C00', bonus: 15 },
+            { count: 10, label: 'MEGA COMBO',    color: '#FF0055', bonus: 30 },
+            { count: 15, label: 'ULTRA COMBO',   color: '#9C27B0', bonus: 50 },
+            { count: 20, label: 'CAT-ASTROPHE!', color: '#00E5FF', bonus: 100 },
+        ],
+        SHAKE_MIN: 5,      // minimum combo for screen shake
+        SHAKE_DURATION: 0.3,
+    },
+
     // Upgrade system — 3 upgrade tiers (level 1 → 2 → 3 → 4)
     MAX_TOWER_LEVEL: 4,
     UPGRADE_COST_MULT: 1.0,

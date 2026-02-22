@@ -1325,4 +1325,90 @@ class Renderer {
         ctx.fillText(dn.value, dn.x, dn.y);
         ctx.restore();
     }
+
+    // Floating combo milestone text (world-space, at kill location)
+    drawComboText(ct) {
+        const ctx = this.ctx;
+        const progress = 1 - ct.life / ct.maxLife;
+        const alpha = Math.max(0, ct.life / ct.maxLife);
+        const scale = 1.2 + progress * 0.6;
+        const fontSize = Math.floor(18 * scale);
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Glow effect
+        ctx.shadowColor = ct.color;
+        ctx.shadowBlur = 12 + progress * 8;
+
+        // Main combo label
+        ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(ct.text, ct.x, ct.y);
+        ctx.fillStyle = ct.color;
+        ctx.fillText(ct.text, ct.x, ct.y);
+
+        // Bonus gold subtext
+        ctx.shadowBlur = 0;
+        ctx.font = `bold ${Math.floor(12 * scale)}px system-ui, -apple-system, sans-serif`;
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.lineWidth = 2;
+        ctx.strokeText(ct.subtext, ct.x, ct.y + fontSize * 0.7);
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(ct.subtext, ct.x, ct.y + fontSize * 0.7);
+
+        ctx.restore();
+    }
+
+    // Persistent combo HUD counter (screen-space, called after ctx.restore)
+    drawComboHUD(combo, timer, maxTimer, thresholds) {
+        const ctx = this.ctx;
+        const cw = this.canvas.width;
+
+        // Find current threshold color
+        let color = '#FFFFFF';
+        for (let i = thresholds.length - 1; i >= 0; i--) {
+            if (combo >= thresholds[i].count) {
+                color = thresholds[i].color;
+                break;
+            }
+        }
+
+        const pulse = 1 + Math.sin(performance.now() * 0.008) * 0.08;
+        const x = cw - 20;
+        const y = 75;
+
+        ctx.save();
+
+        // Combo count
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold ${Math.floor(28 * pulse)}px system-ui, -apple-system, sans-serif`;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = color;
+        ctx.fillText(`x${combo}`, x, y);
+        ctx.shadowBlur = 0;
+
+        // "COMBO" label
+        ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillText('COMBO', x, y - 20);
+
+        // Timer bar
+        const barW = 50;
+        const barH = 4;
+        const barX = x - barW;
+        const barY = y + 18;
+        const pct = Math.max(0, timer / maxTimer);
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle = color;
+        ctx.fillRect(barX, barY, barW * pct, barH);
+
+        ctx.restore();
+    }
 }
