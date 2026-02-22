@@ -1072,6 +1072,17 @@ class Renderer {
 
         ctx.restore();
 
+        // Hit flash - white overlay
+        if (enemy.hitFlash > 0) {
+            ctx.save();
+            ctx.globalAlpha = enemy.hitFlash * 0.7;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, size * 1.1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
         // Frozen indicator
         if (enemy.frozen) {
             ctx.save();
@@ -1164,6 +1175,21 @@ class Renderer {
 
         if (!proj.alive) return;
 
+        // Draw trail
+        if (proj.trail && proj.trail.length > 0) {
+            for (let i = 0; i < proj.trail.length; i++) {
+                const t = proj.trail[i];
+                const alpha = (t.life / 0.2) * 0.6;
+                const sz = proj.size * (t.life / 0.2) * 0.8;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = proj.color;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, sz, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
         const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
         glow.addColorStop(0, proj.color + '88');
         glow.addColorStop(1, proj.color + '00');
@@ -1243,5 +1269,60 @@ class Renderer {
         ctx.font = `${this.tileSize * 0.3}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText('poof!', x, y);
+    }
+
+    // === MUZZLE FLASH ===
+    drawMuzzleFlash(tower) {
+        const ctx = this.ctx;
+        const ts = this.tileSize;
+        const x = tower.x;
+        const y = tower.y;
+        const intensity = (tower.attackAnim - 0.7) / 0.3; // 0-1 over the flash period
+
+        ctx.save();
+        // Bright flash burst
+        const flashSize = ts * 0.4 * intensity;
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, flashSize);
+        glow.addColorStop(0, 'rgba(255,255,200,' + (intensity * 0.8) + ')');
+        glow.addColorStop(0.4, tower.projectileColor + Math.floor(intensity * 100).toString(16).padStart(2, '0'));
+        glow.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, y, flashSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Star spikes
+        ctx.strokeStyle = 'rgba(255,255,220,' + (intensity * 0.6) + ')';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2 + Date.now() / 200;
+            const len = flashSize * 1.2;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // === FLOATING DAMAGE NUMBER ===
+    drawDamageNumber(dn) {
+        const ctx = this.ctx;
+        const ts = this.tileSize;
+        const alpha = Math.min(1, dn.life / dn.maxLife * 2);
+        const scale = 0.8 + (1 - dn.life / dn.maxLife) * 0.4;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold ${ts * 0.3 * scale}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillText(dn.value, dn.x + 1, dn.y + 1);
+        // Main text
+        ctx.fillStyle = dn.color;
+        ctx.fillText(dn.value, dn.x, dn.y);
+        ctx.restore();
     }
 }

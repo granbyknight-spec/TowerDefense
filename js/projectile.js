@@ -26,6 +26,10 @@ class Projectile {
         // Super tower effects (set by Tower)
         this.stunDuration = 0;
         this.freezeDuration = 0;
+
+        // Trail history for rendering
+        this.trail = [];
+        this._trailTimer = 0;
     }
 
     update(dt, enemies, particles) {
@@ -42,6 +46,16 @@ class Projectile {
             this.targetX = this.target.x;
             this.targetY = this.target.y;
         }
+
+        // Record trail positions
+        this._trailTimer -= dt;
+        if (this._trailTimer <= 0) {
+            this._trailTimer = 0.02;
+            this.trail.push({ x: this.x, y: this.y, life: 0.2 });
+            if (this.trail.length > 10) this.trail.shift();
+        }
+        for (const t of this.trail) t.life -= dt;
+        this.trail = this.trail.filter(t => t.life > 0);
 
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;

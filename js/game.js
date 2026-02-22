@@ -12,6 +12,7 @@ class Game {
         this.enemies = [];
         this.projectiles = [];
         this.particles = [];
+        this.damageNumbers = [];
         this.gold = CONFIG.START_GOLD;
         this.lives = CONFIG.START_LIVES;
 
@@ -161,6 +162,7 @@ class Game {
         this.enemies = [];
         this.projectiles = [];
         this.particles = [];
+        this.damageNumbers = [];
         this.gold = CONFIG.START_GOLD;
         this.lives = CONFIG.START_LIVES;
         this.kills = 0;
@@ -853,6 +855,28 @@ class Game {
         }
         this.projectiles = this.projectiles.filter(p => p.alive || (p.chainArcs && p.chainArcs.length > 0));
 
+        // Spawn floating damage numbers from hit enemies
+        for (const enemy of this.enemies) {
+            if (enemy.hitFlash > 0.9 && enemy.lastDamage > 0) {
+                this.damageNumbers.push({
+                    x: enemy.x + (Math.random() - 0.5) * 8,
+                    y: enemy.y - this.tileSize * enemy.size * 0.5,
+                    value: enemy.lastDamage,
+                    life: 0.8,
+                    maxLife: 0.8,
+                    color: enemy.lastDamage >= 20 ? '#FF6347' : '#fff'
+                });
+                enemy.lastDamage = 0;
+            }
+        }
+
+        // Update damage numbers
+        for (const dn of this.damageNumbers) {
+            dn.y -= 40 * dt;
+            dn.life -= dt;
+        }
+        this.damageNumbers = this.damageNumbers.filter(d => d.life > 0);
+
         for (const p of this.particles) {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
@@ -943,6 +967,10 @@ class Game {
 
         for (const tower of this.towers) {
             this.renderer.drawTower(tower);
+            // Muzzle flash when firing
+            if (tower.attackAnim > 0.7 && !tower.isPassive) {
+                this.renderer.drawMuzzleFlash(tower);
+            }
         }
 
         for (const enemy of this.enemies) {
@@ -955,6 +983,11 @@ class Game {
 
         for (const p of this.particles) {
             this.renderer.drawParticle(p);
+        }
+
+        // Floating damage numbers
+        for (const dn of this.damageNumbers) {
+            this.renderer.drawDamageNumber(dn);
         }
 
         ctx.restore(); // end camera transform

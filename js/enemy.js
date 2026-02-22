@@ -53,6 +53,7 @@ class Enemy {
         this.wobble = 0;
         this.wobbleSpeed = 3 + Math.random() * 2;
         this.dodgeFlash = 0;
+        this.hitFlash = 0;
     }
 
     updatePath(newPath) {
@@ -115,6 +116,7 @@ class Enemy {
 
         // Dodge flash
         if (this.dodgeFlash > 0) this.dodgeFlash -= dt * 3;
+        if (this.hitFlash > 0) this.hitFlash -= dt * 6;
 
         // Move toward next path node
         if (this.pathIndex >= this.path.length) {
@@ -155,6 +157,8 @@ class Enemy {
         }
         const dmg = Math.max(1, amount - this.armor);
         this.hp -= dmg;
+        this.hitFlash = 1;
+        this.lastDamage = dmg;
         if (this.hp <= 0) {
             this.hp = 0;
             this.alive = false;
