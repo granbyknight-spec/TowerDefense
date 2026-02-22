@@ -95,9 +95,8 @@ class Game {
         this.state = 'playing';
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
-        document.getElementById('tower-bar').style.display = 'flex';
+        document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
-        document.getElementById('ability-bar').style.display = 'flex';
         this.ui.updateHUD();
     }
 
@@ -135,9 +134,8 @@ class Game {
         document.getElementById('victory-screen').style.display = 'none';
         document.getElementById('level-complete-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
-        document.getElementById('tower-bar').style.display = 'flex';
+        document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
-        document.getElementById('ability-bar').style.display = 'flex';
         this.gameSpeed = 1;
         const speedBtn = document.getElementById('speed-btn');
         if (speedBtn) speedBtn.textContent = '1x';
@@ -693,10 +691,9 @@ class Game {
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
-        document.getElementById('tower-bar').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
-        document.getElementById('ability-bar').style.display = 'none';
         const screen = document.getElementById('game-over-screen');
         screen.style.display = 'flex';
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
@@ -710,10 +707,9 @@ class Game {
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
-        document.getElementById('tower-bar').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
-        document.getElementById('ability-bar').style.display = 'none';
         const screen = document.getElementById('victory-screen');
         screen.style.display = 'flex';
         document.getElementById('vic-gold').textContent = this.gold;

@@ -45,12 +45,12 @@ body {
 #hud {
     display: none;
     width: 100%;
-    padding: 6px 8px;
+    padding: 4px 8px;
     background: linear-gradient(180deg, #3e2723 0%, #4e342e 100%);
     justify-content: space-between;
     align-items: center;
     font-size: 13px;
-    gap: 4px;
+    gap: 3px;
     z-index: 10;
     border-bottom: 2px solid #6d4c41;
     flex-wrap: wrap;
@@ -94,34 +94,42 @@ body {
     background: #2d4a1a;
     touch-action: none;
     flex-shrink: 1;
+    min-height: 0;
     border: 2px solid #3E2723;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
 }
 
-/* === Tower Selection Bar === */
-#tower-bar {
+/* === Combined Bottom Bar === */
+#bottom-bar {
     display: none;
     width: 100%;
-    padding: 4px 4px;
+    flex-direction: column;
     background: linear-gradient(0deg, #3e2723 0%, #4e342e 100%);
+    border-top: 2px solid #6d4c41;
+    z-index: 10;
+}
+
+/* === Tower Selection Bar === */
+#tower-bar {
+    display: flex;
+    width: 100%;
+    padding: 3px 4px;
     justify-content: center;
     align-items: stretch;
-    gap: 4px;
-    z-index: 10;
-    border-top: 2px solid #6d4c41;
+    gap: 3px;
 }
 
 .tower-btn {
     flex: 1;
-    max-width: 110px;
+    max-width: 100px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1px;
-    padding: 5px 2px;
+    gap: 0px;
+    padding: 3px 2px;
     background: rgba(255,255,255,0.1);
     border: 2px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
+    border-radius: 6px;
     color: #fff;
     font-size: 11px;
     cursor: pointer;
@@ -143,50 +151,53 @@ body {
 }
 
 .tower-btn-icon {
-    font-size: 20px;
+    font-size: 16px;
+    line-height: 1;
 }
 
 .tower-btn-name {
     font-weight: 600;
-    font-size: 10px;
+    font-size: 9px;
+    line-height: 1.1;
 }
 
 .tower-btn-cost {
     color: #FFD700;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 10px;
+    line-height: 1.1;
 }
 
 .tower-btn-dps {
     color: #a5d6a7;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 600;
+    line-height: 1.1;
 }
 
-/* === Ability Bar (global per-type) === */
+/* === Ability Bar (row inside bottom-bar) === */
 #ability-bar {
-    display: none;
+    display: flex;
     width: 100%;
-    padding: 3px 4px;
-    background: linear-gradient(0deg, #2e1b12 0%, #3e2723 100%);
+    padding: 2px 4px;
     justify-content: center;
-    align-items: stretch;
-    gap: 4px;
-    z-index: 10;
-    border-top: 1px solid #5d4037;
+    align-items: center;
+    gap: 3px;
+    border-bottom: 1px solid rgba(109,76,65,0.4);
 }
 
 .ability-btn {
     flex: 1;
     max-width: 110px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 1px;
-    padding: 4px 2px;
+    justify-content: center;
+    gap: 3px;
+    padding: 3px 4px;
     background: rgba(255,152,0,0.15);
-    border: 2px solid rgba(255,152,0,0.3);
-    border-radius: 8px;
+    border: 1px solid rgba(255,152,0,0.3);
+    border-radius: 5px;
     color: #fff;
     font-size: 10px;
     cursor: pointer;
@@ -198,27 +209,27 @@ body {
 }
 
 .ability-btn .ability-btn-icon {
-    font-size: 16px;
+    font-size: 13px;
+    line-height: 1;
 }
 
 .ability-btn .ability-btn-name {
     font-weight: 700;
-    font-size: 9px;
+    font-size: 8px;
     color: #FFD700;
+    white-space: nowrap;
 }
 
 .ability-btn .ability-btn-cd {
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 600;
     color: #a5d6a7;
-    min-height: 12px;
 }
 
 .ability-btn.active {
     background: rgba(76, 175, 80, 0.5);
     border-color: #4CAF50;
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
-    animation: ability-pulse 0.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
 }
 
 .ability-btn.on-cooldown {
@@ -233,11 +244,6 @@ body {
 .ability-btn.no-towers {
     opacity: 0.25;
     cursor: not-allowed;
-}
-
-@keyframes ability-pulse {
-    from { box-shadow: 0 0 4px rgba(76, 175, 80, 0.3); }
-    to { box-shadow: 0 0 12px rgba(76, 175, 80, 0.6); }
 }
 
 /* === Upgrade Panel === */
@@ -669,11 +675,11 @@ body {
         <!-- Upgrade/Sell Panel -->
         <div id="upgrade-panel"></div>
 
-        <!-- Ability Bar (global per-type abilities) -->
-        <div id="ability-bar"></div>
-
-        <!-- Tower Selection Bar -->
-        <div id="tower-bar"></div>
+        <!-- Combined Bottom Bar: Abilities + Tower Selection -->
+        <div id="bottom-bar">
+            <div id="ability-bar"></div>
+            <div id="tower-bar"></div>
+        </div>
 
         <!-- Level Complete Screen -->
         <div id="level-complete-screen" class="overlay-screen">
@@ -3297,9 +3303,8 @@ class Game {
         this.state = 'playing';
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
-        document.getElementById('tower-bar').style.display = 'flex';
+        document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
-        document.getElementById('ability-bar').style.display = 'flex';
         this.ui.updateHUD();
     }
 
@@ -3337,9 +3342,8 @@ class Game {
         document.getElementById('victory-screen').style.display = 'none';
         document.getElementById('level-complete-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
-        document.getElementById('tower-bar').style.display = 'flex';
+        document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
-        document.getElementById('ability-bar').style.display = 'flex';
         this.gameSpeed = 1;
         const speedBtn = document.getElementById('speed-btn');
         if (speedBtn) speedBtn.textContent = '1x';
@@ -3895,10 +3899,9 @@ class Game {
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
-        document.getElementById('tower-bar').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
-        document.getElementById('ability-bar').style.display = 'none';
         const screen = document.getElementById('game-over-screen');
         screen.style.display = 'flex';
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
@@ -3912,10 +3915,9 @@ class Game {
         const entry = this._saveScore();
 
         document.getElementById('hud').style.display = 'none';
-        document.getElementById('tower-bar').style.display = 'none';
+        document.getElementById('bottom-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
-        document.getElementById('ability-bar').style.display = 'none';
         const screen = document.getElementById('victory-screen');
         screen.style.display = 'flex';
         document.getElementById('vic-gold').textContent = this.gold;
