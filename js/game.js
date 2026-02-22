@@ -1499,6 +1499,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // Village explorer
     const village = new Village(game.canvas);
 
+    // Connect village to story engine so story can use rich exploration
+    storyEngine.village = village;
+
     // Hub launches battles, stories, explore, and receives results
     const hub = new Hub(academy, (levelIndex) => {
         game.startGame(levelIndex);

@@ -49,6 +49,10 @@ class StoryEngine {
         // Transition effects
         this._transition = null; // {type, progress, duration, callback}
 
+        // Village renderer reference (set externally)
+        this.village = null; // Village instance for rich exploration
+        this._villageActive = false;
+
         // Callbacks
         this.onComplete = null; // called when episode ends
         this.onBattle = null;   // called when story triggers a battle
@@ -72,6 +76,7 @@ class StoryEngine {
         // Show canvas, hide hub
         this.canvas.style.display = 'block';
 
+        this._showSkipBtn();
         this._bindInput();
         this._startScene(0);
         this._raf = requestAnimationFrame((t) => this._loop(t));
@@ -80,12 +85,14 @@ class StoryEngine {
     stop() {
         this.active = false;
         this._unbindInput();
+        this._hideSkipBtn();
         if (this._raf) cancelAnimationFrame(this._raf);
     }
 
     // Resume after a battle mid-story
     resumeAfterBattle() {
         this.active = true;
+        this._showSkipBtn();
         this._bindInput();
         this.stepIndex++;
         this._advanceStep();
@@ -117,6 +124,8 @@ class StoryEngine {
         // If scene is exploration, set up the map
         if (this.scene.type === 'explore') {
             this._setupExploration(this.scene);
+            // If village took over, don't advance (village will callback)
+            if (this._villageActive) return;
         } else {
             this.exploring = false;
         }
@@ -290,6 +299,7 @@ class StoryEngine {
     _endEpisode() {
         this.active = false;
         this._unbindInput();
+        this._hideSkipBtn();
         if (this._raf) cancelAnimationFrame(this._raf);
 
         // Mark episode complete
@@ -304,9 +314,87 @@ class StoryEngine {
         if (this.onComplete) this.onComplete();
     }
 
+    // === SKIP BUTTON ===
+
+    _showSkipBtn() {
+        let btn = document.getElementById('story-skip-btn');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'story-skip-btn';
+            btn.className = 'story-skip-btn';
+            btn.textContent = 'Skip >>';
+            document.getElementById('game-container').appendChild(btn);
+        }
+        btn.style.display = 'block';
+        btn.onclick = () => this._skipScene();
+    }
+
+    _hideSkipBtn() {
+        const btn = document.getElementById('story-skip-btn');
+        if (btn) btn.style.display = 'none';
+    }
+
+    _skipScene() {
+        if (!this.active || !this.scene) return;
+
+        // If village exploration is active, end it
+        if (this._villageActive) {
+            this._endVillageExploration();
+            return;
+        }
+
+        // If old-style exploration, end it
+        if (this.exploring) {
+            this.exploring = false;
+        }
+
+        // Fast-forward through remaining steps looking for the next
+        // battle or the end of the scene. Execute reward/flag steps silently.
+        const steps = this.scene.steps;
+        while (this.stepIndex < steps.length) {
+            const step = steps[this.stepIndex];
+            if (step.type === 'battle') {
+                // Can't skip battles - execute normally
+                this._executeStep(step);
+                return;
+            }
+            // Silently apply reward and flag steps
+            if (step.type === 'reward') {
+                if (step.bones) this.academy.bones += step.bones;
+                if (step.treats) this.academy.treats += step.treats;
+                if (step.xp) this.academy.addXP(step.xp);
+                if (step.dog) this.academy.createDog(step.dog.breed, step.dog.name);
+                SaveSystem.saveLocal(this.academy);
+            } else if (step.type === 'flag') {
+                if (!this.academy.storyFlags) this.academy.storyFlags = {};
+                this.academy.storyFlags[step.flag] = step.value !== undefined ? step.value : true;
+                SaveSystem.saveLocal(this.academy);
+            }
+            this.stepIndex++;
+        }
+
+        // Scene exhausted - go to next scene
+        this.dialogueText = '';
+        this.dialogueChoices = null;
+        this._transition = {
+            type: 'fade',
+            progress: 0,
+            duration: 0.3,
+            callback: () => this._startScene(this.sceneIndex + 1)
+        };
+        this.fadeTarget = 1;
+    }
+
     // === EXPLORATION ===
 
     _setupExploration(step) {
+        // Check if this explore step uses the new Village renderer
+        const villageMapName = step.villageMap || (this.scene && this.scene.villageMap);
+        if (villageMapName && this.village && typeof VILLAGE_MAPS !== 'undefined' && VILLAGE_MAPS[villageMapName]) {
+            this._startVillageExploration(villageMapName, step);
+            return;
+        }
+
         this.exploring = true;
         // Use step map, or fall back to current scene map, or keep existing
         if (step.map) {
@@ -322,6 +410,129 @@ class StoryEngine {
         this._moveTarget = null;
         this.dialogueText = '';
         this.dialogueSpeaker = '';
+    }
+
+    _startVillageExploration(mapName, step) {
+        // Pause story rendering - Village takes over the canvas
+        this.exploring = false;
+        this._villageActive = true;
+
+        // Unbind story input so village handles its own
+        this._unbindInput();
+
+        // Stop story loop (village has its own)
+        if (this._raf) cancelAnimationFrame(this._raf);
+
+        // Size canvas for village
+        this.canvas.width = Math.min(window.innerWidth, 480);
+        this.canvas.height = Math.min(window.innerHeight, 800);
+        this.village.ts = Math.max(24, Math.floor(this.canvas.width / 16));
+
+        // Load the village map
+        const mapData = JSON.parse(JSON.stringify(VILLAGE_MAPS[mapName]));
+
+        // Override start position if step specifies it
+        if (step.startX !== undefined) mapData.startX = step.startX;
+        if (step.startY !== undefined) mapData.startY = step.startY;
+
+        // Merge story NPCs into the village map NPCs
+        if (step.npcs && step.npcs.length) {
+            for (const npc of step.npcs) {
+                // Replace or add NPCs from the story step
+                const existing = mapData.npcs.findIndex(n => n.id === npc.id);
+                const storyNpc = {
+                    ...npc,
+                    dialogue: this._substituteVars(npc.dialogue || ''),
+                };
+                if (existing >= 0) {
+                    mapData.npcs[existing] = { ...mapData.npcs[existing], ...storyNpc };
+                } else {
+                    mapData.npcs.push(storyNpc);
+                }
+            }
+        }
+
+        // Override triggers if step specifies them
+        if (step.triggers && step.triggers.length) {
+            // Add story triggers to map triggers
+            for (const t of step.triggers) {
+                mapData.triggers.push(t);
+            }
+        }
+
+        this.village.loadMap(mapData);
+
+        // Show back button for village mode
+        let backBtn = document.getElementById('village-back-btn');
+        if (backBtn) backBtn.style.display = 'block';
+
+        const self = this;
+        this.village.start((npc) => {
+            // NPC interaction - show dialogue overlay
+            const text = npc.dialogue ? self._substituteVars(npc.dialogue) : '';
+            if (text) {
+                let overlay = document.getElementById('village-dialogue');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'village-dialogue';
+                    overlay.className = 'village-dialogue-overlay';
+                    document.getElementById('game-container').appendChild(overlay);
+                }
+                overlay.innerHTML = `
+                    <div class="village-dialogue-box">
+                        ${npc.name ? `<div class="village-dialogue-speaker">${npc.emoji || ''} ${npc.name}</div>` : ''}
+                        <div class="village-dialogue-text">${text}</div>
+                        <div class="village-dialogue-hint">tap to close</div>
+                    </div>
+                `;
+                overlay.style.display = 'flex';
+                overlay.onclick = () => {
+                    overlay.style.display = 'none';
+                    // Check if this NPC advances the story
+                    if (npc.advanceStory) {
+                        self._endVillageExploration();
+                    }
+                };
+            }
+        }, (trigger) => {
+            if (trigger.action === 'nextStep') {
+                self._endVillageExploration();
+            } else if (trigger.action === 'dialogue') {
+                let overlay = document.getElementById('village-dialogue');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'village-dialogue';
+                    overlay.className = 'village-dialogue-overlay';
+                    document.getElementById('game-container').appendChild(overlay);
+                }
+                overlay.innerHTML = `
+                    <div class="village-dialogue-box">
+                        <div class="village-dialogue-text">${self._substituteVars(trigger.text || '')}</div>
+                        <div class="village-dialogue-hint">tap to close</div>
+                    </div>
+                `;
+                overlay.style.display = 'flex';
+                overlay.onclick = () => { overlay.style.display = 'none'; };
+            }
+        });
+    }
+
+    _endVillageExploration() {
+        // Stop village, resume story
+        this.village.stop();
+        this._villageActive = false;
+
+        // Hide village UI
+        const dlg = document.getElementById('village-dialogue');
+        if (dlg) dlg.style.display = 'none';
+        const backBtn = document.getElementById('village-back-btn');
+        if (backBtn) backBtn.style.display = 'none';
+
+        // Restore canvas and resume story
+        this._bindInput();
+        this.stepIndex++;
+        this._advanceStep();
+        this._raf = requestAnimationFrame((t) => this._loop(t));
     }
 
     _handleExplorationTap(wx, wy) {

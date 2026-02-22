@@ -85,67 +85,37 @@ const EPISODES = {
                 ]
             },
 
-            // === SCENE 3: Exploration - Academy Grounds ===
+            // === SCENE 3: Exploration - Academy Grounds (FF7-style Village) ===
             {
                 type: 'explore',
+                villageMap: 'academy',
                 bg: '#3D6B25',
-                map: {
-                    width: 12, height: 14,
-                    // 0=grass, 1=path, 2=water, 3=building, 4=door, 5=dark
-                    tiles: [
-                        3,3,3,3,3,3,3,3,3,3,3,3,
-                        3,3,3,3,4,3,3,4,3,3,3,3,
-                        0,0,0,1,1,1,1,1,1,0,0,0,
-                        0,0,0,1,0,0,0,0,1,0,0,0,
-                        0,0,0,1,0,0,0,0,1,0,0,0,
-                        0,0,0,1,1,1,1,1,1,0,0,0,
-                        0,0,0,0,0,1,0,0,0,0,0,0,
-                        0,0,0,0,0,1,0,0,0,0,0,0,
-                        0,2,2,0,0,1,0,0,0,0,0,0,
-                        0,2,2,0,0,1,0,0,0,0,0,0,
-                        0,0,0,0,1,1,1,0,0,0,0,0,
-                        0,0,0,0,1,0,1,0,0,0,0,0,
-                        0,0,0,1,1,0,1,1,0,0,0,0,
-                        0,0,0,0,0,0,0,0,0,0,0,0,
-                    ],
-                    decor: (() => {
-                        const d = {};
-                        d[0] = '🏫'; d[1] = '🏫'; d[2] = '🏫'; d[3] = '🏫'; d[5] = '🏫'; d[6] = '🏫'; d[7] = '🏫';
-                        d[8] = '🏫'; d[9] = '🏫'; d[10] = '🏫'; d[11] = '🏫';
-                        d[16] = '🚪'; d[19] = '🚪';
-                        d[8 * 12 + 1] = '🌊'; d[8 * 12 + 2] = '🌊';
-                        d[9 * 12 + 1] = '🌊'; d[9 * 12 + 2] = '🌊';
-                        d[3 * 12 + 0] = '🌳'; d[4 * 12 + 0] = '🌳';
-                        d[3 * 12 + 10] = '🌳'; d[4 * 12 + 10] = '🌳';
-                        d[6 * 12 + 9] = '🌻'; d[7 * 12 + 10] = '🌻';
-                        d[11 * 12 + 1] = '🌳'; d[12 * 12 + 1] = '🌳';
-                        d[13 * 12 + 9] = '🪨'; d[13 * 12 + 10] = '🪨';
-                        return d;
-                    })()
-                },
-                startX: 5, startY: 6,
+                startX: 14, startY: 18,
                 steps: [
                     {
                         type: 'explore',
-                        map: null, // uses scene map
-                        startX: 5, startY: 6,
+                        villageMap: 'academy',
+                        startX: 14, startY: 18,
                         npcs: [
                             {
-                                id: 'rex', emoji: '🦮', name: 'Old Rex', x: 4, y: 2,
+                                id: 'rex', emoji: '🦮', name: 'Old Rex',
+                                x: 14, y: 10, wander: true,
                                 dialogue: 'The Cat Army has been growing bolder. Scout the southern edge of our grounds — I saw movement there last night.'
                             },
                             {
-                                id: 'nurse', emoji: '🐩', name: 'Nurse Fifi', x: 7, y: 2,
+                                id: 'nurse', emoji: '🐩', name: 'Nurse Fifi',
+                                x: 24, y: 8, wander: false,
                                 dialogue: 'The little puppy is resting in the infirmary. Did you know puppies need 18-20 hours of sleep a day? Golden Retrievers especially need their rest while growing!'
                             },
                             {
-                                id: 'scout', emoji: '🐕‍🦺', name: 'Scout', x: 9, y: 7,
+                                id: 'scout', emoji: '🐕‍🦺', name: 'Scout',
+                                x: 20, y: 14, wander: true,
                                 dialogue: 'I spotted cat pawprints near the south fence! Be careful, {dogName}. Cats are sneaky — they can see 6 times better than us in low light.'
                             },
                         ],
                         triggers: [
                             {
-                                x: 3, y: 12, w: 5, h: 2,
+                                x: 13, y: 27, w: 4, h: 2,
                                 visible: true,
                                 label: '⚠️ South Fence',
                                 action: 'nextStep'
