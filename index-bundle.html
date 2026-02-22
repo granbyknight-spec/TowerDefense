@@ -22,6 +22,7 @@ body {
     color: #fff;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     overflow: hidden;
+    touch-action: manipulation;
     height: 100vh;
     height: 100dvh;
     width: 100vw;
@@ -3799,11 +3800,42 @@ class UI {
         this._lastPanX = 0;
         this._lastPanY = 0;
 
-        canvas.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+        // Double-tap detection: toggle zoom in/out
+        this._lastTapTime = 0;
+        this._lastTapX = 0;
+        this._lastTapY = 0;
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch') {
+                const now = performance.now();
+                const dx = e.clientX - this._lastTapX;
+                const dy = e.clientY - this._lastTapY;
+                const tapDist = Math.sqrt(dx * dx + dy * dy);
+                if (now - this._lastTapTime < 350 && tapDist < 40) {
+                    // Double-tap detected: toggle zoom
+                    e.preventDefault();
+                    if (this.game.zoom > 1.05) {
+                        this.game.resetCamera();
+                    } else {
+                        const rect = canvas.getBoundingClientRect();
+                        const sx = (e.clientX - rect.left) * (canvas.width / rect.width);
+                        const sy = (e.clientY - rect.top) * (canvas.height / rect.height);
+                        this.game.setZoom(2, sx, sy);
+                    }
+                    this._lastTapTime = 0;
+                    return;
+                }
+                this._lastTapTime = now;
+                this._lastTapX = e.clientX;
+                this._lastTapY = e.clientY;
+            }
+            this.onPointerDown(e);
+        });
         canvas.addEventListener('pointermove', (e) => this.onPointerMove(e));
         canvas.addEventListener('pointerup', (e) => { this._panning = false; });
         canvas.addEventListener('pointercancel', () => { this._panning = false; });
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        canvas.addEventListener('dblclick', (e) => e.preventDefault());
 
         // Scroll wheel zoom
         canvas.addEventListener('wheel', (e) => {

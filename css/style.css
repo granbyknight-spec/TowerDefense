@@ -13,6 +13,7 @@ body {
     color: #fff;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     overflow: hidden;
+    touch-action: manipulation;
     height: 100vh;
     height: 100dvh;
     width: 100vw;
