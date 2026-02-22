@@ -228,6 +228,7 @@ const CONFIG = {
     },
 
     // Wave system
+    SETUP_TIME: 7,       // seconds to place towers before first wave each level
     WAVE_DELAY: 5,
     SPAWN_INTERVAL: 0.6,
 

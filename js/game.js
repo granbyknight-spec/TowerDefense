@@ -22,6 +22,9 @@ class Game {
         this.playerName = '';
         this.kills = 0;
 
+        // Setup countdown (time to place towers before waves start)
+        this.setupTimer = 0;
+
         // Trivia state
         this.triviaActive = false;
         this.triviaTimer = 0;
@@ -93,6 +96,7 @@ class Game {
         this.kills = 0;
 
         this.state = 'playing';
+        this.setupTimer = CONFIG.SETUP_TIME;
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('bottom-bar').style.display = 'flex';
@@ -137,6 +141,7 @@ class Game {
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
+        this.setupTimer = CONFIG.SETUP_TIME;
         this.gameSpeed = 1;
         const speedBtn = document.getElementById('speed-btn');
         if (speedBtn) speedBtn.textContent = '1x';
@@ -446,6 +451,7 @@ class Game {
         }
 
         this.state = 'playing';
+        this.setupTimer = CONFIG.SETUP_TIME;
         this._triviaShownForWave = -1;
         GameAudio.startMusic(newLevelIdx);
         this.ui.updateHUD();
@@ -555,6 +561,14 @@ class Game {
         if (this.state !== 'playing') return;
 
         dt = Math.min(dt, 0.1);
+
+        // Setup countdown - let player place towers before waves start
+        if (this.setupTimer > 0) {
+            this.setupTimer -= dt;
+            if (this.setupTimer < 0) this.setupTimer = 0;
+            this.ui.updateHUD();
+            return;
+        }
 
         this._updateTrivia(dt);
         this._updateGlobalAbilities(dt);
@@ -676,6 +690,38 @@ class Game {
 
         for (const p of this.particles) {
             this.renderer.drawParticle(p);
+        }
+
+        // Setup countdown overlay
+        if (this.setupTimer > 0) {
+            const ctx = this.canvas.getContext('2d');
+            const secs = Math.ceil(this.setupTimer);
+            const cw = this.canvas.width;
+
+            // Background pill upper-right
+            const text = secs.toString();
+            const label = 'PLACE TOWERS!';
+            const px = cw - 16;
+            const py = 32;
+
+            // Draw countdown number
+            ctx.save();
+            ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+
+            // Glow behind number
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 16;
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText(text, px, py);
+            ctx.shadowBlur = 0;
+
+            // Label underneath
+            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.fillText(label, px, py + 24);
+            ctx.restore();
         }
     }
 

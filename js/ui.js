@@ -26,6 +26,12 @@ class UI {
         if (sendBtn) {
             sendBtn.addEventListener('click', () => {
                 GameAudio.unlock();
+                // Skip setup countdown if active
+                if (this.game.setupTimer > 0) {
+                    this.game.setupTimer = 0;
+                    this.game.gold += CONFIG.SEND_EARLY_BONUS;
+                    return;
+                }
                 if (this.game.waveManager.sendEarly()) {
                     this.game.gold += CONFIG.SEND_EARLY_BONUS;
                 }
@@ -322,7 +328,8 @@ class UI {
             timerEl.textContent = timer !== null ? `Next: ${timer}s` : '';
         }
         if (sendBtn) {
-            sendBtn.style.display = this.game.waveManager.betweenWaves ? 'block' : 'none';
+            const showSend = this.game.setupTimer > 0 || this.game.waveManager.betweenWaves;
+            sendBtn.style.display = showSend ? 'block' : 'none';
         }
 
         this.updateTowerButtons();
