@@ -4,7 +4,8 @@
 const GameAudio = (() => {
     const SR = 22050;
     let urls = {};
-    let muted = false;
+    let sfxMuted = false;
+    let musicMuted = false;
     let volume = 0.5;
 
     // Background music state
@@ -65,14 +66,47 @@ const GameAudio = (() => {
         let phase = 0;
         for (let i = 0; i < n; i++) {
             const t = i / SR;
-            // Smooth envelope: fade in, sustain, fade out
             let env = vol;
             if (t < attack) env *= t / attack;
             if (t > dur - release) env *= (dur - t) / release;
-            // Layered sines for warmth (fundamental + soft octave + fifth)
             const s = Math.sin(phase)
                     + 0.3 * Math.sin(phase * 2)
                     + 0.15 * Math.sin(phase * 1.5);
+            out[i] = s * env * 0.5;
+            phase += 2 * Math.PI * freq / SR;
+        }
+        return out;
+    }
+
+    // Plucky melody note - sharp attack, quick decay
+    function _pluck(freq, dur, vol) {
+        const n = (SR * dur) | 0;
+        const out = new Float32Array(n);
+        let phase = 0;
+        for (let i = 0; i < n; i++) {
+            const t = i / SR;
+            // Sharp pluck envelope
+            const env = vol * Math.exp(-t * 6);
+            // Triangle-ish wave + octave harmonic for brightness
+            const s = Math.sin(phase) + 0.4 * Math.sin(phase * 2) + 0.2 * Math.sin(phase * 3);
+            out[i] = s * env * 0.4;
+            phase += 2 * Math.PI * freq / SR;
+        }
+        return out;
+    }
+
+    // Deeper bass note for level 3
+    function _bass(freq, dur, vol) {
+        const n = (SR * dur) | 0;
+        const out = new Float32Array(n);
+        let phase = 0;
+        for (let i = 0; i < n; i++) {
+            const t = i / SR;
+            let env = vol;
+            if (t < 0.05) env *= t / 0.05;
+            if (t > dur - 0.2) env *= (dur - t) / 0.2;
+            // Thick bass: fundamental + sub-octave
+            const s = Math.sin(phase) + 0.6 * Math.sin(phase * 0.5);
             out[i] = s * env * 0.5;
             phase += 2 * Math.PI * freq / SR;
         }
@@ -93,14 +127,13 @@ const GameAudio = (() => {
                 out[off + i] += s[i];
             }
         }
-        // Crossfade loop point: blend last 0.3s with first 0.3s for seamless loop
+        // Crossfade loop point
         const fadeLen = (SR * 0.3) | 0;
         if (out.length > fadeLen * 2) {
             for (let i = 0; i < fadeLen; i++) {
                 const t = i / fadeLen;
                 out[i] = out[i] * t + out[out.length - fadeLen + i] * (1 - t);
             }
-            // Trim the crossfade tail
             const trimmed = new Float32Array(out.length - fadeLen);
             trimmed.set(out.subarray(0, trimmed.length));
             for (let i = 0; i < trimmed.length; i++) {
@@ -114,16 +147,23 @@ const GameAudio = (() => {
         return out;
     }
 
-    // Generate a music loop from a chord progression
-    // chords: array of [freq1, freq2, freq3] (3-note chords)
-    // beatDur: seconds per chord, vol: amplitude
-    function _generateMusicLoop(chords, beatDur, vol) {
+    // Generate a music loop with chords + optional melody
+    function _generateMusicLoop(chords, beatDur, vol, melody, melodyVol) {
         const parts = [];
         for (let c = 0; c < chords.length; c++) {
             const chord = chords[c];
             const offset = c * beatDur;
             for (const freq of chord) {
                 parts.push({ samples: _pad(freq, beatDur + 0.1, vol), offset });
+            }
+        }
+        // Add melody notes on top if provided
+        if (melody) {
+            for (const note of melody) {
+                parts.push({
+                    samples: (note.voice || _pluck)(note.freq, note.dur || 0.5, melodyVol || 0.1),
+                    offset: note.offset
+                });
             }
         }
         return _mix(parts);
@@ -141,41 +181,126 @@ const GameAudio = (() => {
             { samples: _tone(1000, 'sine', 0.08, 0.1, 1400), offset: 0.05 }
         ]));
 
-        // Background music loops (one per level)
         // Note frequencies
+        const C5=523.25, D5=587.33, E5=659.26, F5=698.46, G5=783.99, A5=880.00, B5=987.77;
         const C4=261.63, D4=293.66, E4=329.63, F4=349.23, G4=392.00, A4=440.00, B4=493.88;
         const C3=130.81, D3=146.83, E3=164.81, F3=174.61, G3=196.00, A3=220.00, B3=246.94;
-        const Bb3=233.08, Eb4=311.13;
+        const Bb3=233.08, Eb4=311.13, Ab3=207.65;
 
-        // Level 1: The Backyard - warm, cheerful C major (C-Am-F-G)
-        const v = 0.12;
-        const bd = 3.0; // seconds per chord
+        // =======================================
+        // Level 1: The Backyard - warm, cheerful, slow waltz feel
+        // Key of C major, tempo ~72bpm (3.3s per chord)
+        // =======================================
+        const bd1 = 3.3;
+        const v1 = 0.11;
+        // Melody: simple ascending/descending C major scale fragments
+        const melody1 = [
+            { freq: E5, offset: 0.0, dur: 0.6 },
+            { freq: G5, offset: 0.8, dur: 0.6 },
+            { freq: C5, offset: 1.6, dur: 0.9 },
+            // chord 2
+            { freq: A4, offset: bd1 + 0.0, dur: 0.6 },
+            { freq: C5, offset: bd1 + 0.8, dur: 0.6 },
+            { freq: E5, offset: bd1 + 1.6, dur: 0.9 },
+            // chord 3
+            { freq: F5, offset: bd1*2 + 0.0, dur: 0.6 },
+            { freq: A4, offset: bd1*2 + 0.8, dur: 0.6 },
+            { freq: C5, offset: bd1*2 + 1.6, dur: 0.9 },
+            // chord 4
+            { freq: G5, offset: bd1*3 + 0.0, dur: 0.6 },
+            { freq: D5, offset: bd1*3 + 0.8, dur: 0.6 },
+            { freq: B4, offset: bd1*3 + 1.6, dur: 0.9 },
+        ];
         urls.music0 = _toWavUrl(_generateMusicLoop([
             [C3, E3, G3],     // C major
             [A3, C4, E4],     // A minor
             [F3, A3, C4],     // F major
             [G3, B3, D4],     // G major
-        ], bd, v));
+        ], bd1, v1, melody1, 0.08));
 
-        // Level 2: The Park - cooler, more serious D minor (Dm-Bb-C-Am)
+        // =======================================
+        // Level 2: The Park - darker, medium tempo, minor key feel
+        // Key of D minor, tempo ~90bpm (2.7s per chord)
+        // =======================================
+        const bd2 = 2.7;
+        const v2 = 0.11;
+        const melody2 = [
+            { freq: D5, offset: 0.0, dur: 0.4 },
+            { freq: F5, offset: 0.5, dur: 0.4 },
+            { freq: A4, offset: 1.0, dur: 0.4 },
+            { freq: D5, offset: 1.5, dur: 0.7 },
+            // chord 2
+            { freq: Bb3*2, offset: bd2 + 0.0, dur: 0.4 },  // Bb4
+            { freq: D5, offset: bd2 + 0.5, dur: 0.4 },
+            { freq: F5, offset: bd2 + 1.0, dur: 0.7 },
+            // chord 3
+            { freq: C5, offset: bd2*2 + 0.0, dur: 0.4 },
+            { freq: E5, offset: bd2*2 + 0.5, dur: 0.4 },
+            { freq: G5, offset: bd2*2 + 1.0, dur: 0.7 },
+            // chord 4
+            { freq: A4, offset: bd2*3 + 0.0, dur: 0.4 },
+            { freq: C5, offset: bd2*3 + 0.5, dur: 0.4 },
+            { freq: E5, offset: bd2*3 + 1.0, dur: 0.7 },
+        ];
         urls.music1 = _toWavUrl(_generateMusicLoop([
             [D3, F3, A3],     // D minor
             [Bb3, D4, F4],    // Bb major
             [C3, E3, G3],     // C major
             [A3, C4, E4],     // A minor
-        ], bd, v));
+        ], bd2, v2, melody2, 0.07));
 
-        // Level 3: Cat Central - tense, dramatic A minor (Am-F-Dm-E)
+        // =======================================
+        // Level 3: Cat Central - tense, fast, dramatic
+        // Key of A minor, tempo ~120bpm (2.0s per chord), added bass pulse
+        // =======================================
+        const bd3 = 2.0;
+        const v3 = 0.12;
+        // Urgent melody with quick notes
+        const melody3 = [
+            { freq: A4, offset: 0.0, dur: 0.25 },
+            { freq: C5, offset: 0.25, dur: 0.25 },
+            { freq: E5, offset: 0.5, dur: 0.25 },
+            { freq: A5, offset: 0.75, dur: 0.5 },
+            // chord 2
+            { freq: F5, offset: bd3 + 0.0, dur: 0.25 },
+            { freq: A4, offset: bd3 + 0.25, dur: 0.25 },
+            { freq: C5, offset: bd3 + 0.5, dur: 0.25 },
+            { freq: F5, offset: bd3 + 0.75, dur: 0.5 },
+            // chord 3
+            { freq: D5, offset: bd3*2 + 0.0, dur: 0.25 },
+            { freq: F5, offset: bd3*2 + 0.25, dur: 0.25 },
+            { freq: A4, offset: bd3*2 + 0.5, dur: 0.25 },
+            { freq: D5, offset: bd3*2 + 0.75, dur: 0.5 },
+            // chord 4
+            { freq: E5, offset: bd3*3 + 0.0, dur: 0.25 },
+            { freq: G5, offset: bd3*3 + 0.25, dur: 0.25 },
+            { freq: B4, offset: bd3*3 + 0.5, dur: 0.25 },
+            { freq: E5, offset: bd3*3 + 0.75, dur: 0.5 },
+        ];
+        // Add bass pulse every beat
+        const bassPulse = [];
+        const bassNotes = [A3, F3, D3, E3];
+        for (let c = 0; c < 4; c++) {
+            for (let b = 0; b < 4; b++) {
+                bassPulse.push({
+                    freq: bassNotes[c],
+                    offset: c * bd3 + b * (bd3 / 4),
+                    dur: bd3 / 4 - 0.05,
+                    voice: _bass
+                });
+            }
+        }
+        const allMelody3 = melody3.concat(bassPulse);
         urls.music2 = _toWavUrl(_generateMusicLoop([
             [A3, C4, E4],     // A minor
             [F3, A3, C4],     // F major
             [D3, F3, A3],     // D minor
-            [E3, G3, B3],     // E minor (resolve tension gently)
-        ], 2.5, v * 1.1));
+            [E3, G3, B3],     // E minor
+        ], bd3, v3, allMelody3, 0.09));
     }
 
     function _play(name) {
-        if (muted || !urls[name]) return;
+        if (sfxMuted || !urls[name]) return;
         try {
             const a = new Audio(urls[name]);
             a.volume = volume;
@@ -192,7 +317,7 @@ const GameAudio = (() => {
         try {
             bgMusic = new Audio(urls[key]);
             bgMusic.loop = true;
-            bgMusic.volume = muted ? 0 : musicVolume;
+            bgMusic.volume = musicMuted ? 0 : musicVolume;
             bgMusic.play().catch(() => {});
         } catch (e) {}
     }
@@ -206,9 +331,9 @@ const GameAudio = (() => {
         currentMusicLevel = -1;
     }
 
-    function _updateMusicMute() {
+    function _updateMusicVolume() {
         if (bgMusic) {
-            bgMusic.volume = muted ? 0 : musicVolume;
+            bgMusic.volume = musicMuted ? 0 : musicVolume;
         }
     }
 
@@ -245,7 +370,9 @@ const GameAudio = (() => {
         bossRoar:     noop,
         startMusic:   (level) => _startMusic(level),
         stopMusic:    () => _stopMusic(),
-        toggleMute:   () => { muted = !muted; _updateMusicMute(); return muted; },
-        isMuted:      () => muted
+        toggleMute:   () => { sfxMuted = !sfxMuted; return sfxMuted; },
+        isMuted:      () => sfxMuted,
+        toggleMusic:  () => { musicMuted = !musicMuted; _updateMusicVolume(); return musicMuted; },
+        isMusicMuted: () => musicMuted
     };
 })();

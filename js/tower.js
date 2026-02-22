@@ -62,6 +62,7 @@ class Tower {
         this.isSuper = false;
         this.superPerk = null;
         this.superAnim = 0; // merge flash animation
+        this.canMove = false; // super towers get one free move
     }
 
     upgrade() {
@@ -132,6 +133,7 @@ class Tower {
         if (!superDef) return;
 
         this.isSuper = true;
+        this.canMove = true; // one free repositioning
         this.superPerk = superDef.perk;
         this.superAnim = 1.5; // flash timer
         this.level = 5; // display level

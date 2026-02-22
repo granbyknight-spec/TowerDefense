@@ -5,6 +5,7 @@ class UI {
         this.game = game;
         this.selectedTowerType = null;
         this.selectedTower = null;
+        this.movingTower = null;
         this.hoverCol = -1;
         this.hoverRow = -1;
 
@@ -108,13 +109,23 @@ class UI {
             });
         }
 
-        // Mute button
+        // Mute SFX button
         const muteBtn = document.getElementById('mute-btn');
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
                 GameAudio.unlock();
                 const muted = GameAudio.toggleMute();
                 muteBtn.textContent = muted ? '🔇' : '🔊';
+            });
+        }
+
+        // Music toggle button
+        const musicBtn = document.getElementById('music-btn');
+        if (musicBtn) {
+            musicBtn.addEventListener('click', () => {
+                GameAudio.unlock();
+                const off = GameAudio.toggleMusic();
+                musicBtn.textContent = off ? '🚫' : '🎵';
             });
         }
 
@@ -132,7 +143,7 @@ class UI {
             });
         }
 
-        // Keyboard zoom (+ / - / 0)
+        // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (this.game.state !== 'playing') return;
             const cw = this.game.canvas.width;
@@ -143,6 +154,12 @@ class UI {
                 this.game.setZoom(this.game.zoom - 0.25, cw / 2, ch / 2);
             } else if (e.key === '0') {
                 this.game.resetCamera();
+            } else if (e.key === 'Escape') {
+                this.movingTower = null;
+                this.selectedTowerType = null;
+                this.selectedTower = null;
+                this.hideUpgradePanel();
+                this.updateTowerButtons();
             }
         });
 
@@ -245,6 +262,7 @@ class UI {
 
     selectTowerType(type) {
         this.selectedTower = null;
+        this.movingTower = null;
         this.hideUpgradePanel();
 
         if (this.selectedTowerType === type) {
@@ -316,7 +334,22 @@ class UI {
 
         const { col, row } = this._screenToGrid(e);
 
-        if (col < 0 || col >= CONFIG.GRID_COLS || row < 0 || row >= CONFIG.GRID_ROWS) return;
+        if (col < 0 || col >= CONFIG.GRID_COLS || row < 0 || row >= CONFIG.GRID_ROWS) {
+            if (this.movingTower) {
+                this.movingTower = null; // cancel move on out-of-bounds click
+            }
+            return;
+        }
+
+        // Move mode: place super tower at new position
+        if (this.movingTower) {
+            if (this.game.moveTower(this.movingTower, col, row)) {
+                this.selectedTower = this.movingTower;
+                this.movingTower = null;
+                this.showUpgradePanel(this.selectedTower);
+            }
+            return;
+        }
 
         const existingTower = this.game.towers.find(t => t.col === col && t.row === row);
         if (existingTower) {
@@ -413,6 +446,9 @@ class UI {
         }
 
         const headerClass = tower.isSuper ? 'upgrade-header super' : 'upgrade-header';
+        const moveBtn = tower.isSuper && tower.canMove
+            ? '<button id="move-btn">Move ↗</button>'
+            : (tower.isSuper ? '<button class="disabled">Moved</button>' : '');
 
         panel.innerHTML = `
             <div class="${headerClass}">${tower.emoji} ${tower.name}${tower.isSuper ? ' ★' : ' Lv.' + tower.level}</div>
@@ -420,6 +456,7 @@ class UI {
             ${extraLine ? `<div class="upgrade-stats">${extraLine}</div>` : ''}
             <div class="upgrade-actions">
                 ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : `<button class="disabled">${tower.isSuper ? 'SUPER' : 'MAX'}</button>`}
+                ${moveBtn}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
             </div>
         `;
@@ -430,6 +467,16 @@ class UI {
             upgradeBtn.addEventListener('click', () => {
                 this.game.upgradeTower(tower);
                 this.showUpgradePanel(tower);
+            });
+        }
+
+        const moveBtnEl = document.getElementById('move-btn');
+        if (moveBtnEl) {
+            moveBtnEl.addEventListener('click', () => {
+                this.movingTower = tower;
+                this.selectedTowerType = null;
+                this.updateTowerButtons();
+                this.hideUpgradePanel();
             });
         }
 

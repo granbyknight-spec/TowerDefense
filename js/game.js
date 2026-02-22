@@ -324,6 +324,34 @@ class Game {
         }
     }
 
+    moveTower(tower, newCol, newRow) {
+        if (!tower.canMove) return false;
+        if (!this.grid.canPlace(newCol, newRow)) return false;
+
+        // Remove from old position
+        this.grid.removeTower(tower.col, tower.row);
+
+        // Place at new position
+        this.grid.placeTower(newCol, newRow);
+        tower.col = newCol;
+        tower.row = newRow;
+        const pos = gridToPixel(newCol, newRow, this.tileSize);
+        tower.x = pos.x;
+        tower.y = pos.y;
+        tower.canMove = false;
+
+        // Re-route enemies
+        const newPath = this.grid.currentPath;
+        for (const enemy of this.enemies) {
+            if (enemy.alive && !enemy.reachedEnd) {
+                enemy.updatePath(newPath);
+            }
+        }
+
+        GameAudio.ability();
+        return true;
+    }
+
     sellTower(tower) {
         const refund = tower.getSellValue();
         this.gold += refund;
@@ -872,6 +900,41 @@ class Game {
                 this.ui.hoverCol, this.ui.hoverRow,
                 canPlace, this.ui.selectedTowerType
             );
+        }
+
+        // Move mode preview
+        if (this.ui.movingTower && this.state === 'playing') {
+            const mt = this.ui.movingTower;
+            const hc = this.ui.hoverCol;
+            const hr = this.ui.hoverRow;
+            if (hc >= 0 && hc < CONFIG.GRID_COLS && hr >= 0 && hr < CONFIG.GRID_ROWS) {
+                const canPlace = this.grid.canPlace(hc, hr);
+                const ts = this.tileSize;
+                const px = hc * ts;
+                const py = hr * ts;
+                ctx.fillStyle = canPlace ? 'rgba(100,200,255,0.3)' : 'rgba(255,60,60,0.3)';
+                ctx.fillRect(px, py, ts, ts);
+                ctx.strokeStyle = canPlace ? '#64c8ff' : '#ff3c3c';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.strokeRect(px + 1, py + 1, ts - 2, ts - 2);
+                ctx.setLineDash([]);
+                // Draw tower emoji at hover
+                ctx.font = `${ts * 0.5}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.globalAlpha = 0.7;
+                ctx.fillText(mt.emoji, px + ts / 2, py + ts / 2);
+                ctx.globalAlpha = 1;
+            }
+            // Highlight source tower
+            const sx = mt.col * this.tileSize;
+            const sy = mt.row * this.tileSize;
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(sx + 1, sy + 1, this.tileSize - 2, this.tileSize - 2);
+            ctx.setLineDash([]);
         }
 
         if (this.ui.selectedTower) {

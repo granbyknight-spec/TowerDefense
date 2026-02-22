@@ -296,6 +296,10 @@ body {
     opacity: 0.6;
 }
 
+.upgrade-actions #move-btn {
+    background: #2196F3;
+}
+
 /* === Trivia Panel === */
 #trivia-panel {
     display: none;
