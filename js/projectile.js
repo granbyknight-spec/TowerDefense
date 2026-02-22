@@ -52,22 +52,18 @@ class Projectile {
             this.targetY = this.target.y;
         }
 
-        // Record trail positions (ring buffer - no filter/shift)
+        // Record trail positions
         this._trailTimer -= dt;
         if (this._trailTimer <= 0) {
             this._trailTimer = 0.03;
-            if (this.trail.length >= 8) {
-                // Reuse oldest slot
-                const slot = this.trail[this._trailIdx % 8];
-                slot.x = this.x; slot.y = this.y; slot.life = 0.2;
-                this._trailIdx++;
-            } else {
-                this.trail.push({ x: this.x, y: this.y, life: 0.2 });
-                this._trailIdx = this.trail.length;
-            }
+            this.trail.push({ x: this.x, y: this.y, life: 0.2 });
+            if (this.trail.length > 8) this.trail.shift();
         }
         for (let i = this.trail.length - 1; i >= 0; i--) {
             this.trail[i].life -= dt;
+            if (this.trail[i].life <= 0) {
+                this.trail.splice(i, 1);
+            }
         }
 
         const dx = this.targetX - this.x;

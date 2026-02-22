@@ -1239,10 +1239,7 @@ class Renderer {
         ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
 
         const hpColor = hpRatio > 0.5 ? '#4CAF50' : hpRatio > 0.25 ? '#FF9800' : '#f44336';
-        const hpGrad = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
-        hpGrad.addColorStop(0, hpColor);
-        hpGrad.addColorStop(1, this._shade(hpColor, 0.6));
-        ctx.fillStyle = hpGrad;
+        ctx.fillStyle = hpColor;
         ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
 
         // Boss: name label
@@ -1284,6 +1281,7 @@ class Renderer {
         if (proj.trail && proj.trail.length > 0) {
             for (let i = 0; i < proj.trail.length; i++) {
                 const t = proj.trail[i];
+                if (t.life <= 0) continue;
                 const alpha = (t.life / 0.2) * 0.6;
                 const sz = proj.size * (t.life / 0.2) * 0.8;
                 ctx.globalAlpha = alpha;
