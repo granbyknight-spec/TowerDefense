@@ -1,5 +1,11 @@
 // A* Pathfinding on the grid
 // Returns array of {col, row} from start to end, or null if no path
+// Walkable cells: 0 (empty) and 5 (bridge)
+// Blocked cells: 1 (tower), 2 (water), 3 (rock), 4 (tree)
+
+function isWalkable(cellVal) {
+    return cellVal === 0 || cellVal === 5;
+}
 
 function findPath(grid, start, end, cols, rows) {
     const key = (col, row) => col + ',' + row;
@@ -37,8 +43,7 @@ function findPath(grid, start, end, cols, rows) {
             if (neighbor.col < 0 || neighbor.col >= cols ||
                 neighbor.row < 0 || neighbor.row >= rows) continue;
 
-            // Can't walk through towers (grid value 1 = tower)
-            if (grid[neighbor.row][neighbor.col] === 1) continue;
+            if (!isWalkable(grid[neighbor.row][neighbor.col])) continue;
 
             const neighborKey = key(neighbor.col, neighbor.row);
             const tentativeG = gScore[currentKey] + 1;
@@ -60,7 +65,6 @@ function findPath(grid, start, end, cols, rows) {
 }
 
 function heuristic(a, b) {
-    // Manhattan distance
     return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
 }
 
@@ -75,16 +79,10 @@ function reconstructPath(cameFrom, current) {
     return path;
 }
 
-// Check if placing a tower at (col, row) would block the path
 function wouldBlockPath(grid, col, row, cols, rows, entry, exit) {
-    // Temporarily place the tower
     const oldVal = grid[row][col];
     grid[row][col] = 1;
-
     const path = findPath(grid, entry, exit, cols, rows);
-
-    // Restore
     grid[row][col] = oldVal;
-
     return path === null;
 }

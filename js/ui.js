@@ -86,6 +86,26 @@ class UI {
                 speedBtn.textContent = labels[speedIdx];
             });
         }
+
+        // High Scores button
+        const hsBtn = document.getElementById('highscores-btn');
+        if (hsBtn) {
+            hsBtn.addEventListener('click', () => {
+                GameAudio.unlock();
+                GameAudio.buttonClick();
+                this.game.showLeaderboard();
+            });
+        }
+
+        // Close leaderboard
+        const closeHs = document.getElementById('close-leaderboard-btn');
+        if (closeHs) {
+            closeHs.addEventListener('click', () => {
+                GameAudio.unlock();
+                GameAudio.buttonClick();
+                document.getElementById('leaderboard-screen').style.display = 'none';
+            });
+        }
     }
 
     setupTowerButtons() {
@@ -94,15 +114,22 @@ class UI {
         bar.innerHTML = '';
 
         for (const [key, def] of Object.entries(CONFIG.TOWERS)) {
-            const dps = (def.damage / def.fireRate).toFixed(1);
             const btn = document.createElement('button');
             btn.className = 'tower-btn';
             btn.dataset.tower = key;
+
+            let statLine;
+            if (def.isPassive) {
+                statLine = `+${def.goldPerWave}g/wave`;
+            } else {
+                statLine = (def.damage / def.fireRate).toFixed(1) + ' DPS';
+            }
+
             btn.innerHTML = `
                 <span class="tower-btn-icon">${def.emoji}</span>
                 <span class="tower-btn-name">${def.name}</span>
                 <span class="tower-btn-cost">${def.cost}g</span>
-                <span class="tower-btn-dps">${dps} DPS</span>
+                <span class="tower-btn-dps">${statLine}</span>
             `;
             btn.addEventListener('click', () => {
                 GameAudio.unlock();
@@ -185,16 +212,37 @@ class UI {
         const canUpgrade = tower.level < maxLevel;
         const upgradeCost = tower.getUpgradeCost();
         const sellValue = tower.getSellValue();
-        const dps = (tower.damage / tower.fireRate).toFixed(1);
+
+        let statsLine;
+        if (tower.isPassive) {
+            statsLine = `Income: +${tower.goldPerWave}g/wave`;
+        } else {
+            const dps = (tower.damage / tower.fireRate).toFixed(1);
+            statsLine = `DPS: ${dps} | DMG: ${tower.damage} | SPD: ${tower.fireRate.toFixed(2)}s`;
+        }
+
+        let extraLine = '';
+        if (!tower.isPassive) {
+            extraLine = `RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}`;
+        }
+
+        // Ability button
+        let abilityHtml = '';
+        if (tower.abilityName) {
+            const ready = tower.canActivateAbility();
+            const cdLeft = tower.abilityCooldown > 0 ? ` (${Math.ceil(tower.abilityCooldown)}s)` : '';
+            abilityHtml = `<button id="ability-btn" class="${ready ? '' : 'disabled'}" style="background:#FF9800;">${tower.abilityName}${cdLeft}</button>`;
+        }
 
         panel.innerHTML = `
             <div class="upgrade-header">${tower.emoji} ${tower.name} Lv.${tower.level}</div>
-            <div class="upgrade-stats">DPS: ${dps} | DMG: ${tower.damage} | SPD: ${tower.fireRate.toFixed(2)}s</div>
-            <div class="upgrade-stats">RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}</div>
+            <div class="upgrade-stats">${statsLine}</div>
+            ${extraLine ? `<div class="upgrade-stats">${extraLine}</div>` : ''}
             <div class="upgrade-actions">
                 ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : '<button class="disabled">MAX</button>'}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
             </div>
+            ${abilityHtml ? `<div class="upgrade-actions">${abilityHtml}</div>` : ''}
         `;
         panel.style.display = 'flex';
 
@@ -212,6 +260,14 @@ class UI {
                 this.game.sellTower(tower);
                 this.hideUpgradePanel();
                 this.selectedTower = null;
+            });
+        }
+
+        const abilityBtn = document.getElementById('ability-btn');
+        if (abilityBtn && tower.canActivateAbility()) {
+            abilityBtn.addEventListener('click', () => {
+                tower.activateAbility(this.game.enemies, this.game.particles);
+                this.showUpgradePanel(tower);
             });
         }
     }

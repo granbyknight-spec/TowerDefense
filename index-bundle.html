@@ -447,6 +447,73 @@ body {
     color: #FFD700;
 }
 
+/* === Name Input === */
+.name-input {
+    width: 70%;
+    max-width: 260px;
+    padding: 10px 14px;
+    border: 2px solid #6d4c41;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.name-input::placeholder {
+    color: #8d6e63;
+    font-weight: 400;
+}
+
+.name-input:focus {
+    border-color: #FFD700;
+    background: rgba(255,255,255,0.15);
+}
+
+/* === Leaderboard Table === */
+.leaderboard-table {
+    width: 90%;
+    max-width: 380px;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 8px 0;
+}
+
+.leaderboard-table th {
+    background: rgba(255,215,0,0.15);
+    color: #FFD700;
+    padding: 8px 6px;
+    text-align: center;
+    font-weight: 700;
+    border-bottom: 2px solid #6d4c41;
+    font-size: 12px;
+}
+
+.leaderboard-table td {
+    padding: 7px 6px;
+    text-align: center;
+    border-bottom: 1px solid rgba(109,76,65,0.4);
+    color: #bcaaa4;
+}
+
+.leaderboard-table tr:nth-child(1) td {
+    color: #FFD700;
+    font-weight: 700;
+}
+
+.leaderboard-table tr:nth-child(2) td {
+    color: #C0C0C0;
+    font-weight: 600;
+}
+
+.leaderboard-table tr:nth-child(3) td {
+    color: #CD7F32;
+    font-weight: 600;
+}
+
     </style>
 </head>
 <body>
@@ -456,12 +523,27 @@ body {
             <div class="title-dogs">🐶🐕🐩</div>
             <div class="game-title">PUPPY DEFENDER</div>
             <div class="game-subtitle">Build a maze of dogs to stop the cat invasion!</div>
+            <input id="player-name" type="text" class="name-input" placeholder="Enter your name..." maxlength="16" autocomplete="off">
             <button id="start-btn" class="screen-btn">PLAY</button>
+            <button id="highscores-btn" class="screen-btn" style="background:linear-gradient(180deg,#FF9800 0%,#E65100 100%);padding:10px 30px;font-size:14px;">HIGH SCORES</button>
             <div class="sound-hint">Sound enabled on tap</div>
-            <div class="game-subtitle" style="font-size:12px; margin-top:8px;">
-                Place towers to create a maze.<br>
-                Cats will pathfind around them!
+            <div class="game-subtitle" style="font-size:12px; margin-top:4px;">
+                Place towers to create a maze. Cats will pathfind around them!
             </div>
+        </div>
+
+        <!-- Leaderboard Screen -->
+        <div id="leaderboard-screen" class="overlay-screen" style="display:none;">
+            <div class="end-title" style="color:#FFD700;">HIGH SCORES</div>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr><th>#</th><th>Name</th><th>Score</th><th>Kills</th><th>Level</th></tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <tr><td colspan="5" style="text-align:center;color:#8d6e63;">No scores yet!</td></tr>
+                </tbody>
+            </table>
+            <button id="close-leaderboard-btn" class="screen-btn" style="padding:10px 30px;font-size:14px;">BACK</button>
         </div>
 
         <!-- HUD -->
@@ -525,7 +607,8 @@ body {
         <div id="game-over-screen" class="overlay-screen">
             <div class="end-title">THE CATS GOT THROUGH!</div>
             <div class="end-subtitle">Your puppies fought bravely...</div>
-            <div class="end-stat">Survived to wave <span id="go-wave">0</span></div>
+            <div class="end-stat">Wave <span id="go-wave">0</span> | Kills: <span id="go-kills">0</span></div>
+            <div class="end-stat">Score: <span id="go-score" style="color:#FFD700;">0</span></div>
             <div style="font-size:48px;">😿🐱🐈</div>
             <button class="screen-btn restart-btn">TRY AGAIN</button>
         </div>
@@ -534,7 +617,8 @@ body {
         <div id="victory-screen" class="overlay-screen">
             <div class="end-title">YARD DEFENDED!</div>
             <div class="end-subtitle">The puppies saved the day!</div>
-            <div class="end-stat">Gold remaining: <span id="vic-gold">0</span></div>
+            <div class="end-stat">Gold: <span id="vic-gold">0</span> | Kills: <span id="vic-kills">0</span></div>
+            <div class="end-stat">Score: <span id="vic-score" style="color:#FFD700;">0</span></div>
             <div style="font-size:48px;">🎉🐶🏆</div>
             <button class="screen-btn restart-btn">PLAY AGAIN</button>
         </div>
@@ -572,6 +656,56 @@ const CONFIG = {
         { name: 'Cat Central', waves: 13, hpScale: 2.4, speedScale: 1.2 }
     ],
 
+    // Map obstacle layouts per level
+    // Cell types: 0=empty, 2=water, 3=rock, 4=tree, 5=bridge
+    MAP_LAYOUTS: [
+        // Level 1: The Backyard - open field
+        null,
+        // Level 2: The Park - river through middle
+        {
+            obstacles: [
+                // River cols 5-6, bridges at rows 4, 9, 14
+                { col: 5, row: 0, type: 2 }, { col: 6, row: 0, type: 2 },
+                { col: 5, row: 1, type: 2 }, { col: 6, row: 1, type: 2 },
+                { col: 5, row: 2, type: 2 }, { col: 6, row: 2, type: 2 },
+                { col: 5, row: 3, type: 2 }, { col: 6, row: 3, type: 2 },
+                { col: 5, row: 4, type: 5 }, { col: 6, row: 4, type: 5 },
+                { col: 5, row: 5, type: 2 }, { col: 6, row: 5, type: 2 },
+                { col: 5, row: 6, type: 2 }, { col: 6, row: 6, type: 2 },
+                { col: 5, row: 7, type: 2 }, { col: 6, row: 7, type: 2 },
+                { col: 5, row: 8, type: 2 }, { col: 6, row: 8, type: 2 },
+                { col: 5, row: 9, type: 5 }, { col: 6, row: 9, type: 5 },
+                { col: 5, row: 10, type: 2 }, { col: 6, row: 10, type: 2 },
+                { col: 5, row: 11, type: 2 }, { col: 6, row: 11, type: 2 },
+                { col: 5, row: 12, type: 2 }, { col: 6, row: 12, type: 2 },
+                { col: 5, row: 13, type: 2 }, { col: 6, row: 13, type: 2 },
+                { col: 5, row: 14, type: 5 }, { col: 6, row: 14, type: 5 },
+                { col: 5, row: 15, type: 2 }, { col: 6, row: 15, type: 2 },
+                { col: 5, row: 16, type: 2 }, { col: 6, row: 16, type: 2 },
+                { col: 5, row: 17, type: 2 }, { col: 6, row: 17, type: 2 },
+            ]
+        },
+        // Level 3: Cat Central - rocks and trees
+        {
+            obstacles: [
+                // Rock clusters
+                { col: 2, row: 3, type: 3 }, { col: 3, row: 3, type: 3 },
+                { col: 2, row: 4, type: 3 },
+                { col: 8, row: 2, type: 3 }, { col: 9, row: 2, type: 3 },
+                { col: 9, row: 3, type: 3 },
+                { col: 5, row: 13, type: 3 }, { col: 5, row: 14, type: 3 },
+                { col: 6, row: 14, type: 3 },
+                // Tree clusters
+                { col: 3, row: 7, type: 4 }, { col: 4, row: 7, type: 4 },
+                { col: 3, row: 8, type: 4 },
+                { col: 8, row: 11, type: 4 }, { col: 9, row: 11, type: 4 },
+                { col: 8, row: 12, type: 4 },
+                { col: 1, row: 15, type: 4 }, { col: 2, row: 15, type: 4 },
+                { col: 10, row: 5, type: 4 }, { col: 10, row: 6, type: 4 },
+            ]
+        }
+    ],
+
     // Tower definitions
     // DPS = damage / fireRate
     TOWERS: {
@@ -587,7 +721,8 @@ const CONFIG = {
             projectileSpeed: 6,
             splash: 0,
             slow: 0,
-            description: 'Fast single-target'
+            description: 'Fast single-target',
+            ability: { name: 'BARK STORM', desc: 'Rapid fire 3s', cooldown: 20, duration: 3 }
         },
         poodle: {
             name: 'Poodle',
@@ -602,7 +737,8 @@ const CONFIG = {
             splash: 0,
             slow: 0.5,
             slowDuration: 2,
-            description: 'Rapid fire + slow'
+            description: 'Rapid fire + slow',
+            ability: { name: 'ZOOMIES', desc: 'Slow all on screen', cooldown: 25, duration: 0 }
         },
         husky: {
             name: 'Husky',
@@ -617,7 +753,8 @@ const CONFIG = {
             splash: 1.2,
             slow: 0.35,
             slowDuration: 3,
-            description: 'AoE freeze howl'
+            description: 'AoE freeze howl',
+            ability: { name: 'BLIZZARD', desc: 'Freeze in range 2s', cooldown: 30, duration: 2 }
         },
         bigboi: {
             name: 'Big Boi',
@@ -631,7 +768,24 @@ const CONFIG = {
             projectileSpeed: 4,
             splash: 1.5,
             slow: 0,
-            description: 'Splash damage WOOF'
+            description: 'Splash damage WOOF',
+            ability: { name: 'MEGA WOOF', desc: 'Screen-wide nuke', cooldown: 35, duration: 0 }
+        },
+        doghouse: {
+            name: 'Dog House',
+            emoji: '🏠',
+            cost: 80,
+            range: 0,
+            damage: 0,
+            fireRate: 999,
+            color: '#A0522D',
+            projectileColor: '#A0522D',
+            projectileSpeed: 0,
+            splash: 0,
+            slow: 0,
+            description: '+8g per wave',
+            isPassive: true,
+            goldPerWave: 8
         }
     },
 
@@ -666,6 +820,39 @@ const CONFIG = {
             color: '#4A4A4A',
             armor: 5,
             size: 0.45
+        },
+        ninja: {
+            name: 'Ninja Cat',
+            emoji: '🥷',
+            hp: 40,
+            speed: 3.5,
+            gold: 25,
+            color: '#2C2C2C',
+            armor: 0,
+            size: 0.28,
+            dodgeFirst: true
+        },
+        chonker: {
+            name: 'Chonker',
+            emoji: '😺',
+            hp: 500,
+            speed: 0.6,
+            gold: 75,
+            color: '#FF6B6B',
+            armor: 8,
+            size: 0.55,
+            slowImmune: true
+        },
+        boss: {
+            name: 'Boss Cat',
+            emoji: '👑',
+            hp: 1000,
+            speed: 0.8,
+            gold: 200,
+            color: '#9C27B0',
+            armor: 5,
+            size: 0.7,
+            isBoss: true
         }
     },
 
@@ -703,6 +890,14 @@ const CONFIG = {
         { q: "Puppies are born deaf and...?", a: ['Blind', 'Hairless', 'Toothless', 'Tailless'], c: 0 },
         { q: "Which breed is known for herding sheep?", a: ['Border Collie', 'Poodle', 'Beagle', 'Boxer'], c: 0 },
     ],
+
+    // Score
+    SCORE_PER_KILL: 10,
+    SCORE_PER_LIFE: 50,
+
+    // Leaderboard
+    LEADERBOARD_KEY: 'puppy_defender_scores',
+    LEADERBOARD_MAX: 10,
 
     // Visual
     GRASS_COLOR: '#4A7C2E',
@@ -906,6 +1101,18 @@ const GameAudio = (() => {
         ]));
         urls.buttonClick = _toWavUrl(_tone(800, 'sine', 0.04, 0.25));
         urls.goldEarned = _toWavUrl(_tone(1000, 'sine', 0.07, 0.25));
+        // Ability activation: dramatic rising chord
+        urls.ability = _toWavUrl(_mix([
+            { samples: _tone(300, 'sine', 0.15, 0.4, 600) },
+            { samples: _tone(450, 'triangle', 0.12, 0.3, 900) },
+            { samples: _tone(600, 'square', 0.1, 0.2, 1200), offset: 0.05 }
+        ]));
+        // Boss roar: low rumble
+        urls.bossRoar = _toWavUrl(_mix([
+            { samples: _tone(80, 'sawtooth', 0.4, 0.5, 40) },
+            { samples: _noise(0.3, 0.35) },
+            { samples: _tone(120, 'square', 0.3, 0.3, 50), offset: 0.1 }
+        ]));
     }
 
     // === PLAYBACK via HTML5 Audio ===
@@ -954,6 +1161,8 @@ const GameAudio = (() => {
         victory:      () => _play('victory'),
         buttonClick:  () => _play('buttonClick'),
         goldEarned:   () => _play('goldEarned'),
+        ability:      () => _play('ability'),
+        bossRoar:     () => _play('bossRoar'),
         toggleMute:   () => { muted = !muted; return muted; },
         isMuted:      () => muted
     };
@@ -963,6 +1172,12 @@ const GameAudio = (() => {
 // === js/pathfinding.js ===
 // A* Pathfinding on the grid
 // Returns array of {col, row} from start to end, or null if no path
+// Walkable cells: 0 (empty) and 5 (bridge)
+// Blocked cells: 1 (tower), 2 (water), 3 (rock), 4 (tree)
+
+function isWalkable(cellVal) {
+    return cellVal === 0 || cellVal === 5;
+}
 
 function findPath(grid, start, end, cols, rows) {
     const key = (col, row) => col + ',' + row;
@@ -1000,8 +1215,7 @@ function findPath(grid, start, end, cols, rows) {
             if (neighbor.col < 0 || neighbor.col >= cols ||
                 neighbor.row < 0 || neighbor.row >= rows) continue;
 
-            // Can't walk through towers (grid value 1 = tower)
-            if (grid[neighbor.row][neighbor.col] === 1) continue;
+            if (!isWalkable(grid[neighbor.row][neighbor.col])) continue;
 
             const neighborKey = key(neighbor.col, neighbor.row);
             const tentativeG = gScore[currentKey] + 1;
@@ -1023,7 +1237,6 @@ function findPath(grid, start, end, cols, rows) {
 }
 
 function heuristic(a, b) {
-    // Manhattan distance
     return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
 }
 
@@ -1038,37 +1251,31 @@ function reconstructPath(cameFrom, current) {
     return path;
 }
 
-// Check if placing a tower at (col, row) would block the path
 function wouldBlockPath(grid, col, row, cols, rows, entry, exit) {
-    // Temporarily place the tower
     const oldVal = grid[row][col];
     grid[row][col] = 1;
-
     const path = findPath(grid, entry, exit, cols, rows);
-
-    // Restore
     grid[row][col] = oldVal;
-
     return path === null;
 }
 
 
 // === js/grid.js ===
-// Grid management - open map with tower placement
+// Grid management - open map with tower placement and obstacles
 
 class Grid {
-    constructor() {
+    constructor(levelIdx) {
         this.cols = CONFIG.GRID_COLS;
         this.rows = CONFIG.GRID_ROWS;
         this.entry = { ...CONFIG.ENTRY };
         this.exit = { ...CONFIG.EXIT };
         this.cells = [];
         this.currentPath = null;
-        this.init();
+        this.init(levelIdx || 0);
     }
 
-    init() {
-        // 0 = empty/walkable, 1 = tower
+    init(levelIdx) {
+        // 0=empty, 1=tower, 2=water, 3=rock, 4=tree, 5=bridge
         this.cells = [];
         for (let r = 0; r < this.rows; r++) {
             this.cells[r] = [];
@@ -1076,6 +1283,17 @@ class Grid {
                 this.cells[r][c] = 0;
             }
         }
+
+        // Load map obstacles for this level
+        const layout = CONFIG.MAP_LAYOUTS[levelIdx];
+        if (layout && layout.obstacles) {
+            for (const obs of layout.obstacles) {
+                if (obs.row >= 0 && obs.row < this.rows && obs.col >= 0 && obs.col < this.cols) {
+                    this.cells[obs.row][obs.col] = obs.type;
+                }
+            }
+        }
+
         this.recalcPath();
     }
 
@@ -1088,14 +1306,11 @@ class Grid {
     }
 
     canPlace(col, row) {
-        // Out of bounds
         if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return false;
-        // Already occupied
+        // Only empty cells (type 0) are buildable
         if (this.cells[row][col] !== 0) return false;
-        // Can't place on entry or exit
         if (col === this.entry.col && row === this.entry.row) return false;
         if (col === this.exit.col && row === this.exit.row) return false;
-        // Would block path?
         if (wouldBlockPath(this.cells, col, row, this.cols, this.rows, this.entry, this.exit)) {
             return false;
         }
@@ -1110,6 +1325,11 @@ class Grid {
     removeTower(col, row) {
         this.cells[row][col] = 0;
         this.recalcPath();
+    }
+
+    getCellType(col, row) {
+        if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return -1;
+        return this.cells[row][col];
     }
 }
 
@@ -1134,8 +1354,23 @@ class Enemy {
         this.alive = true;
         this.reachedEnd = false;
 
+        // Special traits
+        this.dodgeFirst = def.dodgeFirst || false;
+        this.dodgeUsed = false;
+        this.slowImmune = def.slowImmune || false;
+        this.isBoss = def.isBoss || false;
+
+        // Boss ability timers
+        if (this.isBoss) {
+            this.speedBurstTimer = 5;
+            this.speedBurstActive = false;
+            this.speedBurstDuration = 0;
+            this.regenRate = 0.005; // 0.5% max HP per second
+            this.minionTimer = 8;
+        }
+
         // Path following
-        this.path = path.slice(); // copy
+        this.path = path.slice();
         this.pathIndex = 0;
 
         // Position in pixels (start at first path node)
@@ -1147,15 +1382,19 @@ class Enemy {
         this.slowTimer = 0;
         this.slowFactor = 1;
 
+        // Frozen state (from Blizzard ability)
+        this.frozen = false;
+        this.frozenTimer = 0;
+
         // Animation
         this.wobble = 0;
         this.wobbleSpeed = 3 + Math.random() * 2;
+        this.dodgeFlash = 0;
     }
 
     updatePath(newPath) {
         if (!newPath || newPath.length === 0) return;
 
-        // Find the closest point on the new path to current position
         let bestIdx = 0;
         let bestDist = Infinity;
         for (let i = 0; i < newPath.length; i++) {
@@ -1174,13 +1413,45 @@ class Enemy {
     update(dt) {
         if (!this.alive || this.reachedEnd) return;
 
+        // Update frozen
+        if (this.frozenTimer > 0) {
+            this.frozenTimer -= dt;
+            this.frozen = true;
+            if (this.frozenTimer <= 0) this.frozen = false;
+        }
+
         // Update slow
         if (this.slowTimer > 0) {
             this.slowTimer -= dt;
-            this.speed = this.baseSpeed * this.slowFactor;
+            this.speed = this.slowImmune ? this.baseSpeed : this.baseSpeed * this.slowFactor;
         } else {
             this.speed = this.baseSpeed;
         }
+
+        // Frozen overrides speed
+        if (this.frozen && !this.slowImmune) this.speed = 0;
+
+        // Boss abilities
+        if (this.isBoss) {
+            this.speedBurstTimer -= dt;
+            if (this.speedBurstTimer <= 0 && !this.speedBurstActive) {
+                this.speedBurstActive = true;
+                this.speedBurstDuration = 2;
+                this.speedBurstTimer = 5;
+            }
+            if (this.speedBurstActive) {
+                this.speedBurstDuration -= dt;
+                this.speed *= 2;
+                if (this.speedBurstDuration <= 0) this.speedBurstActive = false;
+            }
+            // HP regen
+            this.hp = Math.min(this.maxHp, this.hp + this.maxHp * this.regenRate * dt);
+            // Minion timer (game.js handles actual spawning)
+            this.minionTimer -= dt;
+        }
+
+        // Dodge flash
+        if (this.dodgeFlash > 0) this.dodgeFlash -= dt * 3;
 
         // Move toward next path node
         if (this.pathIndex >= this.path.length) {
@@ -1203,19 +1474,22 @@ class Enemy {
             this.x = target.x;
             this.y = target.y;
             this.pathIndex++;
-            if (this.pathIndex >= this.path.length) {
-                this.reachedEnd = true;
-            }
-        } else {
+            if (this.pathIndex >= this.path.length) this.reachedEnd = true;
+        } else if (moveSpeed > 0) {
             this.x += (dx / d) * moveSpeed;
             this.y += (dy / d) * moveSpeed;
         }
 
-        // Wobble animation (cats sway as they walk)
         this.wobble += this.wobbleSpeed * dt;
     }
 
     takeDamage(amount) {
+        // Ninja dodge: first hit misses
+        if (this.dodgeFirst && !this.dodgeUsed) {
+            this.dodgeUsed = true;
+            this.dodgeFlash = 1;
+            return;
+        }
         const dmg = Math.max(1, amount - this.armor);
         this.hp -= dmg;
         if (this.hp <= 0) {
@@ -1225,14 +1499,21 @@ class Enemy {
     }
 
     applySlow(factor, duration) {
+        if (this.slowImmune) return;
         this.slowFactor = factor;
         this.slowTimer = duration;
+    }
+
+    applyFreeze(duration) {
+        if (this.slowImmune) return;
+        this.frozen = true;
+        this.frozenTimer = duration;
     }
 }
 
 
 // === js/tower.js ===
-// Tower (Dog) entities
+// Tower (Dog) entities with ability system
 
 class Tower {
     constructor(type, col, row, tileSize) {
@@ -1260,6 +1541,8 @@ class Tower {
         this.slowDuration = def.slowDuration || 0;
         this.emoji = def.emoji;
         this.description = def.description;
+        this.isPassive = def.isPassive || false;
+        this.goldPerWave = def.goldPerWave || 0;
 
         this.level = 1;
         this.fireCooldown = 0;
@@ -1267,6 +1550,23 @@ class Tower {
 
         // Animation
         this.attackAnim = 0;
+
+        // Ability system
+        const abilDef = def.ability;
+        if (abilDef) {
+            this.abilityName = abilDef.name;
+            this.abilityDesc = abilDef.desc;
+            this.abilityCooldownMax = abilDef.cooldown;
+            this.abilityDurationMax = abilDef.duration;
+            this.abilityCooldown = 0; // 0 = ready
+            this.abilityActive = false;
+            this.abilityTimer = 0;
+        } else {
+            this.abilityName = null;
+        }
+
+        // Bark Storm: saved original fireRate
+        this._baseFireRate = def.fireRate;
     }
 
     upgrade() {
@@ -1280,19 +1580,23 @@ class Tower {
         const mult = CONFIG.UPGRADE_STAT_MULT;
         this.range *= mult;
         this.damage = Math.floor(this.damage * mult);
-        this.fireRate *= 0.85; // fires faster each level
+        this.fireRate *= 0.85;
+        this._baseFireRate = this.fireRate;
 
-        // Slow towers get better slow at higher levels
         if (this.slow > 0 && this.slowDuration > 0) {
             this.slowDuration += 0.3;
             this.slow = Math.max(0.2, this.slow - 0.05);
+        }
+
+        // Dog house: more gold per wave at higher levels
+        if (this.goldPerWave > 0) {
+            this.goldPerWave = Math.floor(this.goldPerWave * mult);
         }
 
         return upgradeCost;
     }
 
     getUpgradeCost() {
-        // Cost scales with level: base * mult * level
         return Math.floor(this.cost * CONFIG.UPGRADE_COST_MULT * this.level);
     }
 
@@ -1300,7 +1604,99 @@ class Tower {
         return Math.floor(this.totalInvested * CONFIG.SELL_REFUND);
     }
 
+    canActivateAbility() {
+        return this.abilityName && this.abilityCooldown <= 0 && !this.abilityActive;
+    }
+
+    activateAbility(enemies, particles) {
+        if (!this.canActivateAbility()) return false;
+
+        this.abilityActive = true;
+        this.abilityTimer = this.abilityDurationMax;
+
+        if (this.type === 'barker') {
+            // BARK STORM: rapid fire for duration
+            this.fireRate = 0.1;
+            GameAudio.ability();
+        } else if (this.type === 'poodle') {
+            // ZOOMIES: slow all enemies on screen immediately
+            for (const e of enemies) {
+                if (e.alive && !e.reachedEnd) {
+                    e.applySlow(0.2, 4);
+                }
+            }
+            this.abilityActive = false;
+            this.abilityCooldown = this.abilityCooldownMax;
+            GameAudio.ability();
+            // Visual burst
+            if (particles) {
+                for (let i = 0; i < 12; i++) {
+                    const angle = (Math.PI * 2 / 12) * i;
+                    particles.push({
+                        x: this.x, y: this.y,
+                        vx: Math.cos(angle) * 120,
+                        vy: Math.sin(angle) * 120,
+                        life: 0.6, maxLife: 0.6,
+                        color: '#DA70D6', size: 6
+                    });
+                }
+            }
+        } else if (this.type === 'husky') {
+            // BLIZZARD: freeze enemies in range
+            const rangePx = this.range * this.tileSize;
+            for (const e of enemies) {
+                if (!e.alive || e.reachedEnd) continue;
+                if (dist(this.x, this.y, e.x, e.y) <= rangePx) {
+                    e.applyFreeze(2);
+                }
+            }
+            this.abilityActive = false;
+            this.abilityCooldown = this.abilityCooldownMax;
+            GameAudio.ability();
+            if (particles) {
+                for (let i = 0; i < 16; i++) {
+                    const angle = (Math.PI * 2 / 16) * i;
+                    const r = rangePx * (0.3 + Math.random() * 0.7);
+                    particles.push({
+                        x: this.x + Math.cos(angle) * r,
+                        y: this.y + Math.sin(angle) * r,
+                        vx: (Math.random() - 0.5) * 20,
+                        vy: -20 - Math.random() * 30,
+                        life: 0.8, maxLife: 0.8,
+                        color: '#B3E5FC', size: 5
+                    });
+                }
+            }
+        } else if (this.type === 'bigboi') {
+            // MEGA WOOF: screen-wide damage nuke
+            for (const e of enemies) {
+                if (e.alive && !e.reachedEnd) {
+                    e.takeDamage(100);
+                }
+            }
+            this.abilityActive = false;
+            this.abilityCooldown = this.abilityCooldownMax;
+            GameAudio.ability();
+            if (particles) {
+                for (let i = 0; i < 20; i++) {
+                    const angle = (Math.PI * 2 / 20) * i;
+                    particles.push({
+                        x: this.x, y: this.y,
+                        vx: Math.cos(angle) * 200,
+                        vy: Math.sin(angle) * 200,
+                        life: 0.5, maxLife: 0.5,
+                        color: '#FF6347', size: 8
+                    });
+                }
+            }
+        }
+
+        return true;
+    }
+
     findTarget(enemies) {
+        if (this.isPassive) return null;
+
         let closest = null;
         let closestDist = Infinity;
         const rangePx = this.range * this.tileSize;
@@ -1319,6 +1715,24 @@ class Tower {
     }
 
     update(dt, enemies, projectiles) {
+        // Ability cooldown
+        if (this.abilityCooldown > 0) {
+            this.abilityCooldown -= dt;
+            if (this.abilityCooldown < 0) this.abilityCooldown = 0;
+        }
+
+        // Bark Storm duration
+        if (this.abilityActive && this.type === 'barker') {
+            this.abilityTimer -= dt;
+            if (this.abilityTimer <= 0) {
+                this.abilityActive = false;
+                this.fireRate = this._baseFireRate;
+                this.abilityCooldown = this.abilityCooldownMax;
+            }
+        }
+
+        if (this.isPassive) return;
+
         this.fireCooldown -= dt;
         if (this.attackAnim > 0) this.attackAnim -= dt * 4;
 
@@ -1360,7 +1774,6 @@ class Projectile {
         this.alive = true;
         this.size = 4;
 
-        // Store target position in case target dies mid-flight
         this.targetX = target.x;
         this.targetY = target.y;
     }
@@ -1368,7 +1781,6 @@ class Projectile {
     update(dt, enemies, particles) {
         if (!this.alive) return;
 
-        // Update target position if target still alive
         if (this.target && this.target.alive) {
             this.targetX = this.target.x;
             this.targetY = this.target.y;
@@ -1380,11 +1792,9 @@ class Projectile {
         const move = this.speed * dt;
 
         if (d <= move + 5) {
-            // Hit
             this.alive = false;
 
             if (this.splashRadius > 0) {
-                // AoE damage
                 for (const enemy of enemies) {
                     if (!enemy.alive) continue;
                     const ed = dist(this.targetX, this.targetY, enemy.x, enemy.y);
@@ -1396,7 +1806,6 @@ class Projectile {
                     }
                 }
                 GameAudio.splash();
-                // Splash particle
                 if (particles) {
                     for (let i = 0; i < 8; i++) {
                         const angle = (Math.PI * 2 / 8) * i;
@@ -1413,7 +1822,6 @@ class Projectile {
                     }
                 }
             } else {
-                // Single target damage
                 if (this.target && this.target.alive) {
                     this.target.takeDamage(this.damage);
                     if (this.slow > 0) {
@@ -1430,12 +1838,12 @@ class Projectile {
 
 
 // === js/wave.js ===
-// Wave spawning system with level support
+// Wave spawning system with level support and new enemy types
 
 class WaveManager {
     constructor() {
         this.currentLevel = 0;
-        this.currentWave = 0; // wave within current level
+        this.currentWave = 0;
         this.waveDefs = this._generateWavesForLevel(0);
         this.spawnQueue = [];
         this.spawnTimer = 0;
@@ -1460,30 +1868,45 @@ class WaveManager {
             const progress = i / level.waves; // 0→1 within level
 
             if (progress <= 0.4) {
-                // Early: mostly kittens
+                // Early: mostly kittens, sprinkle ninjas in later levels
                 for (let j = 0; j < baseCount; j++) wave.push('kitten');
                 if (progress > 0.2) {
                     for (let j = 0; j < Math.floor(i * 0.5); j++) wave.push('tabby');
                 }
+                if (levelIdx >= 1 && progress > 0.25) {
+                    for (let j = 0; j < Math.floor(i * 0.3); j++) wave.push('ninja');
+                }
             } else if (progress <= 0.75) {
-                // Mid: mix
-                for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('kitten');
-                for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('tabby');
+                // Mid: mix with ninja cats
+                for (let j = 0; j < Math.floor(baseCount * 0.3); j++) wave.push('kitten');
+                for (let j = 0; j < Math.floor(baseCount * 0.35); j++) wave.push('tabby');
+                if (levelIdx >= 0) {
+                    for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('ninja');
+                }
                 if (levelIdx >= 1) {
                     for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('fatcat');
                 }
+                // Chonkers appear in mid-to-late waves
+                if (levelIdx >= 1 && progress > 0.6) {
+                    wave.push('chonker');
+                }
             } else {
-                // Late: heavy
-                for (let j = 0; j < Math.floor(baseCount * 0.2); j++) wave.push('kitten');
-                for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('tabby');
-                for (let j = 0; j < Math.floor(baseCount * 0.25); j++) wave.push('fatcat');
+                // Late: heavy enemies
+                for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('kitten');
+                for (let j = 0; j < Math.floor(baseCount * 0.3); j++) wave.push('tabby');
+                for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('ninja');
+                for (let j = 0; j < Math.floor(baseCount * 0.2); j++) wave.push('fatcat');
+                // Chonkers in late waves
+                const chonkCount = 1 + levelIdx;
+                for (let j = 0; j < chonkCount; j++) wave.push('chonker');
             }
 
-            // Final wave of level: boss wave
+            // Final wave: BOSS + escorts
             if (i === level.waves) {
-                const bossCount = 3 + levelIdx * 4;
-                for (let j = 0; j < bossCount; j++) wave.push('fatcat');
-                for (let j = 0; j < bossCount; j++) wave.push('tabby');
+                wave.push('boss');
+                const escortCount = 2 + levelIdx * 3;
+                for (let j = 0; j < escortCount; j++) wave.push('fatcat');
+                for (let j = 0; j < escortCount; j++) wave.push('ninja');
             }
 
             waves.push({
@@ -1502,7 +1925,6 @@ class WaveManager {
     startNextWave() {
         const totalWaves = this.getTotalWavesThisLevel();
         if (this.currentWave >= totalWaves) {
-            // Level done
             if (this.currentLevel < CONFIG.LEVELS.length - 1) {
                 this.levelComplete = true;
             } else {
@@ -1554,8 +1976,9 @@ class WaveManager {
         if (this.spawnQueue.length > 0) {
             this.spawnTimer -= dt;
             if (this.spawnTimer <= 0) {
-                this.spawnTimer = CONFIG.SPAWN_INTERVAL;
+                // Boss spawns slower
                 const type = this.spawnQueue.shift();
+                this.spawnTimer = type === 'boss' ? 1.5 : CONFIG.SPAWN_INTERVAL;
                 if (path && path.length > 0) {
                     const enemy = new Enemy(type, path, tileSize);
                     const waveDef = this.waveDefs[this.currentWave - 1];
@@ -1608,7 +2031,7 @@ class WaveManager {
 
 
 // === js/renderer.js ===
-// Canvas rendering - bird's-eye terrain with 3D puppy towers
+// Canvas rendering - bird's-eye terrain with 3D puppy towers, obstacles, and new enemy types
 
 class Renderer {
     constructor(canvas, tileSize) {
@@ -1621,14 +2044,12 @@ class Renderer {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    // === SEEDED RANDOM for consistent terrain ===
     _hash(x, y) {
         let h = x * 374761393 + y * 668265263;
         h = (h ^ (h >> 13)) * 1274126177;
         return ((h ^ (h >> 16)) >>> 0) / 4294967296;
     }
 
-    // === COLOR HELPERS ===
     _shade(hex, f) {
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
@@ -1643,20 +2064,32 @@ class Renderer {
         return `rgb(${(r + (255 - r) * f) | 0},${(g + (255 - g) * f) | 0},${(b + (255 - b) * f) | 0})`;
     }
 
-    // === BIRD'S-EYE TERRAIN ===
+    // === GRID WITH OBSTACLES ===
     drawGrid(grid) {
         const ts = this.tileSize;
         const ctx = this.ctx;
 
         for (let r = 0; r < grid.rows; r++) {
             for (let c = 0; c < grid.cols; c++) {
-                this._drawGrassTile(ctx, c, r, ts, grid);
+                const cellType = grid.cells[r][c];
+                if (cellType === 2) {
+                    this._drawWaterTile(ctx, c, r, ts);
+                } else if (cellType === 3) {
+                    this._drawGrassTile(ctx, c, r, ts, grid);
+                    this._drawRockObstacle(ctx, c, r, ts);
+                } else if (cellType === 4) {
+                    this._drawGrassTile(ctx, c, r, ts, grid);
+                    this._drawTreeObstacle(ctx, c, r, ts);
+                } else if (cellType === 5) {
+                    this._drawWaterTile(ctx, c, r, ts);
+                    this._drawBridge(ctx, c, r, ts);
+                } else {
+                    this._drawGrassTile(ctx, c, r, ts, grid);
+                }
             }
         }
 
-        // Entry portal
         this._drawPortal(ctx, grid.entry.col, grid.entry.row, ts, '#4CAF50', '#81C784', 'IN');
-        // Exit portal
         this._drawPortal(ctx, grid.exit.col, grid.exit.row, ts, '#C62828', '#EF5350', 'OUT');
     }
 
@@ -1666,37 +2099,26 @@ class Renderer {
         const h = this._hash(c, r);
         const h2 = this._hash(c + 100, r + 200);
 
-        // Base grass — richer, varied greens
         const gVal = 95 + (h * 35) | 0;
         const rVal = 40 + (h * 20) | 0;
         const bVal = 18 + (h * 12) | 0;
         ctx.fillStyle = `rgb(${rVal},${gVal},${bVal})`;
         ctx.fillRect(x, y, ts, ts);
 
-        // Top-left light / bottom-right shadow for raised tile feel
-        // Light edge (top + left)
         ctx.fillStyle = 'rgba(255,255,200,0.06)';
         ctx.fillRect(x, y, ts, 2);
         ctx.fillRect(x, y, 2, ts);
-
-        // Shadow edge (bottom + right)
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.fillRect(x, y + ts - 2, ts, 2);
         ctx.fillRect(x + ts - 2, y, 2, ts);
 
-        // Dirt/soil patches
         if (h2 > 0.72) {
             ctx.fillStyle = `rgba(70,50,25,${0.15 + h2 * 0.1})`;
             ctx.beginPath();
-            ctx.ellipse(
-                x + ts * (0.3 + h * 0.4),
-                y + ts * (0.3 + h2 * 0.4),
-                ts * 0.15, ts * 0.1, h * 3, 0, Math.PI * 2
-            );
+            ctx.ellipse(x + ts * (0.3 + h * 0.4), y + ts * (0.3 + h2 * 0.4), ts * 0.15, ts * 0.1, h * 3, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Grass tufts
         const tufts = ((h * 7) | 0) % 4;
         for (let i = 0; i < tufts; i++) {
             const hi = this._hash(c * 13 + i, r * 17 + i);
@@ -1710,32 +2132,26 @@ class Renderer {
             ctx.stroke();
         }
 
-        // Small rocks on some tiles
         if (h > 0.85) {
             const rx = x + ts * 0.5 + (h2 - 0.5) * ts * 0.4;
             const ry = y + ts * 0.6 + (h - 0.85) * ts * 2;
             const rr = ts * 0.05;
-            ctx.fillStyle = `rgba(130,120,100,0.5)`;
+            ctx.fillStyle = 'rgba(130,120,100,0.5)';
             ctx.beginPath();
             ctx.ellipse(rx, ry, rr * 1.2, rr * 0.8, h * 2, 0, Math.PI * 2);
             ctx.fill();
-            // Rock highlight
             ctx.fillStyle = 'rgba(255,255,255,0.15)';
             ctx.beginPath();
             ctx.ellipse(rx - rr * 0.3, ry - rr * 0.3, rr * 0.5, rr * 0.3, 0, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Tower tile: slightly raised platform look
         if (grid && grid.cells[r] && grid.cells[r][c] === 1) {
-            // Stone platform
             const platGrad = ctx.createLinearGradient(x, y, x + ts, y + ts);
             platGrad.addColorStop(0, 'rgba(160,150,130,0.35)');
             platGrad.addColorStop(1, 'rgba(100,90,70,0.35)');
             ctx.fillStyle = platGrad;
             ctx.fillRect(x + 2, y + 2, ts - 4, ts - 4);
-
-            // Platform edges (raised)
             ctx.fillStyle = 'rgba(200,190,170,0.25)';
             ctx.fillRect(x + 2, y + 2, ts - 4, 2);
             ctx.fillRect(x + 2, y + 2, 2, ts - 4);
@@ -1745,11 +2161,124 @@ class Renderer {
         }
     }
 
+    // === WATER TILE ===
+    _drawWaterTile(ctx, c, r, ts) {
+        const x = c * ts;
+        const y = r * ts;
+        const h = this._hash(c, r);
+        const t = Date.now() / 1000;
+
+        const blue = 140 + (h * 30) | 0;
+        ctx.fillStyle = `rgb(30,80,${blue})`;
+        ctx.fillRect(x, y, ts, ts);
+
+        // Animated wave lines
+        ctx.strokeStyle = 'rgba(100,180,255,0.25)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            const wy = y + ts * (0.25 + i * 0.25);
+            ctx.beginPath();
+            ctx.moveTo(x, wy + Math.sin(t * 2 + c + i) * 2);
+            ctx.quadraticCurveTo(x + ts * 0.5, wy + Math.sin(t * 2 + c + i + 1) * 3, x + ts, wy + Math.sin(t * 2 + c + i + 2) * 2);
+            ctx.stroke();
+        }
+
+        // Specular highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(x, y, ts, 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(x, y + ts - 2, ts, 2);
+    }
+
+    // === ROCK OBSTACLE ===
+    _drawRockObstacle(ctx, c, r, ts) {
+        const cx = c * ts + ts / 2;
+        const cy = r * ts + ts / 2;
+        const h = this._hash(c * 3, r * 5);
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(cx + 2, cy + ts * 0.15, ts * 0.38, ts * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rock body
+        const rockGrad = ctx.createRadialGradient(cx - ts * 0.1, cy - ts * 0.1, 0, cx, cy, ts * 0.35);
+        rockGrad.addColorStop(0, '#a0a0a0');
+        rockGrad.addColorStop(0.6, '#707070');
+        rockGrad.addColorStop(1, '#505050');
+        ctx.fillStyle = rockGrad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - ts * 0.05, ts * 0.35, ts * 0.28 + h * ts * 0.05, h * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#404040';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(cx - ts * 0.1, cy - ts * 0.15, ts * 0.12, ts * 0.06, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // === TREE OBSTACLE ===
+    _drawTreeObstacle(ctx, c, r, ts) {
+        const cx = c * ts + ts / 2;
+        const cy = r * ts + ts / 2;
+        const h = this._hash(c * 7, r * 11);
+
+        // Trunk shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(cx + 2, cy + ts * 0.2, ts * 0.12, ts * 0.06, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Trunk
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(cx - ts * 0.06, cy - ts * 0.05, ts * 0.12, ts * 0.3);
+
+        // Canopy (multiple overlapping circles for bird's-eye)
+        const canopyColor = `rgb(${30 + (h * 20) | 0},${100 + (h * 30) | 0},${25 + (h * 15) | 0})`;
+        const offsets = [[-0.12, -0.18], [0.12, -0.15], [0, -0.25], [-0.08, -0.08], [0.1, -0.05]];
+        for (const [ox, oy] of offsets) {
+            this._draw3DCircle(ctx, cx + ts * ox, cy + ts * oy, ts * 0.18, canopyColor);
+        }
+    }
+
+    // === BRIDGE ===
+    _drawBridge(ctx, c, r, ts) {
+        const x = c * ts;
+        const y = r * ts;
+
+        // Wooden planks
+        ctx.fillStyle = '#8B7355';
+        ctx.fillRect(x + 2, y + 2, ts - 4, ts - 4);
+
+        // Plank lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(x + 2, y + ts * i / 4);
+            ctx.lineTo(x + ts - 2, y + ts * i / 4);
+            ctx.stroke();
+        }
+
+        // Rails
+        ctx.fillStyle = '#6D4C41';
+        ctx.fillRect(x, y, 3, ts);
+        ctx.fillRect(x + ts - 3, y, 3, ts);
+
+        // Wood highlight
+        ctx.fillStyle = 'rgba(255,255,200,0.1)';
+        ctx.fillRect(x + 3, y + 2, ts - 6, 2);
+    }
+
     _drawPortal(ctx, col, row, ts, darkColor, lightColor, label) {
         const cx = col * ts + ts / 2;
         const cy = row * ts + ts / 2;
 
-        // Glow
         const glow = ctx.createRadialGradient(cx, cy, ts * 0.1, cx, cy, ts * 0.6);
         glow.addColorStop(0, lightColor + 'AA');
         glow.addColorStop(0.5, darkColor + '44');
@@ -1757,11 +2286,9 @@ class Renderer {
         ctx.fillStyle = glow;
         ctx.fillRect(col * ts - ts * 0.1, row * ts - ts * 0.1, ts * 1.2, ts * 1.2);
 
-        // Stone frame
         ctx.fillStyle = '#5D4037';
         ctx.fillRect(col * ts + 2, row * ts + 2, ts - 4, ts - 4);
 
-        // Inner portal
         const inner = ctx.createRadialGradient(cx, cy, 0, cx, cy, ts * 0.35);
         inner.addColorStop(0, lightColor);
         inner.addColorStop(0.7, darkColor);
@@ -1784,12 +2311,10 @@ class Renderer {
         const ts = this.tileSize;
         const ctx = this.ctx;
 
-        // Draw dirt path tiles
         for (const node of path) {
             this._drawPathTile(ctx, node.col, node.row, ts);
         }
 
-        // Subtle direction line
         ctx.strokeStyle = 'rgba(255,255,220,0.15)';
         ctx.lineWidth = ts * 0.06;
         ctx.setLineDash([ts * 0.12, ts * 0.18]);
@@ -1809,11 +2334,9 @@ class Renderer {
         const y = r * ts;
         const h = this._hash(c, r);
 
-        // Recessed dirt path
         ctx.fillStyle = `rgb(${130 + (h * 20) | 0},${98 + (h * 15) | 0},${58 + (h * 15) | 0})`;
         ctx.fillRect(x, y, ts, ts);
 
-        // Recessed shadow edges (opposite of raised tile)
         ctx.fillStyle = 'rgba(0,0,0,0.12)';
         ctx.fillRect(x, y, ts, 2);
         ctx.fillRect(x, y, 2, ts);
@@ -1821,19 +2344,16 @@ class Renderer {
         ctx.fillRect(x, y + ts - 2, ts, 2);
         ctx.fillRect(x + ts - 2, y, 2, ts);
 
-        // Cobblestones
         for (let i = 0; i < 4; i++) {
             const hi = this._hash(c * 7 + i, r * 11 + i);
             const sx = x + (hi * 0.6 + 0.15) * ts;
             const sy = y + (this._hash(c + i * 3, r + i * 5) * 0.6 + 0.15) * ts;
             const sr = ts * (0.07 + hi * 0.05);
-
             const bright = 115 + (hi * 45) | 0;
             ctx.fillStyle = `rgb(${bright},${bright - 8},${bright - 22})`;
             ctx.beginPath();
             ctx.ellipse(sx, sy, sr, sr * 0.7, hi * 2, 0, Math.PI * 2);
             ctx.fill();
-            // Stone highlight
             ctx.fillStyle = 'rgba(255,255,255,0.08)';
             ctx.beginPath();
             ctx.ellipse(sx - sr * 0.2, sy - sr * 0.2, sr * 0.4, sr * 0.3, 0, 0, Math.PI * 2);
@@ -1858,46 +2378,111 @@ class Renderer {
 
         if (canPlace && selectedTower) {
             const def = CONFIG.TOWERS[selectedTower];
-            const pos = gridToPixel(col, row, ts);
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, def.range * ts, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.08)';
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            if (def.range > 0) {
+                const pos = gridToPixel(col, row, ts);
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, def.range * ts, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+    }
+
+    // === DOG HOUSE TOWER ===
+    drawDogHouse(tower) {
+        const ts = this.tileSize;
+        const ctx = this.ctx;
+        const x = tower.x;
+        const y = tower.y;
+        const s = ts * 0.35;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + s * 0.8, s * 1.1, s * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // House body
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - s * 0.7, y - s * 0.3, s * 1.4, s * 1.0);
+
+        // Roof
+        ctx.fillStyle = '#C62828';
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.9, y - s * 0.3);
+        ctx.lineTo(x, y - s * 0.9);
+        ctx.lineTo(x + s * 0.9, y - s * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#8B0000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Door hole
+        ctx.fillStyle = '#3E2723';
+        ctx.beginPath();
+        ctx.arc(x, y + s * 0.25, s * 0.3, Math.PI, 0);
+        ctx.lineTo(x + s * 0.3, y + s * 0.7);
+        ctx.lineTo(x - s * 0.3, y + s * 0.7);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gold coins icon
+        ctx.fillStyle = '#FFD700';
+        ctx.font = `bold ${ts * 0.25}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', x, y - s * 0.55);
+
+        // Level stars
+        const stars = tower.level - 1;
+        if (stars > 0) {
+            ctx.save();
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 4;
+            ctx.fillStyle = '#FFD700';
+            ctx.font = `bold ${ts * 0.18}px Arial`;
+            ctx.fillText('★'.repeat(stars), x, y - s * 1.2);
+            ctx.restore();
         }
     }
 
     // === 3D PUPPY TOWER ===
     drawTower(tower) {
+        if (tower.isPassive) {
+            this.drawDogHouse(tower);
+            return;
+        }
+
         const ts = this.tileSize;
         const ctx = this.ctx;
         const x = tower.x;
         const y = tower.y;
         const size = ts * 0.4;
         const color = tower.color;
-
         const scale = 1 + tower.attackAnim * 0.2;
 
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(scale, scale);
 
-        // Ground shadow (elliptical, offset down-right for bird's-eye)
+        // Ground shadow
         ctx.fillStyle = 'rgba(0,0,0,0.22)';
         ctx.beginPath();
         ctx.ellipse(size * 0.1, size * 0.65, size * 1.0, size * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 3D Ears (behind body)
+        // Ears
         this._draw3DEar(ctx, -size * 0.7, -size * 0.6, size * 0.35, size * 0.5, -0.3, color);
         this._draw3DEar(ctx, size * 0.7, -size * 0.6, size * 0.35, size * 0.5, 0.3, color);
 
-        // 3D Dog body
+        // Body
         this._draw3DCircle(ctx, 0, 0, size, color);
 
-        // Lighter muzzle area
+        // Muzzle
         const muzzleGrad = ctx.createRadialGradient(0, size * 0.15, 0, 0, size * 0.15, size * 0.35);
         muzzleGrad.addColorStop(0, this._lighten(color, 0.4));
         muzzleGrad.addColorStop(1, 'rgba(255,255,255,0)');
@@ -1906,12 +2491,11 @@ class Renderer {
         ctx.ellipse(0, size * 0.2, size * 0.4, size * 0.32, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Eyes with gloss
+        // Eyes
         const eyeR = size * 0.2;
         [-1, 1].forEach(side => {
             const ex = side * size * 0.3;
             const ey = -size * 0.15;
-
             const eyeGrad = ctx.createRadialGradient(ex - eyeR * 0.2, ey - eyeR * 0.2, 0, ex, ey, eyeR);
             eyeGrad.addColorStop(0, '#fff');
             eyeGrad.addColorStop(1, '#ddd');
@@ -1922,20 +2506,18 @@ class Renderer {
             ctx.strokeStyle = '#aaa';
             ctx.lineWidth = 0.8;
             ctx.stroke();
-
             const px = ex + side * size * 0.05;
             ctx.fillStyle = '#222';
             ctx.beginPath();
             ctx.arc(px, ey, eyeR * 0.5, 0, Math.PI * 2);
             ctx.fill();
-
             ctx.fillStyle = 'rgba(255,255,255,0.85)';
             ctx.beginPath();
             ctx.arc(px - eyeR * 0.2, ey - eyeR * 0.2, eyeR * 0.18, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // 3D Nose
+        // Nose
         const noseGrad = ctx.createRadialGradient(-size * 0.03, size * 0.11, 0, 0, size * 0.15, size * 0.13);
         noseGrad.addColorStop(0, '#555');
         noseGrad.addColorStop(0.7, '#222');
@@ -1944,7 +2526,6 @@ class Renderer {
         ctx.beginPath();
         ctx.ellipse(0, size * 0.15, size * 0.13, size * 0.09, 0, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.beginPath();
         ctx.ellipse(-size * 0.03, size * 0.12, size * 0.05, size * 0.025, -0.3, 0, Math.PI * 2);
@@ -1957,15 +2538,13 @@ class Renderer {
         ctx.arc(0, size * 0.1, size * 0.25, 0.2, Math.PI - 0.2);
         ctx.stroke();
 
-        // Type-specific details
+        // Type-specific
         if (tower.type === 'bigboi') {
-            // Red collar
             ctx.strokeStyle = '#C62828';
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(0, size * 0.05, size * 0.85, 0.4, Math.PI - 0.4);
             ctx.stroke();
-            // Gold tag
             ctx.fillStyle = '#FFD700';
             ctx.beginPath();
             ctx.arc(0, size * 0.72, size * 0.11, 0, Math.PI * 2);
@@ -1976,13 +2555,11 @@ class Renderer {
         }
 
         if (tower.type === 'husky') {
-            // Icy blue collar
             ctx.strokeStyle = '#0288D1';
             ctx.lineWidth = 2.5;
             ctx.beginPath();
             ctx.arc(0, size * 0.05, size * 0.85, 0.4, Math.PI - 0.4);
             ctx.stroke();
-            // Snowflake tag
             ctx.fillStyle = '#E1F5FE';
             ctx.font = `bold ${size * 0.4}px Arial`;
             ctx.textAlign = 'center';
@@ -1992,7 +2569,7 @@ class Renderer {
 
         ctx.restore();
 
-        // Husky frost aura (animated particles around tower)
+        // Husky frost aura
         if (tower.type === 'husky') {
             ctx.save();
             for (let i = 0; i < 4; i++) {
@@ -2008,7 +2585,19 @@ class Renderer {
             ctx.restore();
         }
 
-        // Level stars (1 star per upgrade, up to 3)
+        // Bark Storm active aura
+        if (tower.abilityActive && tower.type === 'barker') {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,200,50,0.5)';
+            ctx.lineWidth = 2;
+            const pulseR = size * (1.3 + Math.sin(Date.now() / 100) * 0.2);
+            ctx.beginPath();
+            ctx.arc(x, y, pulseR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Level stars
         const stars = tower.level - 1;
         if (stars > 0) {
             ctx.save();
@@ -2018,8 +2607,7 @@ class Renderer {
             ctx.font = `bold ${ts * 0.2}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            const starStr = '★'.repeat(stars);
-            ctx.fillText(starStr, x, y - size * 1.2);
+            ctx.fillText('★'.repeat(stars), x, y - size * 1.2);
             ctx.restore();
         }
 
@@ -2030,39 +2618,42 @@ class Renderer {
             this._draw3DCircle(this.ctx, x - size * 0.22 * s, y - size * s * 0.95, size * 0.16 * s, '#FFD0D8');
             this._draw3DCircle(this.ctx, x + size * 0.22 * s, y - size * s * 0.95, size * 0.16 * s, '#FFD0D8');
         }
+
+        // Ability cooldown ring
+        if (tower.abilityName && tower.abilityCooldown > 0) {
+            const pct = 1 - tower.abilityCooldown / tower.abilityCooldownMax;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,215,0,0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, size * 1.15, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
     }
 
-    // 3D sphere with radial gradient, outline, and specular highlight
     _draw3DCircle(ctx, cx, cy, radius, baseColor) {
-        const grad = ctx.createRadialGradient(
-            cx - radius * 0.3, cy - radius * 0.3, radius * 0.05,
-            cx, cy, radius
-        );
+        const grad = ctx.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, radius * 0.05, cx, cy, radius);
         grad.addColorStop(0, this._lighten(baseColor, 0.4));
         grad.addColorStop(0.5, baseColor);
         grad.addColorStop(1, this._shade(baseColor, 0.5));
-
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.strokeStyle = this._shade(baseColor, 0.35);
         ctx.lineWidth = 1.5;
         ctx.stroke();
-
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.beginPath();
         ctx.ellipse(cx - radius * 0.25, cy - radius * 0.3, radius * 0.3, radius * 0.15, -0.5, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    // 3D ear with gradient and inner ear
     _draw3DEar(ctx, cx, cy, rx, ry, rotation, baseColor) {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(rotation);
-
         const grad = ctx.createRadialGradient(-rx * 0.2, -ry * 0.2, 0, 0, 0, Math.max(rx, ry));
         grad.addColorStop(0, this._lighten(baseColor, 0.2));
         grad.addColorStop(1, this._shade(baseColor, 0.45));
@@ -2070,21 +2661,19 @@ class Renderer {
         ctx.beginPath();
         ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.strokeStyle = this._shade(baseColor, 0.35);
         ctx.lineWidth = 1;
         ctx.stroke();
-
         ctx.fillStyle = this._lighten(baseColor, 0.15);
         ctx.beginPath();
         ctx.ellipse(0, ry * 0.05, rx * 0.5, ry * 0.5, 0, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.restore();
     }
 
     // === TOWER RANGE ===
     drawTowerRange(tower) {
+        if (tower.isPassive) return;
         const ts = this.tileSize;
         const ctx = this.ctx;
         ctx.beginPath();
@@ -2104,11 +2693,20 @@ class Renderer {
         const ts = this.tileSize;
         const ctx = this.ctx;
         const size = ts * enemy.size;
-
         const wobbleX = Math.sin(enemy.wobble) * 2;
 
         ctx.save();
         ctx.translate(enemy.x + wobbleX, enemy.y);
+
+        // Ninja: semi-transparent
+        if (enemy.type === 'ninja') {
+            ctx.globalAlpha = enemy.dodgeUsed ? 0.85 : 0.5 + Math.sin(Date.now() / 200) * 0.15;
+        }
+
+        // Dodge flash
+        if (enemy.dodgeFlash > 0) {
+            ctx.globalAlpha = 0.3;
+        }
 
         // Ground shadow
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -2116,11 +2714,8 @@ class Renderer {
         ctx.ellipse(size * 0.05, size * 0.7, size * 0.9, size * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Cat body with gradient
-        const bodyGrad = ctx.createRadialGradient(
-            -size * 0.2, -size * 0.2, size * 0.05,
-            0, 0, size
-        );
+        // Cat body
+        const bodyGrad = ctx.createRadialGradient(-size * 0.2, -size * 0.2, size * 0.05, 0, 0, size);
         bodyGrad.addColorStop(0, this._lighten(enemy.color, 0.3));
         bodyGrad.addColorStop(0.6, enemy.color);
         bodyGrad.addColorStop(1, this._shade(enemy.color, 0.5));
@@ -2150,7 +2745,7 @@ class Renderer {
         ctx.stroke();
 
         // Inner ears
-        ctx.fillStyle = '#FFB6C1';
+        ctx.fillStyle = enemy.type === 'ninja' ? '#444' : '#FFB6C1';
         ctx.beginPath();
         ctx.moveTo(-size * 0.55, -size * 0.55);
         ctx.lineTo(-size * 0.3, -size * 0.9);
@@ -2171,8 +2766,9 @@ class Renderer {
         ctx.arc(size * 0.3, -size * 0.1, size * 0.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Slit pupils
-        ctx.fillStyle = '#2E7D32';
+        // Pupils - ninja has red, boss has gold
+        const pupilColor = enemy.type === 'ninja' ? '#C62828' : enemy.isBoss ? '#FFD700' : '#2E7D32';
+        ctx.fillStyle = pupilColor;
         ctx.beginPath();
         ctx.ellipse(-size * 0.3, -size * 0.1, size * 0.06, size * 0.15, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -2206,10 +2802,77 @@ class Renderer {
         ctx.beginPath(); ctx.moveTo(size * 0.15, size * 0.2); ctx.lineTo(size * 0.8, size * 0.05); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(size * 0.15, size * 0.25); ctx.lineTo(size * 0.8, size * 0.3); ctx.stroke();
 
+        // Boss: crown
+        if (enemy.isBoss) {
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.moveTo(-size * 0.5, -size * 0.9);
+            ctx.lineTo(-size * 0.35, -size * 1.4);
+            ctx.lineTo(-size * 0.15, -size * 1.1);
+            ctx.lineTo(0, -size * 1.5);
+            ctx.lineTo(size * 0.15, -size * 1.1);
+            ctx.lineTo(size * 0.35, -size * 1.4);
+            ctx.lineTo(size * 0.5, -size * 0.9);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            // Crown gems
+            ctx.fillStyle = '#E91E63';
+            ctx.beginPath();
+            ctx.arc(0, -size * 1.15, size * 0.06, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Chonker: extra belly circles
+        if (enemy.type === 'chonker') {
+            ctx.fillStyle = this._lighten(enemy.color, 0.2);
+            ctx.beginPath();
+            ctx.ellipse(0, size * 0.2, size * 0.7, size * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Slow immune indicator
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.beginPath();
+            ctx.ellipse(0, size * 0.1, size * 0.4, size * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Ninja: headband
+        if (enemy.type === 'ninja') {
+            ctx.fillStyle = '#C62828';
+            ctx.fillRect(-size * 0.8, -size * 0.35, size * 1.6, size * 0.12);
+            // Headband tails
+            ctx.strokeStyle = '#C62828';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(size * 0.7, -size * 0.3);
+            ctx.quadraticCurveTo(size * 1.0, -size * 0.5, size * 1.1, -size * 0.7);
+            ctx.stroke();
+        }
+
         ctx.restore();
 
+        // Frozen indicator
+        if (enemy.frozen) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(100,200,255,0.7)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, size * 1.2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Ice crystals
+            ctx.fillStyle = 'rgba(180,230,255,0.6)';
+            ctx.font = `${size * 0.5}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('*', enemy.x, enemy.y - size * 1.0);
+            ctx.restore();
+        }
+
         // Slow indicator
-        if (enemy.slowTimer > 0) {
+        if (enemy.slowTimer > 0 && !enemy.frozen) {
             ctx.fillStyle = 'rgba(156, 39, 176, 0.25)';
             ctx.beginPath();
             ctx.arc(enemy.x, enemy.y, size * 1.3, 0, Math.PI * 2);
@@ -2219,11 +2882,34 @@ class Renderer {
             ctx.stroke();
         }
 
+        // Boss: speed burst glow
+        if (enemy.isBoss && enemy.speedBurstActive) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,100,0,0.6)';
+            ctx.lineWidth = 2;
+            const pulseR = size * (1.4 + Math.sin(Date.now() / 80) * 0.2);
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, pulseR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Dodge flash text
+        if (enemy.dodgeFlash > 0) {
+            ctx.save();
+            ctx.globalAlpha = enemy.dodgeFlash;
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${ts * 0.3}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('DODGE!', enemy.x, enemy.y - size * 1.5);
+            ctx.restore();
+        }
+
         // HP bar
-        const barWidth = ts * 0.8;
-        const barHeight = 5;
+        const barWidth = enemy.isBoss ? ts * 1.5 : ts * 0.8;
+        const barHeight = enemy.isBoss ? 8 : 5;
         const barX = enemy.x - barWidth / 2;
-        const barY = enemy.y - size - barHeight - 8;
+        const barY = enemy.y - size - barHeight - (enemy.isBoss ? 14 : 8);
         const hpRatio = enemy.hp / enemy.maxHp;
 
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -2235,6 +2921,14 @@ class Renderer {
         hpGrad.addColorStop(1, this._shade(hpColor, 0.6));
         ctx.fillStyle = hpGrad;
         ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
+
+        // Boss: name label
+        if (enemy.isBoss) {
+            ctx.fillStyle = '#FFD700';
+            ctx.font = `bold ${ts * 0.22}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('BOSS', enemy.x, barY - 4);
+        }
     }
 
     // === PROJECTILE ===
@@ -2250,10 +2944,7 @@ class Renderer {
         ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
         ctx.fill();
 
-        const core = ctx.createRadialGradient(
-            proj.x - proj.size * 0.3, proj.y - proj.size * 0.3, 0,
-            proj.x, proj.y, proj.size
-        );
+        const core = ctx.createRadialGradient(proj.x - proj.size * 0.3, proj.y - proj.size * 0.3, 0, proj.x, proj.y, proj.size);
         core.addColorStop(0, '#fff');
         core.addColorStop(0.4, proj.color);
         core.addColorStop(1, this._shade(proj.color, 0.5));
@@ -2374,6 +3065,26 @@ class UI {
                 speedBtn.textContent = labels[speedIdx];
             });
         }
+
+        // High Scores button
+        const hsBtn = document.getElementById('highscores-btn');
+        if (hsBtn) {
+            hsBtn.addEventListener('click', () => {
+                GameAudio.unlock();
+                GameAudio.buttonClick();
+                this.game.showLeaderboard();
+            });
+        }
+
+        // Close leaderboard
+        const closeHs = document.getElementById('close-leaderboard-btn');
+        if (closeHs) {
+            closeHs.addEventListener('click', () => {
+                GameAudio.unlock();
+                GameAudio.buttonClick();
+                document.getElementById('leaderboard-screen').style.display = 'none';
+            });
+        }
     }
 
     setupTowerButtons() {
@@ -2382,15 +3093,22 @@ class UI {
         bar.innerHTML = '';
 
         for (const [key, def] of Object.entries(CONFIG.TOWERS)) {
-            const dps = (def.damage / def.fireRate).toFixed(1);
             const btn = document.createElement('button');
             btn.className = 'tower-btn';
             btn.dataset.tower = key;
+
+            let statLine;
+            if (def.isPassive) {
+                statLine = `+${def.goldPerWave}g/wave`;
+            } else {
+                statLine = (def.damage / def.fireRate).toFixed(1) + ' DPS';
+            }
+
             btn.innerHTML = `
                 <span class="tower-btn-icon">${def.emoji}</span>
                 <span class="tower-btn-name">${def.name}</span>
                 <span class="tower-btn-cost">${def.cost}g</span>
-                <span class="tower-btn-dps">${dps} DPS</span>
+                <span class="tower-btn-dps">${statLine}</span>
             `;
             btn.addEventListener('click', () => {
                 GameAudio.unlock();
@@ -2473,16 +3191,37 @@ class UI {
         const canUpgrade = tower.level < maxLevel;
         const upgradeCost = tower.getUpgradeCost();
         const sellValue = tower.getSellValue();
-        const dps = (tower.damage / tower.fireRate).toFixed(1);
+
+        let statsLine;
+        if (tower.isPassive) {
+            statsLine = `Income: +${tower.goldPerWave}g/wave`;
+        } else {
+            const dps = (tower.damage / tower.fireRate).toFixed(1);
+            statsLine = `DPS: ${dps} | DMG: ${tower.damage} | SPD: ${tower.fireRate.toFixed(2)}s`;
+        }
+
+        let extraLine = '';
+        if (!tower.isPassive) {
+            extraLine = `RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}`;
+        }
+
+        // Ability button
+        let abilityHtml = '';
+        if (tower.abilityName) {
+            const ready = tower.canActivateAbility();
+            const cdLeft = tower.abilityCooldown > 0 ? ` (${Math.ceil(tower.abilityCooldown)}s)` : '';
+            abilityHtml = `<button id="ability-btn" class="${ready ? '' : 'disabled'}" style="background:#FF9800;">${tower.abilityName}${cdLeft}</button>`;
+        }
 
         panel.innerHTML = `
             <div class="upgrade-header">${tower.emoji} ${tower.name} Lv.${tower.level}</div>
-            <div class="upgrade-stats">DPS: ${dps} | DMG: ${tower.damage} | SPD: ${tower.fireRate.toFixed(2)}s</div>
-            <div class="upgrade-stats">RNG: ${tower.range.toFixed(1)}${tower.slow > 0 ? ' | Slow: ' + Math.round((1 - tower.slow) * 100) + '%' : ''}${tower.splash > 0 ? ' | Splash' : ''}</div>
+            <div class="upgrade-stats">${statsLine}</div>
+            ${extraLine ? `<div class="upgrade-stats">${extraLine}</div>` : ''}
             <div class="upgrade-actions">
                 ${canUpgrade ? `<button id="upgrade-btn" class="${upgradeCost > this.game.gold ? 'disabled' : ''}">Upgrade (${upgradeCost}g)</button>` : '<button class="disabled">MAX</button>'}
                 <button id="sell-btn">Sell (${sellValue}g)</button>
             </div>
+            ${abilityHtml ? `<div class="upgrade-actions">${abilityHtml}</div>` : ''}
         `;
         panel.style.display = 'flex';
 
@@ -2500,6 +3239,14 @@ class UI {
                 this.game.sellTower(tower);
                 this.hideUpgradePanel();
                 this.selectedTower = null;
+            });
+        }
+
+        const abilityBtn = document.getElementById('ability-btn');
+        if (abilityBtn && tower.canActivateAbility()) {
+            abilityBtn.addEventListener('click', () => {
+                tower.activateAbility(this.game.enemies, this.game.particles);
+                this.showUpgradePanel(tower);
             });
         }
     }
@@ -2546,7 +3293,7 @@ class Game {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        this.grid = new Grid();
+        this.grid = new Grid(0);
         this.renderer = new Renderer(this.canvas, this.tileSize);
         this.waveManager = new WaveManager();
         this.ui = new UI(this);
@@ -2561,6 +3308,10 @@ class Game {
         this.lastTime = performance.now();
         this.gameSpeed = 1;
 
+        // Player name & stats
+        this.playerName = '';
+        this.kills = 0;
+
         // Trivia state
         this.triviaActive = false;
         this.triviaTimer = 0;
@@ -2568,7 +3319,7 @@ class Game {
         this.triviaAnswered = false;
         this.triviaResultTimer = 0;
         this.triviaCorrect = false;
-        this.triviaUsed = []; // indices of used questions
+        this.triviaUsed = [];
         this._triviaShownForWave = -1;
 
         GameAudio.init();
@@ -2605,6 +3356,11 @@ class Game {
     }
 
     startGame() {
+        // Get player name
+        const nameInput = document.getElementById('player-name');
+        this.playerName = (nameInput ? nameInput.value.trim() : '') || 'Anonymous';
+        this.kills = 0;
+
         this.state = 'playing';
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
@@ -2615,7 +3371,7 @@ class Game {
 
     restart() {
         this.state = 'playing';
-        this.grid = new Grid();
+        this.grid = new Grid(0);
         this.waveManager = new WaveManager();
         this.towers = [];
         this.enemies = [];
@@ -2623,6 +3379,7 @@ class Game {
         this.particles = [];
         this.gold = CONFIG.START_GOLD;
         this.lives = CONFIG.START_LIVES;
+        this.kills = 0;
         this.ui.selectedTowerType = null;
         this.ui.selectedTower = null;
         this.ui.hideUpgradePanel();
@@ -2690,11 +3447,9 @@ class Game {
     // === TRIVIA SYSTEM ===
     _pickTrivia() {
         const pool = CONFIG.TRIVIA;
-        // Reset used list if we've been through all
         if (this.triviaUsed.length >= pool.length) {
             this.triviaUsed = [];
         }
-        // Pick unused question
         let idx;
         do {
             idx = Math.floor(Math.random() * pool.length);
@@ -2702,7 +3457,6 @@ class Game {
         this.triviaUsed.push(idx);
 
         const q = pool[idx];
-        // Shuffle answers but track correct index
         const indices = [0, 1, 2, 3];
         for (let i = indices.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -2751,7 +3505,6 @@ class Game {
         const btns = panel.querySelectorAll('.trivia-btn');
         const resultEl = document.getElementById('trivia-result');
 
-        // Highlight correct/wrong
         btns[this.triviaQuestion.correctIdx].classList.add('correct');
         if (!correct) {
             btns[idx].classList.add('wrong');
@@ -2783,8 +3536,6 @@ class Game {
         }
 
         this.triviaTimer -= dt;
-
-        // Update timer bar
         const fill = document.getElementById('trivia-timer-fill');
         if (fill) {
             const pct = Math.max(0, this.triviaTimer / CONFIG.TRIVIA_TIME) * 100;
@@ -2792,7 +3543,6 @@ class Game {
         }
 
         if (this.triviaTimer <= 0) {
-            // Time's up
             this.triviaAnswered = true;
             this.triviaResultTimer = 1.0;
             const resultEl = document.getElementById('trivia-result');
@@ -2800,7 +3550,6 @@ class Game {
                 resultEl.textContent = "Time's up!";
                 resultEl.style.color = '#FF9800';
             }
-            // Highlight correct answer
             const panel = document.getElementById('trivia-panel');
             if (panel) {
                 const btns = panel.querySelectorAll('.trivia-btn');
@@ -2823,9 +3572,138 @@ class Game {
     nextLevel() {
         document.getElementById('level-complete-screen').style.display = 'none';
         this.waveManager.startNextLevel();
+
+        // Load new map layout, keep existing towers that fit
+        const newLevelIdx = this.waveManager.currentLevel;
+        this.grid = new Grid(newLevelIdx);
+
+        // Remove towers that now conflict with obstacles
+        this.towers = this.towers.filter(t => {
+            const cell = this.grid.getCellType(t.col, t.row);
+            if (cell !== 0 && cell !== 1) {
+                // Tower is on an obstacle tile, refund it
+                this.gold += t.getSellValue();
+                return false;
+            }
+            this.grid.placeTower(t.col, t.row);
+            return true;
+        });
+
+        // Reposition towers for new tileSize
+        for (const tower of this.towers) {
+            tower.tileSize = this.tileSize;
+            const pos = gridToPixel(tower.col, tower.row, this.tileSize);
+            tower.x = pos.x;
+            tower.y = pos.y;
+        }
+
+        this.enemies = [];
+        this.projectiles = [];
         this.state = 'playing';
         this._triviaShownForWave = -1;
         this.ui.updateHUD();
+    }
+
+    // === LEADERBOARD ===
+    _calcScore() {
+        return this.kills * CONFIG.SCORE_PER_KILL + this.lives * CONFIG.SCORE_PER_LIFE + this.gold;
+    }
+
+    _saveScore() {
+        const entry = {
+            name: this.playerName,
+            score: this._calcScore(),
+            kills: this.kills,
+            gold: this.gold,
+            lives: this.lives,
+            level: this.waveManager.currentLevel + 1,
+            date: new Date().toLocaleDateString()
+        };
+
+        let scores = [];
+        try {
+            const raw = localStorage.getItem(CONFIG.LEADERBOARD_KEY);
+            if (raw) scores = JSON.parse(raw);
+        } catch (e) {}
+
+        scores.push(entry);
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, CONFIG.LEADERBOARD_MAX);
+
+        try {
+            localStorage.setItem(CONFIG.LEADERBOARD_KEY, JSON.stringify(scores));
+        } catch (e) {}
+
+        return entry;
+    }
+
+    _loadScores() {
+        try {
+            const raw = localStorage.getItem(CONFIG.LEADERBOARD_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [];
+    }
+
+    showLeaderboard() {
+        const screen = document.getElementById('leaderboard-screen');
+        if (!screen) return;
+
+        const scores = this._loadScores();
+        const tbody = document.getElementById('leaderboard-body');
+        if (tbody) {
+            if (scores.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8d6e63;">No scores yet!</td></tr>';
+            } else {
+                tbody.innerHTML = scores.map((s, i) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${s.name}</td>
+                        <td>${s.score}</td>
+                        <td>${s.kills}</td>
+                        <td>Lv${s.level}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        screen.style.display = 'flex';
+    }
+
+    // === BOSS MINION SPAWNING ===
+    _updateBosses() {
+        for (const enemy of this.enemies) {
+            if (!enemy.isBoss || !enemy.alive) continue;
+
+            // Spawn minions when timer hits 0
+            if (enemy.minionTimer <= 0) {
+                enemy.minionTimer = 8;
+                const path = this.grid.currentPath;
+                if (path && path.length > 0) {
+                    for (let i = 0; i < 2; i++) {
+                        const minion = new Enemy('kitten', path, this.tileSize);
+                        minion.x = enemy.x + (Math.random() - 0.5) * 10;
+                        minion.y = enemy.y + (Math.random() - 0.5) * 10;
+                        minion.pathIndex = Math.max(0, enemy.pathIndex - 1);
+                        this.enemies.push(minion);
+                    }
+                    GameAudio.bossRoar();
+                }
+            }
+        }
+    }
+
+    // === DOG HOUSE INCOME ===
+    _giveDogHouseIncome() {
+        let income = 0;
+        for (const tower of this.towers) {
+            if (tower.goldPerWave > 0) {
+                income += tower.goldPerWave;
+            }
+        }
+        if (income > 0) {
+            this.gold += income;
+        }
     }
 
     update(dt) {
@@ -2833,13 +3711,10 @@ class Game {
 
         dt = Math.min(dt, 0.1);
 
-        // Trivia update
         this._updateTrivia(dt);
-
-        // Spawn enemies via wave manager
         this.waveManager.update(dt, this.grid.currentPath, this.tileSize, this.enemies);
 
-        // Show trivia between waves (once per wave gap)
+        // Show trivia between waves
         if (this.waveManager.betweenWaves && !this.triviaActive
             && this._triviaShownForWave !== this.waveManager.currentWave
             && this.waveManager.currentWave > 0) {
@@ -2847,7 +3722,6 @@ class Game {
             this._showTrivia();
         }
 
-        // Level complete check
         if (this.waveManager.levelComplete) {
             this._showLevelComplete();
             return;
@@ -2871,6 +3745,7 @@ class Game {
             if (!enemy.alive && enemy.hp <= 0 && !enemy._deathHandled) {
                 enemy._deathHandled = true;
                 this.gold += enemy.gold;
+                this.kills++;
                 GameAudio.enemyDeath();
                 for (let i = 0; i < 6; i++) {
                     const angle = Math.random() * Math.PI * 2;
@@ -2888,6 +3763,9 @@ class Game {
 
         this.enemies = this.enemies.filter(e => e.alive && !e.reachedEnd);
 
+        // Boss minion spawning
+        this._updateBosses();
+
         for (const tower of this.towers) {
             tower.update(dt, this.enemies, this.projectiles);
         }
@@ -2904,10 +3782,11 @@ class Game {
         }
         this.particles = this.particles.filter(p => p.life > 0);
 
-        // Wave income
+        // Wave income + dog house income
         if (this.waveManager.betweenWaves && !this.waveManager._incomeGiven) {
             this.waveManager._incomeGiven = true;
             this.gold += CONFIG.WAVE_INCOME;
+            this._giveDogHouseIncome();
         }
         if (!this.waveManager.betweenWaves) {
             this.waveManager._incomeGiven = false;
@@ -2969,6 +3848,8 @@ class Game {
         this.state = 'lost';
         this._hideTrivia();
         GameAudio.gameOver();
+        const entry = this._saveScore();
+
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
@@ -2976,12 +3857,16 @@ class Game {
         const screen = document.getElementById('game-over-screen');
         screen.style.display = 'flex';
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
+        document.getElementById('go-score').textContent = entry.score;
+        document.getElementById('go-kills').textContent = this.kills;
     }
 
     victory() {
         this.state = 'won';
         this._hideTrivia();
         GameAudio.victory();
+        const entry = this._saveScore();
+
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
@@ -2989,6 +3874,8 @@ class Game {
         const screen = document.getElementById('victory-screen');
         screen.style.display = 'flex';
         document.getElementById('vic-gold').textContent = this.gold;
+        document.getElementById('vic-score').textContent = entry.score;
+        document.getElementById('vic-kills').textContent = this.kills;
     }
 }
 

@@ -1,9 +1,9 @@
-// Wave spawning system with level support
+// Wave spawning system with level support and new enemy types
 
 class WaveManager {
     constructor() {
         this.currentLevel = 0;
-        this.currentWave = 0; // wave within current level
+        this.currentWave = 0;
         this.waveDefs = this._generateWavesForLevel(0);
         this.spawnQueue = [];
         this.spawnTimer = 0;
@@ -28,30 +28,45 @@ class WaveManager {
             const progress = i / level.waves; // 0→1 within level
 
             if (progress <= 0.4) {
-                // Early: mostly kittens
+                // Early: mostly kittens, sprinkle ninjas in later levels
                 for (let j = 0; j < baseCount; j++) wave.push('kitten');
                 if (progress > 0.2) {
                     for (let j = 0; j < Math.floor(i * 0.5); j++) wave.push('tabby');
                 }
+                if (levelIdx >= 1 && progress > 0.25) {
+                    for (let j = 0; j < Math.floor(i * 0.3); j++) wave.push('ninja');
+                }
             } else if (progress <= 0.75) {
-                // Mid: mix
-                for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('kitten');
-                for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('tabby');
+                // Mid: mix with ninja cats
+                for (let j = 0; j < Math.floor(baseCount * 0.3); j++) wave.push('kitten');
+                for (let j = 0; j < Math.floor(baseCount * 0.35); j++) wave.push('tabby');
+                if (levelIdx >= 0) {
+                    for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('ninja');
+                }
                 if (levelIdx >= 1) {
                     for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('fatcat');
                 }
+                // Chonkers appear in mid-to-late waves
+                if (levelIdx >= 1 && progress > 0.6) {
+                    wave.push('chonker');
+                }
             } else {
-                // Late: heavy
-                for (let j = 0; j < Math.floor(baseCount * 0.2); j++) wave.push('kitten');
-                for (let j = 0; j < Math.floor(baseCount * 0.4); j++) wave.push('tabby');
-                for (let j = 0; j < Math.floor(baseCount * 0.25); j++) wave.push('fatcat');
+                // Late: heavy enemies
+                for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('kitten');
+                for (let j = 0; j < Math.floor(baseCount * 0.3); j++) wave.push('tabby');
+                for (let j = 0; j < Math.floor(baseCount * 0.15); j++) wave.push('ninja');
+                for (let j = 0; j < Math.floor(baseCount * 0.2); j++) wave.push('fatcat');
+                // Chonkers in late waves
+                const chonkCount = 1 + levelIdx;
+                for (let j = 0; j < chonkCount; j++) wave.push('chonker');
             }
 
-            // Final wave of level: boss wave
+            // Final wave: BOSS + escorts
             if (i === level.waves) {
-                const bossCount = 3 + levelIdx * 4;
-                for (let j = 0; j < bossCount; j++) wave.push('fatcat');
-                for (let j = 0; j < bossCount; j++) wave.push('tabby');
+                wave.push('boss');
+                const escortCount = 2 + levelIdx * 3;
+                for (let j = 0; j < escortCount; j++) wave.push('fatcat');
+                for (let j = 0; j < escortCount; j++) wave.push('ninja');
             }
 
             waves.push({
@@ -70,7 +85,6 @@ class WaveManager {
     startNextWave() {
         const totalWaves = this.getTotalWavesThisLevel();
         if (this.currentWave >= totalWaves) {
-            // Level done
             if (this.currentLevel < CONFIG.LEVELS.length - 1) {
                 this.levelComplete = true;
             } else {
@@ -122,8 +136,9 @@ class WaveManager {
         if (this.spawnQueue.length > 0) {
             this.spawnTimer -= dt;
             if (this.spawnTimer <= 0) {
-                this.spawnTimer = CONFIG.SPAWN_INTERVAL;
+                // Boss spawns slower
                 const type = this.spawnQueue.shift();
+                this.spawnTimer = type === 'boss' ? 1.5 : CONFIG.SPAWN_INTERVAL;
                 if (path && path.length > 0) {
                     const enemy = new Enemy(type, path, tileSize);
                     const waveDef = this.waveDefs[this.currentWave - 1];

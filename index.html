@@ -15,12 +15,27 @@
             <div class="title-dogs">🐶🐕🐩</div>
             <div class="game-title">PUPPY DEFENDER</div>
             <div class="game-subtitle">Build a maze of dogs to stop the cat invasion!</div>
+            <input id="player-name" type="text" class="name-input" placeholder="Enter your name..." maxlength="16" autocomplete="off">
             <button id="start-btn" class="screen-btn">PLAY</button>
+            <button id="highscores-btn" class="screen-btn" style="background:linear-gradient(180deg,#FF9800 0%,#E65100 100%);padding:10px 30px;font-size:14px;">HIGH SCORES</button>
             <div class="sound-hint">Sound enabled on tap</div>
-            <div class="game-subtitle" style="font-size:12px; margin-top:8px;">
-                Place towers to create a maze.<br>
-                Cats will pathfind around them!
+            <div class="game-subtitle" style="font-size:12px; margin-top:4px;">
+                Place towers to create a maze. Cats will pathfind around them!
             </div>
+        </div>
+
+        <!-- Leaderboard Screen -->
+        <div id="leaderboard-screen" class="overlay-screen" style="display:none;">
+            <div class="end-title" style="color:#FFD700;">HIGH SCORES</div>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr><th>#</th><th>Name</th><th>Score</th><th>Kills</th><th>Level</th></tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <tr><td colspan="5" style="text-align:center;color:#8d6e63;">No scores yet!</td></tr>
+                </tbody>
+            </table>
+            <button id="close-leaderboard-btn" class="screen-btn" style="padding:10px 30px;font-size:14px;">BACK</button>
         </div>
 
         <!-- HUD -->
@@ -84,7 +99,8 @@
         <div id="game-over-screen" class="overlay-screen">
             <div class="end-title">THE CATS GOT THROUGH!</div>
             <div class="end-subtitle">Your puppies fought bravely...</div>
-            <div class="end-stat">Survived to wave <span id="go-wave">0</span></div>
+            <div class="end-stat">Wave <span id="go-wave">0</span> | Kills: <span id="go-kills">0</span></div>
+            <div class="end-stat">Score: <span id="go-score" style="color:#FFD700;">0</span></div>
             <div style="font-size:48px;">😿🐱🐈</div>
             <button class="screen-btn restart-btn">TRY AGAIN</button>
         </div>
@@ -93,7 +109,8 @@
         <div id="victory-screen" class="overlay-screen">
             <div class="end-title">YARD DEFENDED!</div>
             <div class="end-subtitle">The puppies saved the day!</div>
-            <div class="end-stat">Gold remaining: <span id="vic-gold">0</span></div>
+            <div class="end-stat">Gold: <span id="vic-gold">0</span> | Kills: <span id="vic-kills">0</span></div>
+            <div class="end-stat">Score: <span id="vic-score" style="color:#FFD700;">0</span></div>
             <div style="font-size:48px;">🎉🐶🏆</div>
             <button class="screen-btn restart-btn">PLAY AGAIN</button>
         </div>

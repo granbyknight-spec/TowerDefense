@@ -156,6 +156,18 @@ const GameAudio = (() => {
         ]));
         urls.buttonClick = _toWavUrl(_tone(800, 'sine', 0.04, 0.25));
         urls.goldEarned = _toWavUrl(_tone(1000, 'sine', 0.07, 0.25));
+        // Ability activation: dramatic rising chord
+        urls.ability = _toWavUrl(_mix([
+            { samples: _tone(300, 'sine', 0.15, 0.4, 600) },
+            { samples: _tone(450, 'triangle', 0.12, 0.3, 900) },
+            { samples: _tone(600, 'square', 0.1, 0.2, 1200), offset: 0.05 }
+        ]));
+        // Boss roar: low rumble
+        urls.bossRoar = _toWavUrl(_mix([
+            { samples: _tone(80, 'sawtooth', 0.4, 0.5, 40) },
+            { samples: _noise(0.3, 0.35) },
+            { samples: _tone(120, 'square', 0.3, 0.3, 50), offset: 0.1 }
+        ]));
     }
 
     // === PLAYBACK via HTML5 Audio ===
@@ -204,6 +216,8 @@ const GameAudio = (() => {
         victory:      () => _play('victory'),
         buttonClick:  () => _play('buttonClick'),
         goldEarned:   () => _play('goldEarned'),
+        ability:      () => _play('ability'),
+        bossRoar:     () => _play('bossRoar'),
         toggleMute:   () => { muted = !muted; return muted; },
         isMuted:      () => muted
     };

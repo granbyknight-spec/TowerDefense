@@ -437,3 +437,70 @@ body {
 #victory-screen .end-title {
     color: #FFD700;
 }
+
+/* === Name Input === */
+.name-input {
+    width: 70%;
+    max-width: 260px;
+    padding: 10px 14px;
+    border: 2px solid #6d4c41;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.name-input::placeholder {
+    color: #8d6e63;
+    font-weight: 400;
+}
+
+.name-input:focus {
+    border-color: #FFD700;
+    background: rgba(255,255,255,0.15);
+}
+
+/* === Leaderboard Table === */
+.leaderboard-table {
+    width: 90%;
+    max-width: 380px;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 8px 0;
+}
+
+.leaderboard-table th {
+    background: rgba(255,215,0,0.15);
+    color: #FFD700;
+    padding: 8px 6px;
+    text-align: center;
+    font-weight: 700;
+    border-bottom: 2px solid #6d4c41;
+    font-size: 12px;
+}
+
+.leaderboard-table td {
+    padding: 7px 6px;
+    text-align: center;
+    border-bottom: 1px solid rgba(109,76,65,0.4);
+    color: #bcaaa4;
+}
+
+.leaderboard-table tr:nth-child(1) td {
+    color: #FFD700;
+    font-weight: 700;
+}
+
+.leaderboard-table tr:nth-child(2) td {
+    color: #C0C0C0;
+    font-weight: 600;
+}
+
+.leaderboard-table tr:nth-child(3) td {
+    color: #CD7F32;
+    font-weight: 600;
+}

@@ -14,7 +14,6 @@ class Projectile {
         this.alive = true;
         this.size = 4;
 
-        // Store target position in case target dies mid-flight
         this.targetX = target.x;
         this.targetY = target.y;
     }
@@ -22,7 +21,6 @@ class Projectile {
     update(dt, enemies, particles) {
         if (!this.alive) return;
 
-        // Update target position if target still alive
         if (this.target && this.target.alive) {
             this.targetX = this.target.x;
             this.targetY = this.target.y;
@@ -34,11 +32,9 @@ class Projectile {
         const move = this.speed * dt;
 
         if (d <= move + 5) {
-            // Hit
             this.alive = false;
 
             if (this.splashRadius > 0) {
-                // AoE damage
                 for (const enemy of enemies) {
                     if (!enemy.alive) continue;
                     const ed = dist(this.targetX, this.targetY, enemy.x, enemy.y);
@@ -50,7 +46,6 @@ class Projectile {
                     }
                 }
                 GameAudio.splash();
-                // Splash particle
                 if (particles) {
                     for (let i = 0; i < 8; i++) {
                         const angle = (Math.PI * 2 / 8) * i;
@@ -67,7 +62,6 @@ class Projectile {
                     }
                 }
             } else {
-                // Single target damage
                 if (this.target && this.target.alive) {
                     this.target.takeDamage(this.damage);
                     if (this.slow > 0) {

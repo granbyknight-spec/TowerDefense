@@ -1,18 +1,18 @@
-// Grid management - open map with tower placement
+// Grid management - open map with tower placement and obstacles
 
 class Grid {
-    constructor() {
+    constructor(levelIdx) {
         this.cols = CONFIG.GRID_COLS;
         this.rows = CONFIG.GRID_ROWS;
         this.entry = { ...CONFIG.ENTRY };
         this.exit = { ...CONFIG.EXIT };
         this.cells = [];
         this.currentPath = null;
-        this.init();
+        this.init(levelIdx || 0);
     }
 
-    init() {
-        // 0 = empty/walkable, 1 = tower
+    init(levelIdx) {
+        // 0=empty, 1=tower, 2=water, 3=rock, 4=tree, 5=bridge
         this.cells = [];
         for (let r = 0; r < this.rows; r++) {
             this.cells[r] = [];
@@ -20,6 +20,17 @@ class Grid {
                 this.cells[r][c] = 0;
             }
         }
+
+        // Load map obstacles for this level
+        const layout = CONFIG.MAP_LAYOUTS[levelIdx];
+        if (layout && layout.obstacles) {
+            for (const obs of layout.obstacles) {
+                if (obs.row >= 0 && obs.row < this.rows && obs.col >= 0 && obs.col < this.cols) {
+                    this.cells[obs.row][obs.col] = obs.type;
+                }
+            }
+        }
+
         this.recalcPath();
     }
 
@@ -32,14 +43,11 @@ class Grid {
     }
 
     canPlace(col, row) {
-        // Out of bounds
         if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return false;
-        // Already occupied
+        // Only empty cells (type 0) are buildable
         if (this.cells[row][col] !== 0) return false;
-        // Can't place on entry or exit
         if (col === this.entry.col && row === this.entry.row) return false;
         if (col === this.exit.col && row === this.exit.row) return false;
-        // Would block path?
         if (wouldBlockPath(this.cells, col, row, this.cols, this.rows, this.entry, this.exit)) {
             return false;
         }
@@ -54,5 +62,10 @@ class Grid {
     removeTower(col, row) {
         this.cells[row][col] = 0;
         this.recalcPath();
+    }
+
+    getCellType(col, row) {
+        if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return -1;
+        return this.cells[row][col];
     }
 }

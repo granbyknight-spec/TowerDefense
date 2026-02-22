@@ -8,7 +8,7 @@ class Game {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        this.grid = new Grid();
+        this.grid = new Grid(0);
         this.renderer = new Renderer(this.canvas, this.tileSize);
         this.waveManager = new WaveManager();
         this.ui = new UI(this);
@@ -23,6 +23,10 @@ class Game {
         this.lastTime = performance.now();
         this.gameSpeed = 1;
 
+        // Player name & stats
+        this.playerName = '';
+        this.kills = 0;
+
         // Trivia state
         this.triviaActive = false;
         this.triviaTimer = 0;
@@ -30,7 +34,7 @@ class Game {
         this.triviaAnswered = false;
         this.triviaResultTimer = 0;
         this.triviaCorrect = false;
-        this.triviaUsed = []; // indices of used questions
+        this.triviaUsed = [];
         this._triviaShownForWave = -1;
 
         GameAudio.init();
@@ -67,6 +71,11 @@ class Game {
     }
 
     startGame() {
+        // Get player name
+        const nameInput = document.getElementById('player-name');
+        this.playerName = (nameInput ? nameInput.value.trim() : '') || 'Anonymous';
+        this.kills = 0;
+
         this.state = 'playing';
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
@@ -77,7 +86,7 @@ class Game {
 
     restart() {
         this.state = 'playing';
-        this.grid = new Grid();
+        this.grid = new Grid(0);
         this.waveManager = new WaveManager();
         this.towers = [];
         this.enemies = [];
@@ -85,6 +94,7 @@ class Game {
         this.particles = [];
         this.gold = CONFIG.START_GOLD;
         this.lives = CONFIG.START_LIVES;
+        this.kills = 0;
         this.ui.selectedTowerType = null;
         this.ui.selectedTower = null;
         this.ui.hideUpgradePanel();
@@ -152,11 +162,9 @@ class Game {
     // === TRIVIA SYSTEM ===
     _pickTrivia() {
         const pool = CONFIG.TRIVIA;
-        // Reset used list if we've been through all
         if (this.triviaUsed.length >= pool.length) {
             this.triviaUsed = [];
         }
-        // Pick unused question
         let idx;
         do {
             idx = Math.floor(Math.random() * pool.length);
@@ -164,7 +172,6 @@ class Game {
         this.triviaUsed.push(idx);
 
         const q = pool[idx];
-        // Shuffle answers but track correct index
         const indices = [0, 1, 2, 3];
         for (let i = indices.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -213,7 +220,6 @@ class Game {
         const btns = panel.querySelectorAll('.trivia-btn');
         const resultEl = document.getElementById('trivia-result');
 
-        // Highlight correct/wrong
         btns[this.triviaQuestion.correctIdx].classList.add('correct');
         if (!correct) {
             btns[idx].classList.add('wrong');
@@ -245,8 +251,6 @@ class Game {
         }
 
         this.triviaTimer -= dt;
-
-        // Update timer bar
         const fill = document.getElementById('trivia-timer-fill');
         if (fill) {
             const pct = Math.max(0, this.triviaTimer / CONFIG.TRIVIA_TIME) * 100;
@@ -254,7 +258,6 @@ class Game {
         }
 
         if (this.triviaTimer <= 0) {
-            // Time's up
             this.triviaAnswered = true;
             this.triviaResultTimer = 1.0;
             const resultEl = document.getElementById('trivia-result');
@@ -262,7 +265,6 @@ class Game {
                 resultEl.textContent = "Time's up!";
                 resultEl.style.color = '#FF9800';
             }
-            // Highlight correct answer
             const panel = document.getElementById('trivia-panel');
             if (panel) {
                 const btns = panel.querySelectorAll('.trivia-btn');
@@ -285,9 +287,138 @@ class Game {
     nextLevel() {
         document.getElementById('level-complete-screen').style.display = 'none';
         this.waveManager.startNextLevel();
+
+        // Load new map layout, keep existing towers that fit
+        const newLevelIdx = this.waveManager.currentLevel;
+        this.grid = new Grid(newLevelIdx);
+
+        // Remove towers that now conflict with obstacles
+        this.towers = this.towers.filter(t => {
+            const cell = this.grid.getCellType(t.col, t.row);
+            if (cell !== 0 && cell !== 1) {
+                // Tower is on an obstacle tile, refund it
+                this.gold += t.getSellValue();
+                return false;
+            }
+            this.grid.placeTower(t.col, t.row);
+            return true;
+        });
+
+        // Reposition towers for new tileSize
+        for (const tower of this.towers) {
+            tower.tileSize = this.tileSize;
+            const pos = gridToPixel(tower.col, tower.row, this.tileSize);
+            tower.x = pos.x;
+            tower.y = pos.y;
+        }
+
+        this.enemies = [];
+        this.projectiles = [];
         this.state = 'playing';
         this._triviaShownForWave = -1;
         this.ui.updateHUD();
+    }
+
+    // === LEADERBOARD ===
+    _calcScore() {
+        return this.kills * CONFIG.SCORE_PER_KILL + this.lives * CONFIG.SCORE_PER_LIFE + this.gold;
+    }
+
+    _saveScore() {
+        const entry = {
+            name: this.playerName,
+            score: this._calcScore(),
+            kills: this.kills,
+            gold: this.gold,
+            lives: this.lives,
+            level: this.waveManager.currentLevel + 1,
+            date: new Date().toLocaleDateString()
+        };
+
+        let scores = [];
+        try {
+            const raw = localStorage.getItem(CONFIG.LEADERBOARD_KEY);
+            if (raw) scores = JSON.parse(raw);
+        } catch (e) {}
+
+        scores.push(entry);
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, CONFIG.LEADERBOARD_MAX);
+
+        try {
+            localStorage.setItem(CONFIG.LEADERBOARD_KEY, JSON.stringify(scores));
+        } catch (e) {}
+
+        return entry;
+    }
+
+    _loadScores() {
+        try {
+            const raw = localStorage.getItem(CONFIG.LEADERBOARD_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [];
+    }
+
+    showLeaderboard() {
+        const screen = document.getElementById('leaderboard-screen');
+        if (!screen) return;
+
+        const scores = this._loadScores();
+        const tbody = document.getElementById('leaderboard-body');
+        if (tbody) {
+            if (scores.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8d6e63;">No scores yet!</td></tr>';
+            } else {
+                tbody.innerHTML = scores.map((s, i) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${s.name}</td>
+                        <td>${s.score}</td>
+                        <td>${s.kills}</td>
+                        <td>Lv${s.level}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        screen.style.display = 'flex';
+    }
+
+    // === BOSS MINION SPAWNING ===
+    _updateBosses() {
+        for (const enemy of this.enemies) {
+            if (!enemy.isBoss || !enemy.alive) continue;
+
+            // Spawn minions when timer hits 0
+            if (enemy.minionTimer <= 0) {
+                enemy.minionTimer = 8;
+                const path = this.grid.currentPath;
+                if (path && path.length > 0) {
+                    for (let i = 0; i < 2; i++) {
+                        const minion = new Enemy('kitten', path, this.tileSize);
+                        minion.x = enemy.x + (Math.random() - 0.5) * 10;
+                        minion.y = enemy.y + (Math.random() - 0.5) * 10;
+                        minion.pathIndex = Math.max(0, enemy.pathIndex - 1);
+                        this.enemies.push(minion);
+                    }
+                    GameAudio.bossRoar();
+                }
+            }
+        }
+    }
+
+    // === DOG HOUSE INCOME ===
+    _giveDogHouseIncome() {
+        let income = 0;
+        for (const tower of this.towers) {
+            if (tower.goldPerWave > 0) {
+                income += tower.goldPerWave;
+            }
+        }
+        if (income > 0) {
+            this.gold += income;
+        }
     }
 
     update(dt) {
@@ -295,13 +426,10 @@ class Game {
 
         dt = Math.min(dt, 0.1);
 
-        // Trivia update
         this._updateTrivia(dt);
-
-        // Spawn enemies via wave manager
         this.waveManager.update(dt, this.grid.currentPath, this.tileSize, this.enemies);
 
-        // Show trivia between waves (once per wave gap)
+        // Show trivia between waves
         if (this.waveManager.betweenWaves && !this.triviaActive
             && this._triviaShownForWave !== this.waveManager.currentWave
             && this.waveManager.currentWave > 0) {
@@ -309,7 +437,6 @@ class Game {
             this._showTrivia();
         }
 
-        // Level complete check
         if (this.waveManager.levelComplete) {
             this._showLevelComplete();
             return;
@@ -333,6 +460,7 @@ class Game {
             if (!enemy.alive && enemy.hp <= 0 && !enemy._deathHandled) {
                 enemy._deathHandled = true;
                 this.gold += enemy.gold;
+                this.kills++;
                 GameAudio.enemyDeath();
                 for (let i = 0; i < 6; i++) {
                     const angle = Math.random() * Math.PI * 2;
@@ -350,6 +478,9 @@ class Game {
 
         this.enemies = this.enemies.filter(e => e.alive && !e.reachedEnd);
 
+        // Boss minion spawning
+        this._updateBosses();
+
         for (const tower of this.towers) {
             tower.update(dt, this.enemies, this.projectiles);
         }
@@ -366,10 +497,11 @@ class Game {
         }
         this.particles = this.particles.filter(p => p.life > 0);
 
-        // Wave income
+        // Wave income + dog house income
         if (this.waveManager.betweenWaves && !this.waveManager._incomeGiven) {
             this.waveManager._incomeGiven = true;
             this.gold += CONFIG.WAVE_INCOME;
+            this._giveDogHouseIncome();
         }
         if (!this.waveManager.betweenWaves) {
             this.waveManager._incomeGiven = false;
@@ -431,6 +563,8 @@ class Game {
         this.state = 'lost';
         this._hideTrivia();
         GameAudio.gameOver();
+        const entry = this._saveScore();
+
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
@@ -438,12 +572,16 @@ class Game {
         const screen = document.getElementById('game-over-screen');
         screen.style.display = 'flex';
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
+        document.getElementById('go-score').textContent = entry.score;
+        document.getElementById('go-kills').textContent = this.kills;
     }
 
     victory() {
         this.state = 'won';
         this._hideTrivia();
         GameAudio.victory();
+        const entry = this._saveScore();
+
         document.getElementById('hud').style.display = 'none';
         document.getElementById('tower-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
@@ -451,6 +589,8 @@ class Game {
         const screen = document.getElementById('victory-screen');
         screen.style.display = 'flex';
         document.getElementById('vic-gold').textContent = this.gold;
+        document.getElementById('vic-score').textContent = entry.score;
+        document.getElementById('vic-kills').textContent = this.kills;
     }
 }
 
