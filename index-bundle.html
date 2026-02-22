@@ -625,6 +625,7 @@ body {
             <div class="game-subtitle">Build a maze of dogs to stop the cat invasion!</div>
             <input id="player-name" type="text" class="name-input" placeholder="Enter your name..." maxlength="16" autocomplete="off">
             <button id="start-btn" class="screen-btn">PLAY</button>
+            <div id="level-select" style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;justify-content:center;"></div>
             <button id="highscores-btn" class="screen-btn" style="background:linear-gradient(180deg,#FF9800 0%,#E65100 100%);padding:10px 30px;font-size:14px;">HIGH SCORES</button>
             <div class="sound-hint">Sound enabled on tap</div>
             <div class="game-subtitle" style="font-size:12px; margin-top:4px;">
@@ -692,9 +693,6 @@ body {
             </div>
             <div id="trivia-result" class="trivia-result"></div>
         </div>
-
-        <!-- Send Early Button -->
-        <button id="send-early-btn">Send Early (+30g)</button>
 
         <!-- Upgrade/Sell Panel -->
         <div id="upgrade-panel"></div>
@@ -2620,6 +2618,8 @@ class Tower {
                     this.slowDuration
                 );
 
+                proj.towerType = this.type;
+
                 // Stun super perk
                 if (this.superPerk === 'stun') {
                     proj.stunDuration = 1.0;
@@ -2843,10 +2843,10 @@ class Projectile {
 // Wave spawning system with level support and new enemy types
 
 class WaveManager {
-    constructor() {
-        this.currentLevel = 0;
+    constructor(startLevel) {
+        this.currentLevel = startLevel || 0;
         this.currentWave = 0;
-        this.waveDefs = this._generateWavesForLevel(0);
+        this.waveDefs = this._generateWavesForLevel(this.currentLevel);
         this.spawnQueue = [];
         this.spawnTimer = 0;
         this.waveInProgress = false;
@@ -4245,37 +4245,206 @@ class Renderer {
 
         if (!proj.alive) return;
 
-        // Draw trail
+        const type = proj.towerType || '';
+
+        // --- Type-specific trail ---
         if (proj.trail && proj.trail.length > 0) {
             for (let i = 0; i < proj.trail.length; i++) {
                 const t = proj.trail[i];
                 const alpha = (t.life / 0.2) * 0.6;
                 const sz = proj.size * (t.life / 0.2) * 0.8;
                 ctx.globalAlpha = alpha;
-                ctx.fillStyle = proj.color;
-                ctx.beginPath();
-                ctx.arc(t.x, t.y, sz, 0, Math.PI * 2);
-                ctx.fill();
+                if (type === 'poodle') {
+                    // Sparkly pink trail with shimmer
+                    ctx.fillStyle = i % 2 === 0 ? '#FF69B4' : '#DA70D6';
+                    ctx.beginPath();
+                    ctx.arc(t.x + (Math.random() - 0.5) * 2, t.y + (Math.random() - 0.5) * 2, sz * 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (type === 'husky') {
+                    // Ice crystal trail
+                    ctx.fillStyle = 'rgba(180,230,255,0.7)';
+                    ctx.beginPath();
+                    ctx.save();
+                    ctx.translate(t.x, t.y);
+                    ctx.rotate(i * 0.8);
+                    ctx.fillRect(-sz * 0.5, -sz * 0.5, sz, sz);
+                    ctx.restore();
+                } else if (type === 'sparky') {
+                    // Electric crackle trail
+                    ctx.fillStyle = '#FFEB3B';
+                    ctx.beginPath();
+                    ctx.arc(t.x + (Math.random() - 0.5) * 4, t.y + (Math.random() - 0.5) * 4, sz * 0.7, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = proj.color;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, sz, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
             ctx.globalAlpha = 1;
         }
 
-        const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
-        glow.addColorStop(0, proj.color + '88');
-        glow.addColorStop(1, proj.color + '00');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        const core = ctx.createRadialGradient(proj.x - proj.size * 0.3, proj.y - proj.size * 0.3, 0, proj.x, proj.y, proj.size);
-        core.addColorStop(0, '#fff');
-        core.addColorStop(0.4, proj.color);
-        core.addColorStop(1, this._shade(proj.color, 0.5));
-        ctx.fillStyle = core;
-        ctx.beginPath();
-        ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
-        ctx.fill();
+        // --- Type-specific projectile body ---
+        if (type === 'barker') {
+            // Bark shockwave ring
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
+            glow.addColorStop(0, 'rgba(245,222,179,0.5)');
+            glow.addColorStop(1, 'rgba(245,222,179,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Expanding ring
+            ctx.strokeStyle = 'rgba(245,222,179,0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 2, 0, Math.PI * 2);
+            ctx.stroke();
+            // Core
+            ctx.fillStyle = '#F5DEB3';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'poodle') {
+            // Sparkly pink/purple orb
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3.5);
+            glow.addColorStop(0, 'rgba(255,105,180,0.5)');
+            glow.addColorStop(0.5, 'rgba(218,112,214,0.2)');
+            glow.addColorStop(1, 'rgba(218,112,214,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            // Core with sparkle
+            const core = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size);
+            core.addColorStop(0, '#FFF');
+            core.addColorStop(0.3, '#FF69B4');
+            core.addColorStop(1, '#DA70D6');
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.1, 0, Math.PI * 2);
+            ctx.fill();
+            // Tiny sparkle dots
+            for (let i = 0; i < 3; i++) {
+                const a = Date.now() / 150 + i * 2.1;
+                const r = proj.size * (1.5 + Math.sin(a) * 0.5);
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.beginPath();
+                ctx.arc(proj.x + Math.cos(a) * r, proj.y + Math.sin(a) * r, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (type === 'husky') {
+            // Icy crystalline projectile
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
+            glow.addColorStop(0, 'rgba(100,200,255,0.5)');
+            glow.addColorStop(1, 'rgba(100,200,255,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Diamond/crystal shape
+            ctx.save();
+            ctx.translate(proj.x, proj.y);
+            ctx.rotate(Date.now() / 200);
+            ctx.fillStyle = '#B3E5FC';
+            ctx.beginPath();
+            ctx.moveTo(0, -proj.size * 1.3);
+            ctx.lineTo(proj.size * 0.8, 0);
+            ctx.lineTo(0, proj.size * 1.3);
+            ctx.lineTo(-proj.size * 0.8, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.moveTo(0, -proj.size * 1.3);
+            ctx.lineTo(proj.size * 0.3, 0);
+            ctx.lineTo(0, proj.size * 0.3);
+            ctx.lineTo(-proj.size * 0.3, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        } else if (type === 'bigboi') {
+            // Heavy cannonball
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 4);
+            glow.addColorStop(0, 'rgba(255,99,71,0.4)');
+            glow.addColorStop(0.5, 'rgba(255,69,0,0.15)');
+            glow.addColorStop(1, 'rgba(255,69,0,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 4, 0, Math.PI * 2);
+            ctx.fill();
+            // Dark heavy core
+            const core = ctx.createRadialGradient(proj.x - proj.size * 0.3, proj.y - proj.size * 0.3, 0, proj.x, proj.y, proj.size * 1.5);
+            core.addColorStop(0, '#666');
+            core.addColorStop(0.4, '#333');
+            core.addColorStop(1, '#111');
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            // Hot glow ring
+            ctx.strokeStyle = 'rgba(255,100,50,0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.7, 0, Math.PI * 2);
+            ctx.stroke();
+            // Highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.beginPath();
+            ctx.arc(proj.x - proj.size * 0.4, proj.y - proj.size * 0.4, proj.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'sparky') {
+            // Electric ball with crackle
+            ctx.save();
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 10;
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
+            glow.addColorStop(0, 'rgba(255,235,59,0.6)');
+            glow.addColorStop(1, 'rgba(255,235,59,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Core
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFEB3B';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+            // Mini lightning spikes
+            ctx.strokeStyle = '#FFF';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 4; i++) {
+                const a = Date.now() / 80 + i * 1.57;
+                const len = proj.size * (2 + Math.random());
+                ctx.beginPath();
+                ctx.moveTo(proj.x, proj.y);
+                ctx.lineTo(proj.x + Math.cos(a) * len, proj.y + Math.sin(a) * len);
+                ctx.stroke();
+            }
+            ctx.restore();
+        } else {
+            // Default projectile (generic)
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
+            glow.addColorStop(0, proj.color + '88');
+            glow.addColorStop(1, proj.color + '00');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            const core = ctx.createRadialGradient(proj.x - proj.size * 0.3, proj.y - proj.size * 0.3, 0, proj.x, proj.y, proj.size);
+            core.addColorStop(0, '#fff');
+            core.addColorStop(0.4, proj.color);
+            core.addColorStop(1, this._shade(proj.color, 0.5));
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     // === CHAIN LIGHTNING ARC ===
@@ -4431,6 +4600,163 @@ class Renderer {
         ctx.fillText(ct.subtext, ct.x, ct.y + fontSize * 0.7);
 
         ctx.restore();
+    }
+
+    // === ABILITY VISUAL EFFECTS ===
+    drawAbilityEffect(ef) {
+        const ctx = this.ctx;
+        const progress = 1 - ef.life / ef.maxLife;
+
+        if (ef.type === 'eruption') {
+            // Ground eruption: expanding shockwave ring + fire/dirt burst
+            ctx.save();
+            const alpha = Math.max(0, ef.life / ef.maxLife);
+            const r = ef.radius * (0.3 + progress * 1.2);
+
+            // Shockwave ring
+            ctx.strokeStyle = `rgba(255,100,50,${(alpha * 0.8).toFixed(2)})`;
+            ctx.lineWidth = 4 * alpha;
+            ctx.beginPath();
+            ctx.arc(ef.x, ef.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner fire glow
+            const glow = ctx.createRadialGradient(ef.x, ef.y, 0, ef.x, ef.y, r * 0.8);
+            glow.addColorStop(0, `rgba(255,200,50,${(alpha * 0.5).toFixed(2)})`);
+            glow.addColorStop(0.4, `rgba(255,80,20,${(alpha * 0.3).toFixed(2)})`);
+            glow.addColorStop(1, 'rgba(255,50,0,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(ef.x, ef.y, r * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Crack lines radiating from center
+            if (progress < 0.6) {
+                ctx.strokeStyle = `rgba(255,200,100,${(alpha * 0.6).toFixed(2)})`;
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 8; i++) {
+                    const a = (i / 8) * Math.PI * 2 + ef.x * 0.1;
+                    const len = r * (0.5 + Math.random() * 0.5);
+                    ctx.beginPath();
+                    ctx.moveTo(ef.x, ef.y);
+                    ctx.lineTo(ef.x + Math.cos(a) * len, ef.y + Math.sin(a) * len);
+                    ctx.stroke();
+                }
+            }
+
+            // Ground scar (darkened earth)
+            if (progress > 0.3) {
+                ctx.fillStyle = `rgba(40,20,0,${(alpha * 0.3).toFixed(2)})`;
+                ctx.beginPath();
+                ctx.ellipse(ef.x, ef.y, r * 0.6, r * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        } else if (ef.type === 'bolt') {
+            // Lightning bolt from sky to target
+            ctx.save();
+            const alpha = Math.max(0, ef.life / ef.maxLife);
+            ctx.globalAlpha = alpha;
+
+            // Bright flash at strike point
+            const flashR = 30 * alpha;
+            const flash = ctx.createRadialGradient(ef.x, ef.y, 0, ef.x, ef.y, flashR);
+            flash.addColorStop(0, 'rgba(255,255,255,0.9)');
+            flash.addColorStop(0.3, 'rgba(255,255,100,0.5)');
+            flash.addColorStop(1, 'rgba(255,255,100,0)');
+            ctx.fillStyle = flash;
+            ctx.beginPath();
+            ctx.arc(ef.x, ef.y, flashR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main bolt from top of screen to target
+            ctx.strokeStyle = '#FFEB3B';
+            ctx.lineWidth = 4;
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 15;
+
+            const segments = 8;
+            const jitter = 15;
+            const dy = ef.y - ef.startY;
+            ctx.beginPath();
+            ctx.moveTo(ef.x + (Math.random() - 0.5) * 10, ef.startY);
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                ctx.lineTo(
+                    ef.x + (Math.random() - 0.5) * jitter,
+                    ef.startY + dy * t
+                );
+            }
+            ctx.lineTo(ef.x, ef.y);
+            ctx.stroke();
+
+            // Bright white core bolt
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(ef.x + (Math.random() - 0.5) * 5, ef.startY);
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                ctx.lineTo(
+                    ef.x + (Math.random() - 0.5) * jitter * 0.5,
+                    ef.startY + dy * t
+                );
+            }
+            ctx.lineTo(ef.x, ef.y);
+            ctx.stroke();
+
+            // Branch bolts
+            if (Math.random() > 0.3) {
+                ctx.strokeStyle = 'rgba(255,235,59,0.6)';
+                ctx.lineWidth = 1.5;
+                const branchY = ef.startY + dy * (0.3 + Math.random() * 0.4);
+                const branchX = ef.x + (Math.random() - 0.5) * jitter;
+                const endX = branchX + (Math.random() - 0.5) * 40;
+                const endY = branchY + 20 + Math.random() * 30;
+                ctx.beginPath();
+                ctx.moveTo(branchX, branchY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        } else if (ef.type === 'stormcloud') {
+            // Dark storm cloud across top of screen
+            ctx.save();
+            const alpha = Math.min(1, ef.life / (ef.maxLife - 9), (ef.maxLife - (ef.maxLife - ef.life)) / 2) * 0.6;
+            ctx.globalAlpha = Math.min(0.6, alpha);
+            const t = Date.now() / 1000;
+
+            // Multiple overlapping dark cloud ellipses
+            for (let i = 0; i < 8; i++) {
+                const cx = ef.w * (i / 8 + 0.06) + Math.sin(t * 0.3 + i) * 15;
+                const cy = 25 + Math.sin(t * 0.5 + i * 0.8) * 8;
+                const rx = ef.w * 0.12 + Math.sin(i * 1.3) * 10;
+                const ry = 20 + Math.sin(i * 0.7) * 5;
+
+                const cloud = ctx.createRadialGradient(cx, cy - 5, 0, cx, cy, ry * 1.5);
+                cloud.addColorStop(0, 'rgba(30,30,50,0.8)');
+                cloud.addColorStop(0.5, 'rgba(40,40,60,0.5)');
+                cloud.addColorStop(1, 'rgba(50,50,70,0)');
+                ctx.fillStyle = cloud;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Occasional internal flicker
+            if (Math.random() > 0.92) {
+                ctx.fillStyle = 'rgba(255,255,200,0.15)';
+                const fx = Math.random() * ef.w;
+                ctx.beginPath();
+                ctx.ellipse(fx, 20, 30, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
     }
 
     // === AMBIENT PARTICLE ===
@@ -4642,29 +4968,29 @@ class UI {
 
         this.setupTowerButtons();
 
-        // Send Early button
-        const sendBtn = document.getElementById('send-early-btn');
-        if (sendBtn) {
-            sendBtn.addEventListener('click', () => {
-                GameAudio.unlock();
-                // Skip setup countdown if active
-                if (this.game.setupTimer > 0) {
-                    this.game.setupTimer = 0;
-                    this.game.gold += CONFIG.SEND_EARLY_BONUS;
-                    return;
-                }
-                if (this.game.waveManager.sendEarly()) {
-                    this.game.gold += CONFIG.SEND_EARLY_BONUS;
-                }
-            });
-        }
-
-        // Start button
+        // Start button (Level 1)
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                this.game.startGame();
+                this.game.startGame(0);
+            });
+        }
+
+        // Level select buttons
+        const levelSelect = document.getElementById('level-select');
+        if (levelSelect) {
+            CONFIG.LEVELS.forEach((lvl, idx) => {
+                if (idx === 0) return; // Skip level 1, that's the main PLAY button
+                const btn = document.createElement('button');
+                btn.className = 'screen-btn';
+                btn.style.cssText = 'padding:8px 16px;font-size:12px;background:linear-gradient(180deg,#7B1FA2 0%,#4A148C 100%)';
+                btn.textContent = `Start: ${lvl.name}`;
+                btn.addEventListener('click', () => {
+                    GameAudio.unlock();
+                    this.game.startGame(idx);
+                });
+                levelSelect.appendChild(btn);
             });
         }
 
@@ -5091,7 +5417,6 @@ class UI {
         const livesEl = document.getElementById('lives-display');
         const waveEl = document.getElementById('wave-display');
         const timerEl = document.getElementById('timer-display');
-        const sendBtn = document.getElementById('send-early-btn');
         const levelEl = document.getElementById('level-display');
 
         if (goldEl) goldEl.textContent = this.game.gold;
@@ -5102,10 +5427,6 @@ class UI {
         const timer = this.game.waveManager.getTimerDisplay();
         if (timerEl) {
             timerEl.textContent = timer !== null ? `Next: ${timer}s` : '';
-        }
-        if (sendBtn) {
-            const showSend = this.game.setupTimer > 0 || this.game.waveManager.betweenWaves;
-            sendBtn.style.display = showSend ? 'block' : 'none';
         }
 
         this.updateTowerButtons();
@@ -5188,6 +5509,9 @@ class Game {
 
         // Ambient environmental particles (level-themed)
         this.ambientParticles = [];
+
+        // Ability visual effects (explosions, lightning bolts, storm clouds)
+        this.abilityEffects = [];
 
         this.grid = new Grid(0);
         this.renderer = new Renderer(this.canvas, this.tileSize);
@@ -5275,7 +5599,8 @@ class Game {
         this.camY = Math.max(-maxPanY, Math.min(maxPanY, this.camY));
     }
 
-    startGame() {
+    startGame(startLevel) {
+        startLevel = startLevel || 0;
         const nameInput = document.getElementById('player-name');
         this.playerName = (nameInput ? nameInput.value.trim() : '') || 'Anonymous';
         this.kills = 0;
@@ -5283,14 +5608,56 @@ class Game {
         this.comboTimer = 0;
         this.comboTexts = [];
         this.maxCombo = 0;
+        this.shakeTimer = 0;
+        this.shakeIntensity = 0;
+
+        // Reset game objects
+        this.towers = [];
+        this.enemies = [];
+        this.projectiles = [];
+        this.particles = [];
+        this.damageNumbers = [];
+        this.ambientParticles = [];
+        this.abilityEffects = [];
+        this.lives = CONFIG.START_LIVES;
+
+        // Level select support
+        this.grid = new Grid(startLevel);
+        this.waveManager = new WaveManager(startLevel);
+        this.gold = startLevel > 0 ? 3000 : CONFIG.START_GOLD;
+
+        // Reset abilities
+        for (const key in this.abilityState) {
+            this.abilityState[key].cooldown = 0;
+            this.abilityState[key].active = false;
+            this.abilityState[key].timer = 0;
+            this.abilityState[key].effectTick = 0;
+        }
+
+        this.triviaActive = false;
+        this.triviaUsed = [];
+        this._triviaShownForWave = -1;
+        this._hideTrivia();
+
+        this.ui.selectedTowerType = null;
+        this.ui.selectedTower = null;
+        this.ui.hideUpgradePanel();
 
         this.state = 'playing';
         this.setupTimer = CONFIG.SETUP_TIME;
+        this.gameSpeed = 1;
+        this.resetCamera();
+        this.resize();
+        const speedBtn = document.getElementById('speed-btn');
+        if (speedBtn) speedBtn.textContent = '1x';
         document.getElementById('title-screen').style.display = 'none';
+        document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('victory-screen').style.display = 'none';
+        document.getElementById('level-complete-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
-        GameAudio.startMusic(0);
+        GameAudio.startMusic(startLevel);
         this.ui.updateHUD();
     }
 
@@ -5332,6 +5699,7 @@ class Game {
         this.shakeIntensity = 0;
         this.maxCombo = 0;
         this.ambientParticles = [];
+        this.abilityEffects = [];
 
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'none';
@@ -5611,15 +5979,83 @@ class Game {
                 }
             }
         } else if (type === 'bigboi') {
-            // MEGA WOOF: periodic damage to all enemies
-            for (const e of this.enemies) {
-                if (e.alive && !e.reachedEnd) {
-                    e.takeDamage(15);
+            // MEGA WOOF: massive ground eruptions at random enemies
+            const dmg = 40;
+            const targets = this.enemies.filter(e => e.alive && !e.reachedEnd);
+            // Pick up to 3 random targets for eruption epicenters
+            const epicenters = [];
+            const shuffled = [...targets].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < Math.min(3, shuffled.length); i++) {
+                epicenters.push({ x: shuffled[i].x, y: shuffled[i].y });
+            }
+            // Damage all enemies
+            for (const e of targets) {
+                e.takeDamage(dmg);
+            }
+            // Spawn ground eruption effects at epicenters
+            for (const ep of epicenters) {
+                this.abilityEffects.push({
+                    type: 'eruption', x: ep.x, y: ep.y,
+                    life: 0.8, maxLife: 0.8, radius: this.tileSize * 2
+                });
+                // Debris particles
+                for (let i = 0; i < 15; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 60 + Math.random() * 120;
+                    this.particles.push({
+                        x: ep.x, y: ep.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 80,
+                        life: 0.6 + Math.random() * 0.4, maxLife: 1.0,
+                        color: Math.random() > 0.5 ? '#FF6347' : '#8B4513',
+                        size: 3 + Math.random() * 4
+                    });
                 }
             }
+            // Screen shake
+            this.shakeTimer = 0.5;
+            this.shakeIntensity = 6;
+        } else if (type === 'sparky') {
+            // THUNDER STORM: storm cloud + lightning bolts from sky
+            const targets = this.enemies.filter(e => e.alive && !e.reachedEnd);
+            const cw = this.canvas.width;
+            // Spawn storm cloud effect if not already there
+            const hasCloud = this.abilityEffects.some(e => e.type === 'stormcloud');
+            if (!hasCloud) {
+                this.abilityEffects.push({
+                    type: 'stormcloud', x: cw / 2, y: 0,
+                    life: 10.5, maxLife: 10.5, w: cw
+                });
+            }
+            // Strike up to 4 random enemies with lightning bolts
+            const shuffled = [...targets].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < Math.min(4, shuffled.length); i++) {
+                const e = shuffled[i];
+                e.takeDamage(25);
+                this.abilityEffects.push({
+                    type: 'bolt', x: e.x, y: e.y,
+                    startY: -10,
+                    life: 0.35, maxLife: 0.35
+                });
+                // Spark particles at strike point
+                for (let j = 0; j < 8; j++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 40 + Math.random() * 60;
+                    this.particles.push({
+                        x: e.x, y: e.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 0.3, maxLife: 0.3,
+                        color: '#FFEB3B', size: 3
+                    });
+                }
+            }
+            // Brief screen flash
+            this.shakeTimer = 0.15;
+            this.shakeIntensity = 3;
         }
         // barker: handled by tower's rapid fireRate (already set in startAbility)
-        // sparky: handled by tower doubling chainCount when abilityActive
+        // sparky chain doubling still happens via tower.js abilityActive check
     }
 
     // === TRIVIA SYSTEM ===
@@ -5765,6 +6201,7 @@ class Game {
         this.projectiles = [];
         this.particles = [];
         this.ambientParticles = [];
+        this.abilityEffects = [];
         this.ui.selectedTowerType = null;
         this.ui.selectedTower = null;
         this.ui.hideUpgradePanel();
@@ -6160,6 +6597,12 @@ class Game {
         // Ambient environmental particles
         this._updateAmbientParticles(dt);
 
+        // Update ability visual effects
+        for (const ef of this.abilityEffects) {
+            ef.life -= dt;
+        }
+        this.abilityEffects = this.abilityEffects.filter(e => e.life > 0);
+
         // Wave income + dog house income
         if (this.waveManager.betweenWaves && !this.waveManager._incomeGiven) {
             this.waveManager._incomeGiven = true;
@@ -6293,6 +6736,11 @@ class Game {
         // Floating combo milestone texts
         for (const ct of this.comboTexts) {
             this.renderer.drawComboText(ct);
+        }
+
+        // Ability visual effects (eruptions, lightning bolts, storm cloud)
+        for (const ef of this.abilityEffects) {
+            this.renderer.drawAbilityEffect(ef);
         }
 
         // Ambient environmental particles

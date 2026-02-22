@@ -97,29 +97,29 @@ class UI {
 
         this.setupTowerButtons();
 
-        // Send Early button
-        const sendBtn = document.getElementById('send-early-btn');
-        if (sendBtn) {
-            sendBtn.addEventListener('click', () => {
-                GameAudio.unlock();
-                // Skip setup countdown if active
-                if (this.game.setupTimer > 0) {
-                    this.game.setupTimer = 0;
-                    this.game.gold += CONFIG.SEND_EARLY_BONUS;
-                    return;
-                }
-                if (this.game.waveManager.sendEarly()) {
-                    this.game.gold += CONFIG.SEND_EARLY_BONUS;
-                }
-            });
-        }
-
-        // Start button
+        // Start button (Level 1)
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
                 GameAudio.unlock();
-                this.game.startGame();
+                this.game.startGame(0);
+            });
+        }
+
+        // Level select buttons
+        const levelSelect = document.getElementById('level-select');
+        if (levelSelect) {
+            CONFIG.LEVELS.forEach((lvl, idx) => {
+                if (idx === 0) return; // Skip level 1, that's the main PLAY button
+                const btn = document.createElement('button');
+                btn.className = 'screen-btn';
+                btn.style.cssText = 'padding:8px 16px;font-size:12px;background:linear-gradient(180deg,#7B1FA2 0%,#4A148C 100%)';
+                btn.textContent = `Start: ${lvl.name}`;
+                btn.addEventListener('click', () => {
+                    GameAudio.unlock();
+                    this.game.startGame(idx);
+                });
+                levelSelect.appendChild(btn);
             });
         }
 
@@ -546,7 +546,6 @@ class UI {
         const livesEl = document.getElementById('lives-display');
         const waveEl = document.getElementById('wave-display');
         const timerEl = document.getElementById('timer-display');
-        const sendBtn = document.getElementById('send-early-btn');
         const levelEl = document.getElementById('level-display');
 
         if (goldEl) goldEl.textContent = this.game.gold;
@@ -557,10 +556,6 @@ class UI {
         const timer = this.game.waveManager.getTimerDisplay();
         if (timerEl) {
             timerEl.textContent = timer !== null ? `Next: ${timer}s` : '';
-        }
-        if (sendBtn) {
-            const showSend = this.game.setupTimer > 0 || this.game.waveManager.betweenWaves;
-            sendBtn.style.display = showSend ? 'block' : 'none';
         }
 
         this.updateTowerButtons();

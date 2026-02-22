@@ -235,6 +235,8 @@ class Tower {
                     this.slowDuration
                 );
 
+                proj.towerType = this.type;
+
                 // Stun super perk
                 if (this.superPerk === 'stun') {
                     proj.stunDuration = 1.0;

@@ -1210,37 +1210,206 @@ class Renderer {
 
         if (!proj.alive) return;
 
-        // Draw trail
+        const type = proj.towerType || '';
+
+        // --- Type-specific trail ---
         if (proj.trail && proj.trail.length > 0) {
             for (let i = 0; i < proj.trail.length; i++) {
                 const t = proj.trail[i];
                 const alpha = (t.life / 0.2) * 0.6;
                 const sz = proj.size * (t.life / 0.2) * 0.8;
                 ctx.globalAlpha = alpha;
-                ctx.fillStyle = proj.color;
-                ctx.beginPath();
-                ctx.arc(t.x, t.y, sz, 0, Math.PI * 2);
-                ctx.fill();
+                if (type === 'poodle') {
+                    // Sparkly pink trail with shimmer
+                    ctx.fillStyle = i % 2 === 0 ? '#FF69B4' : '#DA70D6';
+                    ctx.beginPath();
+                    ctx.arc(t.x + (Math.random() - 0.5) * 2, t.y + (Math.random() - 0.5) * 2, sz * 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (type === 'husky') {
+                    // Ice crystal trail
+                    ctx.fillStyle = 'rgba(180,230,255,0.7)';
+                    ctx.beginPath();
+                    ctx.save();
+                    ctx.translate(t.x, t.y);
+                    ctx.rotate(i * 0.8);
+                    ctx.fillRect(-sz * 0.5, -sz * 0.5, sz, sz);
+                    ctx.restore();
+                } else if (type === 'sparky') {
+                    // Electric crackle trail
+                    ctx.fillStyle = '#FFEB3B';
+                    ctx.beginPath();
+                    ctx.arc(t.x + (Math.random() - 0.5) * 4, t.y + (Math.random() - 0.5) * 4, sz * 0.7, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = proj.color;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, sz, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
             ctx.globalAlpha = 1;
         }
 
-        const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
-        glow.addColorStop(0, proj.color + '88');
-        glow.addColorStop(1, proj.color + '00');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        const core = ctx.createRadialGradient(proj.x - proj.size * 0.3, proj.y - proj.size * 0.3, 0, proj.x, proj.y, proj.size);
-        core.addColorStop(0, '#fff');
-        core.addColorStop(0.4, proj.color);
-        core.addColorStop(1, this._shade(proj.color, 0.5));
-        ctx.fillStyle = core;
-        ctx.beginPath();
-        ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
-        ctx.fill();
+        // --- Type-specific projectile body ---
+        if (type === 'barker') {
+            // Bark shockwave ring
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
+            glow.addColorStop(0, 'rgba(245,222,179,0.5)');
+            glow.addColorStop(1, 'rgba(245,222,179,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Expanding ring
+            ctx.strokeStyle = 'rgba(245,222,179,0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 2, 0, Math.PI * 2);
+            ctx.stroke();
+            // Core
+            ctx.fillStyle = '#F5DEB3';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'poodle') {
+            // Sparkly pink/purple orb
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3.5);
+            glow.addColorStop(0, 'rgba(255,105,180,0.5)');
+            glow.addColorStop(0.5, 'rgba(218,112,214,0.2)');
+            glow.addColorStop(1, 'rgba(218,112,214,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            // Core with sparkle
+            const core = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size);
+            core.addColorStop(0, '#FFF');
+            core.addColorStop(0.3, '#FF69B4');
+            core.addColorStop(1, '#DA70D6');
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.1, 0, Math.PI * 2);
+            ctx.fill();
+            // Tiny sparkle dots
+            for (let i = 0; i < 3; i++) {
+                const a = Date.now() / 150 + i * 2.1;
+                const r = proj.size * (1.5 + Math.sin(a) * 0.5);
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.beginPath();
+                ctx.arc(proj.x + Math.cos(a) * r, proj.y + Math.sin(a) * r, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (type === 'husky') {
+            // Icy crystalline projectile
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
+            glow.addColorStop(0, 'rgba(100,200,255,0.5)');
+            glow.addColorStop(1, 'rgba(100,200,255,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Diamond/crystal shape
+            ctx.save();
+            ctx.translate(proj.x, proj.y);
+            ctx.rotate(Date.now() / 200);
+            ctx.fillStyle = '#B3E5FC';
+            ctx.beginPath();
+            ctx.moveTo(0, -proj.size * 1.3);
+            ctx.lineTo(proj.size * 0.8, 0);
+            ctx.lineTo(0, proj.size * 1.3);
+            ctx.lineTo(-proj.size * 0.8, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.moveTo(0, -proj.size * 1.3);
+            ctx.lineTo(proj.size * 0.3, 0);
+            ctx.lineTo(0, proj.size * 0.3);
+            ctx.lineTo(-proj.size * 0.3, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        } else if (type === 'bigboi') {
+            // Heavy cannonball
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 4);
+            glow.addColorStop(0, 'rgba(255,99,71,0.4)');
+            glow.addColorStop(0.5, 'rgba(255,69,0,0.15)');
+            glow.addColorStop(1, 'rgba(255,69,0,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 4, 0, Math.PI * 2);
+            ctx.fill();
+            // Dark heavy core
+            const core = ctx.createRadialGradient(proj.x - proj.size * 0.3, proj.y - proj.size * 0.3, 0, proj.x, proj.y, proj.size * 1.5);
+            core.addColorStop(0, '#666');
+            core.addColorStop(0.4, '#333');
+            core.addColorStop(1, '#111');
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            // Hot glow ring
+            ctx.strokeStyle = 'rgba(255,100,50,0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.7, 0, Math.PI * 2);
+            ctx.stroke();
+            // Highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.beginPath();
+            ctx.arc(proj.x - proj.size * 0.4, proj.y - proj.size * 0.4, proj.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'sparky') {
+            // Electric ball with crackle
+            ctx.save();
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 10;
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
+            glow.addColorStop(0, 'rgba(255,235,59,0.6)');
+            glow.addColorStop(1, 'rgba(255,235,59,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Core
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFEB3B';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+            // Mini lightning spikes
+            ctx.strokeStyle = '#FFF';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 4; i++) {
+                const a = Date.now() / 80 + i * 1.57;
+                const len = proj.size * (2 + Math.random());
+                ctx.beginPath();
+                ctx.moveTo(proj.x, proj.y);
+                ctx.lineTo(proj.x + Math.cos(a) * len, proj.y + Math.sin(a) * len);
+                ctx.stroke();
+            }
+            ctx.restore();
+        } else {
+            // Default projectile (generic)
+            const glow = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.size * 3);
+            glow.addColorStop(0, proj.color + '88');
+            glow.addColorStop(1, proj.color + '00');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            const core = ctx.createRadialGradient(proj.x - proj.size * 0.3, proj.y - proj.size * 0.3, 0, proj.x, proj.y, proj.size);
+            core.addColorStop(0, '#fff');
+            core.addColorStop(0.4, proj.color);
+            core.addColorStop(1, this._shade(proj.color, 0.5));
+            ctx.fillStyle = core;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     // === CHAIN LIGHTNING ARC ===
@@ -1396,6 +1565,163 @@ class Renderer {
         ctx.fillText(ct.subtext, ct.x, ct.y + fontSize * 0.7);
 
         ctx.restore();
+    }
+
+    // === ABILITY VISUAL EFFECTS ===
+    drawAbilityEffect(ef) {
+        const ctx = this.ctx;
+        const progress = 1 - ef.life / ef.maxLife;
+
+        if (ef.type === 'eruption') {
+            // Ground eruption: expanding shockwave ring + fire/dirt burst
+            ctx.save();
+            const alpha = Math.max(0, ef.life / ef.maxLife);
+            const r = ef.radius * (0.3 + progress * 1.2);
+
+            // Shockwave ring
+            ctx.strokeStyle = `rgba(255,100,50,${(alpha * 0.8).toFixed(2)})`;
+            ctx.lineWidth = 4 * alpha;
+            ctx.beginPath();
+            ctx.arc(ef.x, ef.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner fire glow
+            const glow = ctx.createRadialGradient(ef.x, ef.y, 0, ef.x, ef.y, r * 0.8);
+            glow.addColorStop(0, `rgba(255,200,50,${(alpha * 0.5).toFixed(2)})`);
+            glow.addColorStop(0.4, `rgba(255,80,20,${(alpha * 0.3).toFixed(2)})`);
+            glow.addColorStop(1, 'rgba(255,50,0,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(ef.x, ef.y, r * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Crack lines radiating from center
+            if (progress < 0.6) {
+                ctx.strokeStyle = `rgba(255,200,100,${(alpha * 0.6).toFixed(2)})`;
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 8; i++) {
+                    const a = (i / 8) * Math.PI * 2 + ef.x * 0.1;
+                    const len = r * (0.5 + Math.random() * 0.5);
+                    ctx.beginPath();
+                    ctx.moveTo(ef.x, ef.y);
+                    ctx.lineTo(ef.x + Math.cos(a) * len, ef.y + Math.sin(a) * len);
+                    ctx.stroke();
+                }
+            }
+
+            // Ground scar (darkened earth)
+            if (progress > 0.3) {
+                ctx.fillStyle = `rgba(40,20,0,${(alpha * 0.3).toFixed(2)})`;
+                ctx.beginPath();
+                ctx.ellipse(ef.x, ef.y, r * 0.6, r * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        } else if (ef.type === 'bolt') {
+            // Lightning bolt from sky to target
+            ctx.save();
+            const alpha = Math.max(0, ef.life / ef.maxLife);
+            ctx.globalAlpha = alpha;
+
+            // Bright flash at strike point
+            const flashR = 30 * alpha;
+            const flash = ctx.createRadialGradient(ef.x, ef.y, 0, ef.x, ef.y, flashR);
+            flash.addColorStop(0, 'rgba(255,255,255,0.9)');
+            flash.addColorStop(0.3, 'rgba(255,255,100,0.5)');
+            flash.addColorStop(1, 'rgba(255,255,100,0)');
+            ctx.fillStyle = flash;
+            ctx.beginPath();
+            ctx.arc(ef.x, ef.y, flashR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main bolt from top of screen to target
+            ctx.strokeStyle = '#FFEB3B';
+            ctx.lineWidth = 4;
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 15;
+
+            const segments = 8;
+            const jitter = 15;
+            const dy = ef.y - ef.startY;
+            ctx.beginPath();
+            ctx.moveTo(ef.x + (Math.random() - 0.5) * 10, ef.startY);
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                ctx.lineTo(
+                    ef.x + (Math.random() - 0.5) * jitter,
+                    ef.startY + dy * t
+                );
+            }
+            ctx.lineTo(ef.x, ef.y);
+            ctx.stroke();
+
+            // Bright white core bolt
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(ef.x + (Math.random() - 0.5) * 5, ef.startY);
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                ctx.lineTo(
+                    ef.x + (Math.random() - 0.5) * jitter * 0.5,
+                    ef.startY + dy * t
+                );
+            }
+            ctx.lineTo(ef.x, ef.y);
+            ctx.stroke();
+
+            // Branch bolts
+            if (Math.random() > 0.3) {
+                ctx.strokeStyle = 'rgba(255,235,59,0.6)';
+                ctx.lineWidth = 1.5;
+                const branchY = ef.startY + dy * (0.3 + Math.random() * 0.4);
+                const branchX = ef.x + (Math.random() - 0.5) * jitter;
+                const endX = branchX + (Math.random() - 0.5) * 40;
+                const endY = branchY + 20 + Math.random() * 30;
+                ctx.beginPath();
+                ctx.moveTo(branchX, branchY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        } else if (ef.type === 'stormcloud') {
+            // Dark storm cloud across top of screen
+            ctx.save();
+            const alpha = Math.min(1, ef.life / (ef.maxLife - 9), (ef.maxLife - (ef.maxLife - ef.life)) / 2) * 0.6;
+            ctx.globalAlpha = Math.min(0.6, alpha);
+            const t = Date.now() / 1000;
+
+            // Multiple overlapping dark cloud ellipses
+            for (let i = 0; i < 8; i++) {
+                const cx = ef.w * (i / 8 + 0.06) + Math.sin(t * 0.3 + i) * 15;
+                const cy = 25 + Math.sin(t * 0.5 + i * 0.8) * 8;
+                const rx = ef.w * 0.12 + Math.sin(i * 1.3) * 10;
+                const ry = 20 + Math.sin(i * 0.7) * 5;
+
+                const cloud = ctx.createRadialGradient(cx, cy - 5, 0, cx, cy, ry * 1.5);
+                cloud.addColorStop(0, 'rgba(30,30,50,0.8)');
+                cloud.addColorStop(0.5, 'rgba(40,40,60,0.5)');
+                cloud.addColorStop(1, 'rgba(50,50,70,0)');
+                ctx.fillStyle = cloud;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Occasional internal flicker
+            if (Math.random() > 0.92) {
+                ctx.fillStyle = 'rgba(255,255,200,0.15)';
+                const fx = Math.random() * ef.w;
+                ctx.beginPath();
+                ctx.ellipse(fx, 20, 30, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
     }
 
     // === AMBIENT PARTICLE ===

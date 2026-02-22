@@ -1,10 +1,10 @@
 // Wave spawning system with level support and new enemy types
 
 class WaveManager {
-    constructor() {
-        this.currentLevel = 0;
+    constructor(startLevel) {
+        this.currentLevel = startLevel || 0;
         this.currentWave = 0;
-        this.waveDefs = this._generateWavesForLevel(0);
+        this.waveDefs = this._generateWavesForLevel(this.currentLevel);
         this.spawnQueue = [];
         this.spawnTimer = 0;
         this.waveInProgress = false;

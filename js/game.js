@@ -72,6 +72,9 @@ class Game {
         // Ambient environmental particles (level-themed)
         this.ambientParticles = [];
 
+        // Ability visual effects (explosions, lightning bolts, storm clouds)
+        this.abilityEffects = [];
+
         this.grid = new Grid(0);
         this.renderer = new Renderer(this.canvas, this.tileSize);
         this.waveManager = new WaveManager();
@@ -158,7 +161,8 @@ class Game {
         this.camY = Math.max(-maxPanY, Math.min(maxPanY, this.camY));
     }
 
-    startGame() {
+    startGame(startLevel) {
+        startLevel = startLevel || 0;
         const nameInput = document.getElementById('player-name');
         this.playerName = (nameInput ? nameInput.value.trim() : '') || 'Anonymous';
         this.kills = 0;
@@ -166,14 +170,56 @@ class Game {
         this.comboTimer = 0;
         this.comboTexts = [];
         this.maxCombo = 0;
+        this.shakeTimer = 0;
+        this.shakeIntensity = 0;
+
+        // Reset game objects
+        this.towers = [];
+        this.enemies = [];
+        this.projectiles = [];
+        this.particles = [];
+        this.damageNumbers = [];
+        this.ambientParticles = [];
+        this.abilityEffects = [];
+        this.lives = CONFIG.START_LIVES;
+
+        // Level select support
+        this.grid = new Grid(startLevel);
+        this.waveManager = new WaveManager(startLevel);
+        this.gold = startLevel > 0 ? 3000 : CONFIG.START_GOLD;
+
+        // Reset abilities
+        for (const key in this.abilityState) {
+            this.abilityState[key].cooldown = 0;
+            this.abilityState[key].active = false;
+            this.abilityState[key].timer = 0;
+            this.abilityState[key].effectTick = 0;
+        }
+
+        this.triviaActive = false;
+        this.triviaUsed = [];
+        this._triviaShownForWave = -1;
+        this._hideTrivia();
+
+        this.ui.selectedTowerType = null;
+        this.ui.selectedTower = null;
+        this.ui.hideUpgradePanel();
 
         this.state = 'playing';
         this.setupTimer = CONFIG.SETUP_TIME;
+        this.gameSpeed = 1;
+        this.resetCamera();
+        this.resize();
+        const speedBtn = document.getElementById('speed-btn');
+        if (speedBtn) speedBtn.textContent = '1x';
         document.getElementById('title-screen').style.display = 'none';
+        document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('victory-screen').style.display = 'none';
+        document.getElementById('level-complete-screen').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
         document.getElementById('bottom-bar').style.display = 'flex';
         document.getElementById('game-controls').style.display = 'flex';
-        GameAudio.startMusic(0);
+        GameAudio.startMusic(startLevel);
         this.ui.updateHUD();
     }
 
@@ -215,6 +261,7 @@ class Game {
         this.shakeIntensity = 0;
         this.maxCombo = 0;
         this.ambientParticles = [];
+        this.abilityEffects = [];
 
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'none';
@@ -494,15 +541,83 @@ class Game {
                 }
             }
         } else if (type === 'bigboi') {
-            // MEGA WOOF: periodic damage to all enemies
-            for (const e of this.enemies) {
-                if (e.alive && !e.reachedEnd) {
-                    e.takeDamage(15);
+            // MEGA WOOF: massive ground eruptions at random enemies
+            const dmg = 40;
+            const targets = this.enemies.filter(e => e.alive && !e.reachedEnd);
+            // Pick up to 3 random targets for eruption epicenters
+            const epicenters = [];
+            const shuffled = [...targets].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < Math.min(3, shuffled.length); i++) {
+                epicenters.push({ x: shuffled[i].x, y: shuffled[i].y });
+            }
+            // Damage all enemies
+            for (const e of targets) {
+                e.takeDamage(dmg);
+            }
+            // Spawn ground eruption effects at epicenters
+            for (const ep of epicenters) {
+                this.abilityEffects.push({
+                    type: 'eruption', x: ep.x, y: ep.y,
+                    life: 0.8, maxLife: 0.8, radius: this.tileSize * 2
+                });
+                // Debris particles
+                for (let i = 0; i < 15; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 60 + Math.random() * 120;
+                    this.particles.push({
+                        x: ep.x, y: ep.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 80,
+                        life: 0.6 + Math.random() * 0.4, maxLife: 1.0,
+                        color: Math.random() > 0.5 ? '#FF6347' : '#8B4513',
+                        size: 3 + Math.random() * 4
+                    });
                 }
             }
+            // Screen shake
+            this.shakeTimer = 0.5;
+            this.shakeIntensity = 6;
+        } else if (type === 'sparky') {
+            // THUNDER STORM: storm cloud + lightning bolts from sky
+            const targets = this.enemies.filter(e => e.alive && !e.reachedEnd);
+            const cw = this.canvas.width;
+            // Spawn storm cloud effect if not already there
+            const hasCloud = this.abilityEffects.some(e => e.type === 'stormcloud');
+            if (!hasCloud) {
+                this.abilityEffects.push({
+                    type: 'stormcloud', x: cw / 2, y: 0,
+                    life: 10.5, maxLife: 10.5, w: cw
+                });
+            }
+            // Strike up to 4 random enemies with lightning bolts
+            const shuffled = [...targets].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < Math.min(4, shuffled.length); i++) {
+                const e = shuffled[i];
+                e.takeDamage(25);
+                this.abilityEffects.push({
+                    type: 'bolt', x: e.x, y: e.y,
+                    startY: -10,
+                    life: 0.35, maxLife: 0.35
+                });
+                // Spark particles at strike point
+                for (let j = 0; j < 8; j++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 40 + Math.random() * 60;
+                    this.particles.push({
+                        x: e.x, y: e.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 0.3, maxLife: 0.3,
+                        color: '#FFEB3B', size: 3
+                    });
+                }
+            }
+            // Brief screen flash
+            this.shakeTimer = 0.15;
+            this.shakeIntensity = 3;
         }
         // barker: handled by tower's rapid fireRate (already set in startAbility)
-        // sparky: handled by tower doubling chainCount when abilityActive
+        // sparky chain doubling still happens via tower.js abilityActive check
     }
 
     // === TRIVIA SYSTEM ===
@@ -648,6 +763,7 @@ class Game {
         this.projectiles = [];
         this.particles = [];
         this.ambientParticles = [];
+        this.abilityEffects = [];
         this.ui.selectedTowerType = null;
         this.ui.selectedTower = null;
         this.ui.hideUpgradePanel();
@@ -1043,6 +1159,12 @@ class Game {
         // Ambient environmental particles
         this._updateAmbientParticles(dt);
 
+        // Update ability visual effects
+        for (const ef of this.abilityEffects) {
+            ef.life -= dt;
+        }
+        this.abilityEffects = this.abilityEffects.filter(e => e.life > 0);
+
         // Wave income + dog house income
         if (this.waveManager.betweenWaves && !this.waveManager._incomeGiven) {
             this.waveManager._incomeGiven = true;
@@ -1176,6 +1298,11 @@ class Game {
         // Floating combo milestone texts
         for (const ct of this.comboTexts) {
             this.renderer.drawComboText(ct);
+        }
+
+        // Ability visual effects (eruptions, lightning bolts, storm cloud)
+        for (const ef of this.abilityEffects) {
+            this.renderer.drawAbilityEffect(ef);
         }
 
         // Ambient environmental particles
