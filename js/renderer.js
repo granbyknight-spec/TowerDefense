@@ -87,15 +87,17 @@ class Renderer {
         }
 
         const tufts = ((h * 7) | 0) % 4;
+        const t = Date.now() / 1000;
         for (let i = 0; i < tufts; i++) {
             const hi = this._hash(c * 13 + i, r * 17 + i);
             const bx = x + hi * ts * 0.8 + ts * 0.1;
             const by = y + this._hash(c + i * 7, r + i * 3) * ts * 0.8 + ts * 0.1;
-            ctx.strokeStyle = `rgba(25,${70 + (hi * 40) | 0},15,0.5)`;
-            ctx.lineWidth = 1;
+            const sway = Math.sin(t * 1.8 + c * 0.7 + r * 0.5 + i * 2.1) * 3;
+            ctx.strokeStyle = `rgba(25,${70 + (hi * 40) | 0},15,0.55)`;
+            ctx.lineWidth = 1.2;
             ctx.beginPath();
             ctx.moveTo(bx, by);
-            ctx.lineTo(bx + (hi - 0.5) * 4, by - 4 - hi * 3);
+            ctx.quadraticCurveTo(bx + sway * 0.5, by - 3, bx + (hi - 0.5) * 4 + sway, by - 5 - hi * 3);
             ctx.stroke();
         }
 
@@ -135,23 +137,40 @@ class Renderer {
         const h = this._hash(c, r);
         const t = Date.now() / 1000;
 
+        // Color cycling base
+        const cycle = Math.sin(t * 0.5 + c * 0.3 + r * 0.2) * 15;
         const blue = 140 + (h * 30) | 0;
-        ctx.fillStyle = `rgb(30,80,${blue})`;
+        ctx.fillStyle = `rgb(${25 + cycle * 0.3 | 0},${75 + cycle * 0.5 | 0},${blue + cycle | 0})`;
         ctx.fillRect(x, y, ts, ts);
 
         // Animated wave lines
-        ctx.strokeStyle = 'rgba(100,180,255,0.25)';
         ctx.lineWidth = 1;
         for (let i = 0; i < 3; i++) {
             const wy = y + ts * (0.25 + i * 0.25);
+            const wAlpha = 0.2 + Math.sin(t * 1.5 + i * 1.2 + c) * 0.08;
+            ctx.strokeStyle = `rgba(100,180,255,${wAlpha.toFixed(2)})`;
             ctx.beginPath();
             ctx.moveTo(x, wy + Math.sin(t * 2 + c + i) * 2);
             ctx.quadraticCurveTo(x + ts * 0.5, wy + Math.sin(t * 2 + c + i + 1) * 3, x + ts, wy + Math.sin(t * 2 + c + i + 2) * 2);
             ctx.stroke();
         }
 
+        // Caustic light patterns
+        for (let i = 0; i < 2; i++) {
+            const hi = this._hash(c * 5 + i, r * 7 + i);
+            const cx2 = x + ts * (0.2 + hi * 0.6);
+            const cy2 = y + ts * (0.2 + this._hash(c + i, r + i * 3) * 0.6);
+            const cSize = ts * (0.08 + hi * 0.08);
+            const cAlpha = (0.08 + Math.sin(t * 2.5 + hi * 6.28 + c + r) * 0.06);
+            ctx.fillStyle = `rgba(150,220,255,${Math.max(0, cAlpha).toFixed(2)})`;
+            ctx.beginPath();
+            ctx.ellipse(cx2 + Math.sin(t * 1.3 + hi * 5) * 2, cy2 + Math.cos(t * 1.1 + hi * 3) * 2, cSize, cSize * 0.6, t * 0.5 + hi * 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         // Specular highlight
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        const specAlpha = 0.04 + Math.sin(t * 1.8 + c * 0.5) * 0.03;
+        ctx.fillStyle = `rgba(255,255,255,${Math.max(0, specAlpha).toFixed(2)})`;
         ctx.fillRect(x, y, ts, 2);
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.fillRect(x, y + ts - 2, ts, 2);
@@ -873,6 +892,22 @@ class Renderer {
         ctx.restore();
     }
 
+    // === DYNAMIC SHADOW (sun-cast) ===
+    drawDynamicShadow(x, y, radius, ts) {
+        const ctx = this.ctx;
+        const t = Date.now() / 1000;
+        // Sun angle drifts slowly for a subtle living feel
+        const sunAngle = t * 0.15;
+        const offsetX = Math.cos(sunAngle) * radius * 0.4;
+        const offsetY = Math.sin(sunAngle) * 0.2 * radius + radius * 0.5;
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.13)';
+        ctx.beginPath();
+        ctx.ellipse(x + offsetX, y + offsetY, radius * 0.95, radius * 0.35, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
     // === TOWER RANGE ===
     drawTowerRange(tower) {
         const ts = this.tileSize;
@@ -1360,6 +1395,64 @@ class Renderer {
         ctx.fillStyle = '#FFD700';
         ctx.fillText(ct.subtext, ct.x, ct.y + fontSize * 0.7);
 
+        ctx.restore();
+    }
+
+    // === AMBIENT PARTICLE ===
+    drawAmbientParticle(p) {
+        const ctx = this.ctx;
+        const alpha = Math.min(1, p.life / (p.maxLife * 0.3), (p.maxLife - (p.maxLife - p.life)) / p.maxLife);
+        const fadeAlpha = Math.min(1, p.life * 2, (p.maxLife - (p.maxLife - p.life)) / (p.maxLife * 0.5));
+
+        ctx.save();
+        if (p.type === 'leaf') {
+            ctx.globalAlpha = Math.min(0.7, p.life / 2);
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            // Leaf shape
+            ctx.beginPath();
+            ctx.ellipse(0, 0, p.size, p.size * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Leaf vein
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(-p.size, 0);
+            ctx.lineTo(p.size, 0);
+            ctx.stroke();
+        } else if (p.type === 'firefly') {
+            const glow = 0.4 + Math.sin(p.phase * 3) * 0.4;
+            ctx.globalAlpha = Math.min(glow, p.life / 2);
+            // Outer glow
+            const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
+            g.addColorStop(0, 'rgba(255,255,100,0.3)');
+            g.addColorStop(1, 'rgba(255,255,100,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+            ctx.fill();
+            // Core
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (p.type === 'ember') {
+            ctx.globalAlpha = Math.min(0.8, p.life / 1.5);
+            // Glow
+            const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+            g.addColorStop(0, p.color + 'AA');
+            g.addColorStop(1, p.color + '00');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Core
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 

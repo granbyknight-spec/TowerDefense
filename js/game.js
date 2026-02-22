@@ -24,6 +24,9 @@ class Game {
         this.camX = 0; // world offset (0 = centered)
         this.camY = 0;
 
+        // 2.5D perspective mode
+        this.perspectiveMode = false;
+
         // Player name & stats
         this.playerName = '';
         this.kills = 0;
@@ -65,6 +68,9 @@ class Game {
                 };
             }
         }
+
+        // Ambient environmental particles (level-themed)
+        this.ambientParticles = [];
 
         this.grid = new Grid(0);
         this.renderer = new Renderer(this.canvas, this.tileSize);
@@ -108,10 +114,15 @@ class Game {
     screenToWorld(sx, sy) {
         const cw = this.canvas.width;
         const ch = this.canvas.height;
-        return {
-            x: (sx - cw / 2) / this.zoom + cw / 2 - this.camX,
-            y: (sy - ch / 2) / this.zoom + ch / 2 - this.camY
-        };
+        let wx = (sx - cw / 2) / this.zoom + cw / 2 - this.camX;
+        let wy = (sy - ch / 2) / this.zoom + ch / 2 - this.camY;
+        // Invert perspective Y-scale if enabled
+        if (this.perspectiveMode) {
+            const yScale = 0.88;
+            const pivotY = ch * 0.5;
+            wy = (wy - pivotY) / yScale + pivotY;
+        }
+        return { x: wx, y: wy };
     }
 
     resetCamera() {
@@ -203,6 +214,7 @@ class Game {
         this.shakeTimer = 0;
         this.shakeIntensity = 0;
         this.maxCombo = 0;
+        this.ambientParticles = [];
 
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'none';
@@ -635,6 +647,7 @@ class Game {
         this.enemies = [];
         this.projectiles = [];
         this.particles = [];
+        this.ambientParticles = [];
         this.ui.selectedTowerType = null;
         this.ui.selectedTower = null;
         this.ui.hideUpgradePanel();
@@ -795,6 +808,74 @@ class Game {
                 tower.buffDamageMult = Math.max(tower.buffDamageMult, aura.damageMult);
             }
         }
+    }
+
+    _updateAmbientParticles(dt) {
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        const level = this.waveManager ? this.waveManager.currentLevel : 0;
+        const maxP = 25;
+
+        // Spawn new ambient particles
+        if (this.ambientParticles.length < maxP && Math.random() < 0.15) {
+            if (level === 0) {
+                // Backyard: drifting leaves
+                this.ambientParticles.push({
+                    x: Math.random() * cw, y: -5,
+                    vx: 10 + Math.random() * 20, vy: 15 + Math.random() * 25,
+                    life: 6 + Math.random() * 4, maxLife: 10,
+                    size: 3 + Math.random() * 3,
+                    type: 'leaf', rot: Math.random() * 6.28,
+                    rotSpeed: (Math.random() - 0.5) * 2,
+                    color: Math.random() > 0.5 ? '#6B8E23' : '#8FBC8F'
+                });
+            } else if (level === 1) {
+                // Park: fireflies
+                this.ambientParticles.push({
+                    x: Math.random() * cw, y: Math.random() * ch,
+                    vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15,
+                    life: 3 + Math.random() * 4, maxLife: 7,
+                    size: 2 + Math.random() * 2,
+                    type: 'firefly', phase: Math.random() * 6.28,
+                    color: '#FFEB3B'
+                });
+            } else {
+                // Cat Central: embers
+                this.ambientParticles.push({
+                    x: Math.random() * cw, y: ch + 5,
+                    vx: (Math.random() - 0.5) * 25, vy: -(20 + Math.random() * 30),
+                    life: 3 + Math.random() * 3, maxLife: 6,
+                    size: 2 + Math.random() * 2,
+                    type: 'ember', phase: Math.random() * 6.28,
+                    color: Math.random() > 0.5 ? '#FF6347' : '#FF8C00'
+                });
+            }
+        }
+
+        // Update
+        for (const p of this.ambientParticles) {
+            p.life -= dt;
+            if (p.type === 'leaf') {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vx += Math.sin(p.life * 2) * dt * 8;
+                p.rot += p.rotSpeed * dt;
+            } else if (p.type === 'firefly') {
+                p.phase += dt * 2;
+                p.x += p.vx * dt + Math.sin(p.phase) * 0.5;
+                p.y += p.vy * dt + Math.cos(p.phase * 0.7) * 0.5;
+                // Wander direction
+                p.vx += (Math.random() - 0.5) * dt * 30;
+                p.vy += (Math.random() - 0.5) * dt * 30;
+                p.vx *= 0.98; p.vy *= 0.98;
+            } else if (p.type === 'ember') {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vx += Math.sin(p.phase + p.life) * dt * 10;
+                p.size *= 0.998;
+            }
+        }
+        this.ambientParticles = this.ambientParticles.filter(p => p.life > 0);
     }
 
     update(dt) {
@@ -959,6 +1040,9 @@ class Game {
         }
         this.comboTexts = this.comboTexts.filter(ct => ct.life > 0);
 
+        // Ambient environmental particles
+        this._updateAmbientParticles(dt);
+
         // Wave income + dog house income
         if (this.waveManager.betweenWaves && !this.waveManager._incomeGiven) {
             this.waveManager._incomeGiven = true;
@@ -994,6 +1078,14 @@ class Game {
         ctx.translate(cw / 2 + shakeX, ch / 2 + shakeY);
         ctx.scale(this.zoom, this.zoom);
         ctx.translate(-cw / 2 + this.camX, -ch / 2 + this.camY);
+
+        // 2.5D perspective: compress Y toward center for a tilted-table look
+        if (this.perspectiveMode) {
+            const pivotY = ch * 0.5;
+            ctx.translate(0, pivotY);
+            ctx.scale(1, 0.88);
+            ctx.translate(0, -pivotY);
+        }
 
         this.renderer.drawGrid(this.grid);
         this.renderer.drawPath(this.grid.currentPath, this.grid);
@@ -1045,6 +1137,17 @@ class Game {
             this.renderer.drawTowerRange(this.ui.selectedTower);
         }
 
+        // Dynamic shadows (drawn first so they appear under entities)
+        for (const tower of this.towers) {
+            const sz = tower.isPassive ? this.tileSize * 0.4 : this.tileSize * (tower.isSuper ? 0.48 : 0.4);
+            this.renderer.drawDynamicShadow(tower.x, tower.y, sz, this.tileSize);
+        }
+        for (const enemy of this.enemies) {
+            if (enemy.alive) {
+                this.renderer.drawDynamicShadow(enemy.x, enemy.y, this.tileSize * enemy.size, this.tileSize);
+            }
+        }
+
         for (const tower of this.towers) {
             this.renderer.drawTower(tower);
             // Muzzle flash when firing
@@ -1073,6 +1176,11 @@ class Game {
         // Floating combo milestone texts
         for (const ct of this.comboTexts) {
             this.renderer.drawComboText(ct);
+        }
+
+        // Ambient environmental particles
+        for (const ap of this.ambientParticles) {
+            this.renderer.drawAmbientParticle(ap);
         }
 
         ctx.restore(); // end camera transform

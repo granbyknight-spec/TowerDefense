@@ -218,6 +218,16 @@ class UI {
             });
         }
 
+        // Perspective toggle button
+        const perspBtn = document.getElementById('perspective-btn');
+        if (perspBtn) {
+            perspBtn.addEventListener('click', () => {
+                this.game.perspectiveMode = !this.game.perspectiveMode;
+                perspBtn.textContent = this.game.perspectiveMode ? '3D' : '2D';
+                perspBtn.title = this.game.perspectiveMode ? 'Switch to flat view' : 'Switch to 2.5D view';
+            });
+        }
+
         // High Scores button
         const hsBtn = document.getElementById('highscores-btn');
         if (hsBtn) {
