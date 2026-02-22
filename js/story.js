@@ -146,8 +146,8 @@ class StoryEngine {
     _executeStep(step) {
         switch (step.type) {
             case 'dialogue':
-                this.dialogueSpeaker = step.speaker || '';
-                this.dialogueSpeakerEmoji = step.emoji || '';
+                this.dialogueSpeaker = this._substituteVars(step.speaker || '');
+                this.dialogueSpeakerEmoji = this._substituteVars(step.emoji || '');
                 this.dialogueText = this._substituteVars(step.text);
                 this.dialogueChars = 0;
                 this.dialogueTyping = true;
@@ -155,10 +155,10 @@ class StoryEngine {
                 break;
 
             case 'choice':
-                this.dialogueSpeaker = step.speaker || '';
-                this.dialogueSpeakerEmoji = step.emoji || '';
+                this.dialogueSpeaker = this._substituteVars(step.speaker || '');
+                this.dialogueSpeakerEmoji = this._substituteVars(step.emoji || '');
                 this.dialogueText = this._substituteVars(step.text);
-                this.dialogueChars = step.text.length; // show full text
+                this.dialogueChars = this.dialogueText.length; // show full text
                 this.dialogueTyping = false;
                 this.dialogueChoices = step.choices;
                 break;
@@ -173,7 +173,11 @@ class StoryEngine {
                 break;
 
             case 'enter':
-                this._addCharacter(step);
+                this._addCharacter({
+                    ...step,
+                    emoji: this._substituteVars(step.emoji || '🐕'),
+                    name: this._substituteVars(step.name || ''),
+                });
                 this.stepIndex++;
                 this._advanceStep();
                 break;
@@ -304,7 +308,12 @@ class StoryEngine {
 
     _setupExploration(step) {
         this.exploring = true;
-        this.exploMap = step.map || null;
+        // Use step map, or fall back to current scene map, or keep existing
+        if (step.map) {
+            this.exploMap = step.map;
+        } else if (this.scene && this.scene.map && !this.exploMap) {
+            this.exploMap = this.scene.map;
+        }
         this.playerX = step.startX !== undefined ? step.startX : 5;
         this.playerY = step.startY !== undefined ? step.startY : 8;
         this.playerDir = 'down';
@@ -757,14 +766,20 @@ class StoryEngine {
     // === INPUT ===
 
     _bindInput() {
-        this._clickHandler = (e) => this._onTap(e);
-        this.canvas.addEventListener('click', this._clickHandler);
-        this.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+        // Use pointerdown (not click) since the game UI uses pointerdown
+        // and touch-action:manipulation can suppress click on mobile
+        this._pointerHandler = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            this._onTap(e);
+        };
+        this.canvas.addEventListener('pointerdown', this._pointerHandler);
     }
 
     _unbindInput() {
-        if (this._clickHandler) {
-            this.canvas.removeEventListener('click', this._clickHandler);
+        if (this._pointerHandler) {
+            this.canvas.removeEventListener('pointerdown', this._pointerHandler);
+            this._pointerHandler = null;
         }
     }
 
@@ -772,8 +787,8 @@ class StoryEngine {
         if (!this.active) return;
 
         const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX || (e.touches && e.touches[0].clientX) || 0) - rect.left;
+        const y = (e.clientY || (e.touches && e.touches[0].clientY) || 0) - rect.top;
 
         // Scale to canvas coords
         const sx = x * (this.canvas.width / rect.width);
