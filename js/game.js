@@ -221,8 +221,8 @@ class Game {
             }
         }
 
-        // Check for 3-in-a-line merge
-        this._checkAndMerge(tower);
+        // Check for 3-in-a-line merge (disabled for now)
+        // this._checkAndMerge(tower);
     }
 
     // === TOWER MERGE SYSTEM ===
