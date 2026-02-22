@@ -15,9 +15,53 @@ class UI {
     setupEventListeners() {
         const canvas = this.game.canvas;
 
+        this._panning = false;
+        this._lastPanX = 0;
+        this._lastPanY = 0;
+
         canvas.addEventListener('pointerdown', (e) => this.onPointerDown(e));
         canvas.addEventListener('pointermove', (e) => this.onPointerMove(e));
+        canvas.addEventListener('pointerup', (e) => { this._panning = false; });
+        canvas.addEventListener('pointercancel', () => { this._panning = false; });
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Scroll wheel zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const sx = (e.clientX - rect.left) * scaleX;
+            const sy = (e.clientY - rect.top) * scaleY;
+            const delta = e.deltaY > 0 ? -0.15 : 0.15;
+            this.game.setZoom(this.game.zoom + delta, sx, sy);
+        }, { passive: false });
+
+        // Pinch zoom (touch)
+        this._pinchDist = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                this._pinchDist = Math.sqrt(dx * dx + dy * dy);
+            }
+        }, { passive: true });
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const newDist = Math.sqrt(dx * dx + dy * dy);
+                if (this._pinchDist > 0) {
+                    const scale = newDist / this._pinchDist;
+                    const rect = canvas.getBoundingClientRect();
+                    const mx = ((e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left) * (canvas.width / rect.width);
+                    const my = ((e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top) * (canvas.height / rect.height);
+                    this.game.setZoom(this.game.zoom * scale, mx, my);
+                }
+                this._pinchDist = newDist;
+            }
+        }, { passive: false });
 
         this.setupTowerButtons();
 
@@ -85,6 +129,44 @@ class UI {
                 speedIdx = (speedIdx + 1) % speeds.length;
                 this.game.gameSpeed = speeds[speedIdx];
                 speedBtn.textContent = labels[speedIdx];
+            });
+        }
+
+        // Keyboard zoom (+ / - / 0)
+        document.addEventListener('keydown', (e) => {
+            if (this.game.state !== 'playing') return;
+            const cw = this.game.canvas.width;
+            const ch = this.game.canvas.height;
+            if (e.key === '=' || e.key === '+') {
+                this.game.setZoom(this.game.zoom + 0.25, cw / 2, ch / 2);
+            } else if (e.key === '-' || e.key === '_') {
+                this.game.setZoom(this.game.zoom - 0.25, cw / 2, ch / 2);
+            } else if (e.key === '0') {
+                this.game.resetCamera();
+            }
+        });
+
+        // Zoom buttons
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', () => {
+                const cw = this.game.canvas.width;
+                const ch = this.game.canvas.height;
+                this.game.setZoom(this.game.zoom + 0.25, cw / 2, ch / 2);
+            });
+        }
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', () => {
+                const cw = this.game.canvas.width;
+                const ch = this.game.canvas.height;
+                this.game.setZoom(this.game.zoom - 0.25, cw / 2, ch / 2);
+            });
+        }
+        const zoomResetBtn = document.getElementById('zoom-reset-btn');
+        if (zoomResetBtn) {
+            zoomResetBtn.addEventListener('click', () => {
+                this.game.resetCamera();
             });
         }
 
@@ -210,16 +292,29 @@ class UI {
         });
     }
 
+    _screenToGrid(e) {
+        const rect = this.game.canvas.getBoundingClientRect();
+        const scaleX = this.game.canvas.width / rect.width;
+        const scaleY = this.game.canvas.height / rect.height;
+        const sx = (e.clientX - rect.left) * scaleX;
+        const sy = (e.clientY - rect.top) * scaleY;
+        const world = this.game.screenToWorld(sx, sy);
+        return { sx, sy, ...pixelToGrid(world.x, world.y, this.game.tileSize) };
+    }
+
     onPointerDown(e) {
         if (this.game.state !== 'playing') return;
         GameAudio.unlock();
 
-        const rect = this.game.canvas.getBoundingClientRect();
-        const scaleX = this.game.canvas.width / rect.width;
-        const scaleY = this.game.canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
-        const { col, row } = pixelToGrid(x, y, this.game.tileSize);
+        // Right-click starts panning
+        if (e.button === 2 && this.game.zoom > 1) {
+            this._panning = true;
+            this._lastPanX = e.clientX;
+            this._lastPanY = e.clientY;
+            return;
+        }
+
+        const { col, row } = this._screenToGrid(e);
 
         if (col < 0 || col >= CONFIG.GRID_COLS || row < 0 || row >= CONFIG.GRID_ROWS) return;
 
@@ -244,12 +339,22 @@ class UI {
     }
 
     onPointerMove(e) {
-        const rect = this.game.canvas.getBoundingClientRect();
-        const scaleX = this.game.canvas.width / rect.width;
-        const scaleY = this.game.canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
-        const { col, row } = pixelToGrid(x, y, this.game.tileSize);
+        // Handle panning
+        if (this._panning) {
+            const rect = this.game.canvas.getBoundingClientRect();
+            const scaleX = this.game.canvas.width / rect.width;
+            const scaleY = this.game.canvas.height / rect.height;
+            const dx = (e.clientX - this._lastPanX) * scaleX / this.game.zoom;
+            const dy = (e.clientY - this._lastPanY) * scaleY / this.game.zoom;
+            this.game.camX += dx;
+            this.game.camY += dy;
+            this.game._clampCamera();
+            this._lastPanX = e.clientX;
+            this._lastPanY = e.clientY;
+            return;
+        }
+
+        const { col, row } = this._screenToGrid(e);
         this.hoverCol = col;
         this.hoverRow = row;
     }

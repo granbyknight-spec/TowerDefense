@@ -18,6 +18,11 @@ class Game {
         this.lastTime = performance.now();
         this.gameSpeed = 1;
 
+        // Camera (zoom + pan)
+        this.zoom = 1;
+        this.camX = 0; // world offset (0 = centered)
+        this.camY = 0;
+
         // Player name & stats
         this.playerName = '';
         this.kills = 0;
@@ -90,6 +95,49 @@ class Game {
         }
     }
 
+    // Convert screen-space canvas coords to world coords
+    screenToWorld(sx, sy) {
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        return {
+            x: (sx - cw / 2) / this.zoom + cw / 2 - this.camX,
+            y: (sy - ch / 2) / this.zoom + ch / 2 - this.camY
+        };
+    }
+
+    resetCamera() {
+        this.zoom = 1;
+        this.camX = 0;
+        this.camY = 0;
+    }
+
+    setZoom(newZoom, screenX, screenY) {
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        newZoom = Math.max(0.5, Math.min(3, newZoom));
+
+        // Zoom toward the cursor position
+        if (screenX !== undefined) {
+            const wx = (screenX - cw / 2) / this.zoom + cw / 2 - this.camX;
+            const wy = (screenY - ch / 2) / this.zoom + ch / 2 - this.camY;
+            // After zoom, same world point should stay under cursor
+            this.camX = cw / 2 - wx + (screenX - cw / 2) / newZoom;
+            this.camY = ch / 2 - wy + (screenY - ch / 2) / newZoom;
+        }
+
+        this.zoom = newZoom;
+        this._clampCamera();
+    }
+
+    _clampCamera() {
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        const maxPanX = Math.max(0, cw / 2 - cw / (2 * this.zoom));
+        const maxPanY = Math.max(0, ch / 2 - ch / (2 * this.zoom));
+        this.camX = Math.max(-maxPanX, Math.min(maxPanX, this.camX));
+        this.camY = Math.max(-maxPanY, Math.min(maxPanY, this.camY));
+    }
+
     startGame() {
         const nameInput = document.getElementById('player-name');
         this.playerName = (nameInput ? nameInput.value.trim() : '') || 'Anonymous';
@@ -143,6 +191,7 @@ class Game {
         document.getElementById('game-controls').style.display = 'flex';
         this.setupTimer = CONFIG.SETUP_TIME;
         this.gameSpeed = 1;
+        this.resetCamera();
         const speedBtn = document.getElementById('speed-btn');
         if (speedBtn) speedBtn.textContent = '1x';
         GameAudio.startMusic(0);
@@ -551,6 +600,7 @@ class Game {
         this.state = 'playing';
         this.setupTimer = CONFIG.SETUP_TIME;
         this._triviaShownForWave = -1;
+        this.resetCamera();
         GameAudio.startMusic(newLevelIdx);
         this.ui.updateHUD();
     }
@@ -801,7 +851,18 @@ class Game {
     }
 
     render() {
+        const ctx = this.canvas.getContext('2d');
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+
         this.renderer.clear();
+
+        // Apply camera transform
+        ctx.save();
+        ctx.translate(cw / 2, ch / 2);
+        ctx.scale(this.zoom, this.zoom);
+        ctx.translate(-cw / 2 + this.camX, -ch / 2 + this.camY);
+
         this.renderer.drawGrid(this.grid);
         this.renderer.drawPath(this.grid.currentPath);
 
@@ -833,11 +894,24 @@ class Game {
             this.renderer.drawParticle(p);
         }
 
-        // Setup countdown overlay
+        ctx.restore(); // end camera transform
+
+        // Zoom indicator (when not 1x)
+        if (this.zoom !== 1) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.fillRect(8, ch - 28, 50, 20);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.zoom.toFixed(1) + 'x', 33, ch - 18);
+            ctx.restore();
+        }
+
+        // Setup countdown overlay (screen space)
         if (this.setupTimer > 0) {
-            const ctx = this.canvas.getContext('2d');
             const secs = Math.ceil(this.setupTimer);
-            const cw = this.canvas.width;
 
             // Background pill upper-right
             const text = secs.toString();
