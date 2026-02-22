@@ -1,3 +1,6 @@
+// Game version – shown on title screen to verify bundle freshness
+const GAME_VERSION = 'v0.3.0';
+
 // Game configuration and balance values
 const CONFIG = {
     // Grid

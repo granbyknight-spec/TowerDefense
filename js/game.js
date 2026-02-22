@@ -1488,6 +1488,10 @@ class Game {
 
 // Boot - Academy is the root, Game is a battle mode, Story is the JRPG mode
 window.addEventListener('DOMContentLoaded', () => {
+    // Show version on title screen
+    const vTag = document.getElementById('version-tag');
+    if (vTag) vTag.textContent = GAME_VERSION;
+
     const academy = new Academy();
     const game = new Game();
     game.academy = academy;

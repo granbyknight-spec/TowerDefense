@@ -531,6 +531,14 @@ body {
     letter-spacing: 0.5px;
 }
 
+.version-tag {
+    font-size: 10px;
+    color: #6d5e56;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+    font-family: monospace;
+}
+
 .screen-btn {
     padding: 14px 40px;
     font-size: 18px;
