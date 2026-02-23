@@ -51,41 +51,41 @@ const PROLOGUE_SCENARIO = {
     ],
     playerUnits: [
         { id:'buddy', name:'Buddy', team:'player', unitClass:'knight',
-          x:2, y:4, hp:28, maxHp:28, mp:5, maxMp:5,
-          atk:10, def:7, spd:6, mov:4, atkRange:1,
+          x:2, y:4, hp:36, maxHp:36, mp:5, maxMp:5,
+          atk:13, def:9, spd:6, mov:5, atkRange:1,
           level:1, exp:0, spriteKey:'dog_knight',
           abilities:['attack','growl'] },
         { id:'luna', name:'Luna', team:'player', unitClass:'mage',
-          x:1, y:2, hp:18, maxHp:18, mp:10, maxMp:10,
-          atk:12, def:3, spd:8, mov:3, atkRange:2,
+          x:1, y:2, hp:24, maxHp:24, mp:14, maxMp:14,
+          atk:14, def:5, spd:8, mov:3, atkRange:3,
           level:1, exp:0, spriteKey:'dog_mage',
-          abilities:['attack','tailwhip'] },
+          abilities:['attack','tailwhip','heal'] },
         { id:'rex', name:'Rex', team:'player', unitClass:'warrior',
-          x:2, y:7, hp:35, maxHp:35, mp:3, maxMp:3,
-          atk:11, def:9, spd:4, mov:3, atkRange:1,
+          x:2, y:7, hp:42, maxHp:42, mp:5, maxMp:5,
+          atk:14, def:11, spd:4, mov:3, atkRange:1,
           level:1, exp:0, spriteKey:'dog_warrior',
           abilities:['attack','barkwave'] },
     ],
     enemyUnits: [
         { id:'scout1', name:'Whiskers', team:'enemy', unitClass:'scout',
-          x:10, y:2, hp:12, maxHp:12, mp:0, maxMp:0,
-          atk:6, def:3, spd:9, mov:5, atkRange:1,
+          x:10, y:2, hp:10, maxHp:10, mp:0, maxMp:0,
+          atk:5, def:3, spd:9, mov:4, atkRange:1,
           level:1, exp:0, spriteKey:'cat_scout', abilities:['attack'] },
         { id:'scout2', name:'Mittens', team:'enemy', unitClass:'scout',
-          x:11, y:7, hp:12, maxHp:12, mp:0, maxMp:0,
-          atk:6, def:3, spd:9, mov:5, atkRange:1,
+          x:11, y:7, hp:10, maxHp:10, mp:0, maxMp:0,
+          atk:5, def:3, spd:9, mov:4, atkRange:1,
           level:1, exp:0, spriteKey:'cat_scout', abilities:['attack'] },
         { id:'soldier1', name:'Patches', team:'enemy', unitClass:'soldier',
-          x:12, y:4, hp:20, maxHp:20, mp:2, maxMp:2,
-          atk:8, def:5, spd:5, mov:4, atkRange:1,
+          x:12, y:4, hp:16, maxHp:16, mp:2, maxMp:2,
+          atk:7, def:5, spd:5, mov:4, atkRange:1,
           level:1, exp:0, spriteKey:'cat_soldier', abilities:['attack','scratch'] },
         { id:'soldier2', name:'Ginger', team:'enemy', unitClass:'soldier',
-          x:12, y:6, hp:20, maxHp:20, mp:2, maxMp:2,
-          atk:8, def:5, spd:5, mov:4, atkRange:1,
+          x:12, y:6, hp:16, maxHp:16, mp:2, maxMp:2,
+          atk:7, def:5, spd:5, mov:4, atkRange:1,
           level:1, exp:0, spriteKey:'cat_soldier', abilities:['attack','scratch'] },
         { id:'boss', name:'Shadow', team:'enemy', unitClass:'boss',
-          x:13, y:5, hp:32, maxHp:32, mp:4, maxMp:4,
-          atk:12, def:6, spd:10, mov:5, atkRange:1,
+          x:13, y:5, hp:28, maxHp:28, mp:4, maxMp:4,
+          atk:10, def:5, spd:7, mov:4, atkRange:1,
           level:3, exp:0, spriteKey:'cat_boss', abilities:['attack','scratch','hiss'] },
     ],
     triggers: [
@@ -314,6 +314,7 @@ class TacticalBattle {
     }
     _update(dt) {
         this.time+=dt;
+        this.engine.tickDialogue(dt);
         this.camX+=(this.camTargetX-this.camX)*this.camSpeed*dt;
         this.camY+=(this.camTargetY-this.camY)*this.camSpeed*dt;
         this.zoom+=(this.zoomTarget-this.zoom)*this.zoomSpeed*dt;
@@ -500,21 +501,47 @@ class TacticalBattle {
         ctx.restore();
     }
     _rInfo(ctx,cw,ch){
-        const sel=this.engine.selectedUnit;if(!sel)return;
-        this._pan(ctx,6,32,140,sel);
-        const tgt=this.engine.getUnitAt(this.engine.cursor.x,this.engine.cursor.y);
-        if(tgt&&tgt!==sel&&tgt.alive)this._pan(ctx,cw-146,32,140,tgt);
+        const sel=this.engine.selectedUnit;
+        const cur=this.engine.getUnitAt(this.engine.cursor.x,this.engine.cursor.y);
+        if(sel){
+            this._pan(ctx,6,32,148,sel);
+            if(cur&&cur!==sel&&cur.alive)this._pan(ctx,cw-154,32,148,cur);
+        } else if(cur&&cur.alive){
+            this._pan(ctx,6,32,148,cur);
+        }
     }
     _pan(ctx,x,y,w,u){
-        const h=70;this._dq(ctx,x,y,w,h);
+        const hasMp=u.maxMp>0;
+        const h=hasMp?92:76;
+        this._dq(ctx,x,y,w,h);
         ctx.save();
+        // Name + level
         ctx.font='bold 12px monospace';ctx.fillStyle=u.team==='player'?'#88bbff':'#ff8888';
         ctx.textAlign='left';ctx.fillText(u.name,x+8,y+16);
-        ctx.font='10px monospace';ctx.fillStyle=TPAL.UI_TEXT;
-        ctx.fillText('HP',x+8,y+31);this._hp(ctx,x+28,y+24,w-38,7,u.hp,u.maxHp);
+        ctx.font='9px monospace';ctx.fillStyle=TPAL.UI_ACCENT;
+        ctx.textAlign='right';ctx.fillText('Lv.'+u.level,x+w-8,y+16);
+        // HP bar
+        ctx.font='10px monospace';ctx.fillStyle=TPAL.UI_TEXT;ctx.textAlign='left';
+        ctx.fillText('HP',x+8,y+31);
+        this._hp(ctx,x+28,y+24,w-38,7,u.hp,u.maxHp);
         ctx.fillText(`${u.hp}/${u.maxHp}`,x+8,y+44);
-        ctx.fillText(`ATK:${u.atk} DEF:${u.def} SPD:${u.spd}`,x+8,y+56);
-        if(u.maxMp>0){ctx.fillStyle='#88aaff';ctx.fillText(`MP:${u.mp}/${u.maxMp}`,x+8,y+66);}
+        let statsY=y+57;
+        // MP bar (if unit has MP)
+        if(hasMp){
+            ctx.fillStyle=TPAL.UI_TEXT;ctx.textAlign='left';
+            ctx.fillText('MP',x+8,y+57);
+            // MP bar background
+            ctx.fillStyle='#1a1a2e';ctx.fillRect(x+28,y+50,w-38,7);
+            // MP bar fill
+            ctx.fillStyle='#5577dd';ctx.fillRect(x+28,y+50,(w-38)*(u.mp/u.maxMp),7);
+            ctx.strokeStyle='#000';ctx.lineWidth=0.5;ctx.strokeRect(x+28,y+50,w-38,7);
+            ctx.fillStyle='#88aaff';ctx.textAlign='left';
+            ctx.fillText(`${u.mp}/${u.maxMp}`,x+8,y+70);
+            statsY=y+82;
+        }
+        // ATK/DEF/SPD stats line
+        ctx.font='10px monospace';ctx.fillStyle=TPAL.UI_TEXT;ctx.textAlign='left';
+        ctx.fillText(`ATK:${u.atk} DEF:${u.def} SPD:${u.spd}`,x+8,statsY);
         ctx.restore();
     }
     _rActions(ctx,cw,ch){
@@ -553,7 +580,12 @@ class TacticalBattle {
         let line='',ly=bY+(speaker?36:20);
         for(const w of words){const t=line+(line?' ':'')+w;if(ctx.measureText(t).width>maxW){ctx.fillText(line,bX+12,ly);line=w;ly+=lH;}else line=t;}
         if(line)ctx.fillText(line,bX+12,ly);
-        if(Math.floor(this.time*3)%2===0){ctx.fillStyle=TPAL.UI_TEXT;ctx.font='10px monospace';ctx.textAlign='right';ctx.fillText('TAP \u25B6',bX+bW-12,bY+bH-10);}
+        // Auto-advance progress bar
+        const prog=Math.min(1,this.engine._dialogueTimer/Math.max(0.001,this.engine._dialogueAutoTime));
+        const pBX=bX+12,pBY=bY+bH-10,pBW=bW-24,pBH=4;
+        ctx.fillStyle='rgba(0,0,80,0.7)';ctx.fillRect(pBX,pBY,pBW,pBH);
+        ctx.fillStyle=TPAL.UI_ACCENT;ctx.fillRect(pBX,pBY,pBW*prog,pBH);
+        ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=0.5;ctx.strokeRect(pBX,pBY,pBW,pBH);
         ctx.restore();
     }
     _rEnd(ctx,cw,ch){

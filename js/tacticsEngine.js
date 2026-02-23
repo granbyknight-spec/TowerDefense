@@ -155,6 +155,8 @@ class TacticsEngine {
         this.dialogueQueue = [];    // [{speaker, text, portrait}] waiting lines
         this.currentDialogue = null; // the line currently on screen
         this._stateBeforeDialogue = null; // where to return after dialogue ends
+        this._dialogueTimer = 0;    // seconds elapsed on current dialogue line
+        this._dialogueAutoTime = 3.5; // seconds before auto-advance
 
         // ── Story triggers ────────────────────────────────────────────────────
         // Each trigger fires at most once. Populated by loadBattle().
@@ -242,6 +244,7 @@ class TacticsEngine {
         this._stateBeforeDialogue = null;
         this._pendingAbility = null;
         this._enemyQueue = [];
+        this._dialogueTimer = 0;
 
         // ── Queue intro dialogue, then transition to player phase ─────────────
         const introLines = scenario.dialogue && scenario.dialogue.intro
@@ -1006,6 +1009,12 @@ class TacticsEngine {
      * with a small delay between each so the renderer can animate.
      */
     startEnemyPhase() {
+        // Clear any still-pending enemy process timer
+        if (this._enemyProcessTimer !== null) {
+            clearTimeout(this._enemyProcessTimer);
+            this._enemyProcessTimer = null;
+        }
+
         this.state = 'enemy_turn';
         this._emit('phase_change', { phase: 'enemy', turnNumber: this.turnNumber });
 
@@ -1029,6 +1038,9 @@ class TacticsEngine {
      * @private
      */
     _processNextEnemy() {
+        // If the battle has already ended (victory or defeat), stop processing
+        if (this.state === 'victory' || this.state === 'defeat') return;
+
         if (this._enemyQueue.length === 0) {
             // All enemies done → back to player phase
             this.startPlayerPhase();
@@ -1044,6 +1056,9 @@ class TacticsEngine {
         }
 
         this.processEnemyUnit(unit);
+
+        // If the attack ended the battle, stop scheduling more enemies
+        if (this.state === 'victory' || this.state === 'defeat') return;
 
         // Yield control to let the renderer animate, then continue
         // In environments without setTimeout (testing), call synchronously.
@@ -1133,6 +1148,8 @@ class TacticsEngine {
             // Attack
             this.executeAttack(unit, bestTarget);
             unit.acted = true;
+            // If the attack ended the battle, return immediately
+            if (this.state === 'victory' || this.state === 'defeat') return;
             return;
         }
 
@@ -1154,6 +1171,8 @@ class TacticsEngine {
             // Check if now in range after moving
             if (this._inAttackRange(unit.x, unit.y, nearest.x, nearest.y, unit.atkRange)) {
                 this.executeAttack(unit, nearest);
+                // If the attack ended the battle, return immediately
+                if (this.state === 'victory' || this.state === 'defeat') return;
             }
         }
 
@@ -1262,6 +1281,7 @@ class TacticsEngine {
             this.currentDialogue = null;
             this.state = this._stateBeforeDialogue || 'player_select';
             this._stateBeforeDialogue = null;
+            this._dialogueTimer = 0;
             this._emit('dialogue_end', {});
             return;
         }
@@ -1274,6 +1294,10 @@ class TacticsEngine {
         }
         this.state = 'dialogue';
 
+        // Reset auto-advance timer and compute display time from text length
+        this._dialogueTimer = 0;
+        this._dialogueAutoTime = Math.max(2.0, Math.min(6.0, line.text.length * 0.04 + 1.5));
+
         this._emit('dialogue', { speaker: line.speaker, text: line.text, portrait: line.portrait });
     }
 
@@ -1282,6 +1306,20 @@ class TacticsEngine {
      */
     advanceDialogue() {
         this._nextDialogue();
+    }
+
+    /**
+     * Tick the auto-advance timer for dialogue.
+     * Call this every frame with the delta-time in seconds.
+     * When the timer exceeds _dialogueAutoTime, the dialogue auto-advances.
+     * @param {number} dt  — elapsed seconds since last frame
+     */
+    tickDialogue(dt) {
+        if (this.state !== 'dialogue' && this.state !== 'intro') return;
+        this._dialogueTimer += dt;
+        if (this._dialogueTimer >= this._dialogueAutoTime) {
+            this._nextDialogue();
+        }
     }
 
     // =========================================================================
