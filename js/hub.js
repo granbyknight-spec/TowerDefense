@@ -46,6 +46,8 @@ class Hub {
         const title = a.getTrainerTitle();
         const nextXP = a.getNextRankXP();
         const xpPct = nextXP > 0 ? Math.min(100, Math.round((a.trainerXP / nextXP) * 100)) : 100;
+        const completedCount = a.completedLevels.length;
+        const totalLevels = CONFIG.LEVELS.length;
 
         // Build battle list
         const battleCards = CONFIG.LEVELS.map((lvl, i) => {
@@ -65,12 +67,13 @@ class Hub {
         const rosterCards = a.roster.map(d => {
             const bd = DOG_BREEDS[d.breed];
             const isActive = d.id === a.activeDogId;
+            const bondLabel = d.bond >= 80 ? 'Best Friend' : d.bond >= 50 ? 'Close Bond' : d.bond >= 20 ? 'Friendly' : 'Getting to know...';
             return `
                 <div class="hub-dog-card ${isActive ? 'active' : ''}" data-dog-id="${d.id}">
                     <div class="hub-dog-emoji">${bd ? bd.emoji : '🐕'}</div>
                     <div class="hub-dog-info">
                         <div class="hub-dog-name">${d.name} <span class="hub-dog-level">Lv${d.level}</span></div>
-                        <div class="hub-dog-breed">${bd ? bd.breed : d.breed}</div>
+                        <div class="hub-dog-breed">${bd ? bd.breed : d.breed} &middot; ${bondLabel}</div>
                         <div class="hub-dog-bond-bar"><div class="hub-dog-bond-fill" style="width:${d.bond}%"></div></div>
                     </div>
                     <div class="hub-dog-actions">
@@ -159,8 +162,8 @@ class Hub {
                 <div class="hub-trainer">
                     <span class="hub-trainer-name">${a.playerName}</span>
                     <span class="hub-trainer-rank">${title}</span>
-                    <div class="hub-xp-bar"><div class="hub-xp-fill" style="width:${xpPct}%"></div></div>
                 </div>
+                <div class="hub-xp-bar"><div class="hub-xp-fill" style="width:${xpPct}%"></div></div>
                 <div class="hub-currency">
                     <span class="hub-bones">🦴 ${a.bones}</span>
                     <span class="hub-treats">🍖 ${a.treats}</span>
@@ -172,7 +175,7 @@ class Hub {
                 <div class="hub-companion-emoji">${breedData ? breedData.emoji : '🐕'}</div>
                 <div class="hub-companion-info">
                     <div class="hub-companion-name">${dog.name} <span class="hub-dog-level">Lv${dog.level}</span></div>
-                    <div class="hub-companion-breed">${breedData ? breedData.breed : ''} | Battles: ${dog.battlesWon}</div>
+                    <div class="hub-companion-breed">${breedData ? breedData.breed : ''} &middot; ${dog.battlesWon} Victories</div>
                 </div>
             </div>
             ` : ''}
@@ -197,18 +200,18 @@ class Hub {
             </div>
 
             <div class="hub-section">
-                <div class="hub-section-title">Yard Patrol (Free Play)</div>
+                <div class="hub-section-title">Yard Patrol &middot; ${completedCount}/${totalLevels}</div>
                 <div class="hub-battles">${battleCards}</div>
-                <button class="hub-btn hub-go-btn" id="start-battle-btn">Start Battle!</button>
+                <button class="hub-btn hub-go-btn" id="start-battle-btn">Start Battle</button>
             </div>
 
             <div class="hub-section">
-                <div class="hub-section-title">Your Kennel (${a.roster.length} dogs)</div>
-                <div class="hub-roster">${rosterCards || '<div class="hub-empty">No dogs yet!</div>'}</div>
+                <div class="hub-section-title">Your Kennel &middot; ${a.roster.length} dogs</div>
+                <div class="hub-roster">${rosterCards || '<div class="hub-empty">No dogs yet! Visit the shelter to adopt.</div>'}</div>
             </div>
 
             <div class="hub-section">
-                <div class="hub-section-title">Dog Shelter - Adopt</div>
+                <div class="hub-section-title">Dog Shelter</div>
                 <div class="hub-shelter">${shelterCards}</div>
             </div>
 

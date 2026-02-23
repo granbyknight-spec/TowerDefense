@@ -24,6 +24,10 @@ class StoryEngine {
         this.dialogueChars = 0;
         this.dialogueSpeed = 40; // chars per second
         this._typeTimer = 0;
+        this._punctPause = 0; // punctuation pause counter (in char-times)
+
+        // Choice selection state
+        this._selectedChoice = 0;
 
         // Visual state
         this.bgColor = '#1a1a2e';
@@ -145,14 +149,13 @@ class StoryEngine {
         if (!this.scene) return;
         const steps = this.scene.steps;
         if (this.stepIndex >= steps.length) {
-            // Scene complete, go to next
+            // Scene complete, go to next with iris wipe transition
             this._transition = {
-                type: 'fade',
+                type: 'iris',
                 progress: 0,
-                duration: 0.5,
+                duration: 0.8,
                 callback: () => this._startScene(this.sceneIndex + 1)
             };
-            this.fadeTarget = 1;
             return;
         }
 
@@ -169,6 +172,7 @@ class StoryEngine {
                 this.dialogueChars = 0;
                 this.dialogueTyping = true;
                 this.dialogueChoices = null;
+                this._punctPause = 0;
                 break;
 
             case 'choice':
@@ -178,6 +182,7 @@ class StoryEngine {
                 this.dialogueChars = this.dialogueText.length; // show full text
                 this.dialogueTyping = false;
                 this.dialogueChoices = step.choices;
+                this._selectedChoice = 0;
                 break;
 
             case 'narration':
@@ -187,6 +192,7 @@ class StoryEngine {
                 this.dialogueChars = 0;
                 this.dialogueTyping = true;
                 this.dialogueChoices = null;
+                this._punctPause = 0;
                 break;
 
             case 'enter':
@@ -381,16 +387,15 @@ class StoryEngine {
             this.stepIndex++;
         }
 
-        // Scene exhausted - go to next scene
+        // Scene exhausted - go to next scene with iris wipe
         this.dialogueText = '';
         this.dialogueChoices = null;
         this._transition = {
-            type: 'fade',
+            type: 'iris',
             progress: 0,
-            duration: 0.3,
+            duration: 0.5,
             callback: () => this._startScene(this.sceneIndex + 1)
         };
-        this.fadeTarget = 1;
     }
 
     // === EXPLORATION ===
@@ -631,20 +636,47 @@ class StoryEngine {
     }
 
     _update(dt) {
-        // Typing animation
+        // Typing animation with punctuation-based pauses (FF7-style)
         if (this.dialogueTyping && this.dialogueChars < this.dialogueText.length) {
             this._typeTimer += dt;
-            const charsToAdd = Math.floor(this._typeTimer * this.dialogueSpeed);
-            if (charsToAdd > 0) {
-                this.dialogueChars = Math.min(this.dialogueChars + charsToAdd, this.dialogueText.length);
-                this._typeTimer = 0;
+            const baseInterval = 1 / this.dialogueSpeed; // time per character
+
+            while (this._typeTimer >= baseInterval && this.dialogueChars < this.dialogueText.length) {
+                // Check if we are currently pausing for punctuation
+                if (this._punctPause > 0) {
+                    this._punctPause--;
+                    this._typeTimer -= baseInterval;
+                    continue;
+                }
+
+                this.dialogueChars++;
+                this._typeTimer -= baseInterval;
+
+                // Check the character we just revealed for punctuation pauses
+                const ch2 = this.dialogueText[this.dialogueChars - 1];
+                const nextCh = this.dialogueChars < this.dialogueText.length ? this.dialogueText[this.dialogueChars] : '';
+
+                // Ellipsis detection: if we just typed the third dot of "..."
+                if (ch2 === '.' && this.dialogueChars >= 3 &&
+                    this.dialogueText[this.dialogueChars - 2] === '.' &&
+                    this.dialogueText[this.dialogueChars - 3] === '.') {
+                    this._punctPause = 12; // longer pause for ellipsis
+                } else if ((ch2 === '.' || ch2 === '!' || ch2 === '?') && nextCh !== '.' && nextCh !== '!' && nextCh !== '?') {
+                    // Period, exclamation, question: 8 char-times (but not mid-ellipsis/combo)
+                    this._punctPause = 8;
+                } else if (ch2 === ',') {
+                    this._punctPause = 4;
+                } else if (ch2 === ':' || ch2 === ';') {
+                    this._punctPause = 3;
+                }
             }
+
             if (this.dialogueChars >= this.dialogueText.length) {
                 this.dialogueTyping = false;
             }
         }
 
-        // Fade transition
+        // Transition effects (fade and iris wipe)
         if (this._transition) {
             this._transition.progress += dt / this._transition.duration;
             if (this._transition.progress >= 1) {
@@ -652,7 +684,7 @@ class StoryEngine {
                 this._transition = null;
                 this.fadeAlpha = 0;
                 if (cb) cb();
-            } else {
+            } else if (this._transition.type === 'fade') {
                 // Fade out then in
                 if (this._transition.progress < 0.5) {
                     this.fadeAlpha = this._transition.progress * 2;
@@ -660,6 +692,7 @@ class StoryEngine {
                     this.fadeAlpha = (1 - this._transition.progress) * 2;
                 }
             }
+            // Iris wipe is rendered in _render, progress tracked here
         }
 
         // Shake
@@ -724,6 +757,32 @@ class StoryEngine {
         if (this.fadeAlpha > 0) {
             ctx.fillStyle = `rgba(0,0,0,${this.fadeAlpha})`;
             ctx.fillRect(0, 0, cw, ch);
+        }
+
+        // Iris wipe overlay (circle that closes/opens)
+        if (this._transition && this._transition.type === 'iris') {
+            const p = this._transition.progress;
+            const maxRadius = Math.sqrt(cw * cw + ch * ch) / 2;
+            let radius;
+            if (p < 0.5) {
+                // Closing: circle shrinks from full to zero
+                radius = maxRadius * (1 - p * 2);
+            } else {
+                // Opening: circle grows from zero to full
+                radius = maxRadius * ((p - 0.5) * 2);
+            }
+
+            // Draw black with a circular hole cut out
+            ctx.save();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.rect(0, 0, cw, ch);
+            // Cut out circle using counter-clockwise winding
+            ctx.moveTo(cw / 2 + radius, ch / 2);
+            ctx.arc(cw / 2, ch / 2, Math.max(radius, 0.5), 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
         }
 
         ctx.restore();
@@ -894,6 +953,67 @@ class StoryEngine {
         }
     }
 
+    // Draw an FF7-style blue gradient box with borders and corner highlights
+    _drawFF7Box(ctx, x, y, w, h, radius) {
+        radius = radius || 6;
+
+        // Background: dark blue-purple gradient
+        const grad = ctx.createLinearGradient(x, y, x, y + h);
+        grad.addColorStop(0, '#1a1040');
+        grad.addColorStop(1, '#080618');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.fill();
+
+        // Outer border: 2px #a8a0c0
+        ctx.strokeStyle = '#a8a0c0';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.stroke();
+
+        // Inner border: 1px #605880 inset 3px
+        ctx.strokeStyle = '#605880';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x + 3, y + 3, w - 6, h - 6, Math.max(radius - 2, 2));
+        ctx.stroke();
+
+        // Corner highlights: bright #c8c0e0 L-shapes at each corner (4px)
+        const cLen = 4;
+        ctx.strokeStyle = '#c8c0e0';
+        ctx.lineWidth = 1.5;
+
+        // Top-left corner L
+        ctx.beginPath();
+        ctx.moveTo(x + 1, y + 1 + cLen);
+        ctx.lineTo(x + 1, y + 1);
+        ctx.lineTo(x + 1 + cLen, y + 1);
+        ctx.stroke();
+
+        // Top-right corner L
+        ctx.beginPath();
+        ctx.moveTo(x + w - 1 - cLen, y + 1);
+        ctx.lineTo(x + w - 1, y + 1);
+        ctx.lineTo(x + w - 1, y + 1 + cLen);
+        ctx.stroke();
+
+        // Bottom-left corner L
+        ctx.beginPath();
+        ctx.moveTo(x + 1, y + h - 1 - cLen);
+        ctx.lineTo(x + 1, y + h - 1);
+        ctx.lineTo(x + 1 + cLen, y + h - 1);
+        ctx.stroke();
+
+        // Bottom-right corner L
+        ctx.beginPath();
+        ctx.moveTo(x + w - 1 - cLen, y + h - 1);
+        ctx.lineTo(x + w - 1, y + h - 1);
+        ctx.lineTo(x + w - 1, y + h - 1 - cLen);
+        ctx.stroke();
+    }
+
     _renderDialogueBox(ctx, cw, ch) {
         const boxH = ch * 0.28;
         const boxY = ch - boxH - 8;
@@ -901,38 +1021,35 @@ class StoryEngine {
         const boxW = cw - 16;
         const pad = 14;
 
-        // Box background
-        ctx.fillStyle = 'rgba(15, 10, 8, 0.92)';
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, 12);
-        ctx.fill();
+        // === FF7-Style Blue Gradient Dialogue Box ===
+        this._drawFF7Box(ctx, boxX, boxY, boxW, boxH, 6);
 
-        // Box border
-        ctx.strokeStyle = this.dialogueSpeaker ? '#FFD700' : '#8d6e63';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, 12);
-        ctx.stroke();
-
-        // Speaker name + emoji
+        // === Speaker Name Label Box (overlapping top border) ===
+        let textStartY = boxY + pad + 4;
         if (this.dialogueSpeaker) {
-            const speakerY = boxY + pad + 2;
-            if (this.dialogueSpeakerEmoji) {
-                ctx.font = `${cw * 0.05}px Arial`;
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-                ctx.fillText(this.dialogueSpeakerEmoji, boxX + pad, speakerY - 2);
-            }
-            ctx.font = `bold ${cw * 0.035}px Arial`;
-            ctx.fillStyle = '#FFD700';
+            const nameFont = `bold ${cw * 0.033}px Arial`;
+            ctx.font = nameFont;
+            const emojiStr = this.dialogueSpeakerEmoji ? this.dialogueSpeakerEmoji + ' ' : '';
+            const fullName = emojiStr + this.dialogueSpeaker;
+            const nameWidth = ctx.measureText(fullName).width + 20;
+            const nameBoxH = cw * 0.055;
+            const nameBoxX = boxX + 12;
+            const nameBoxY = boxY - nameBoxH * 0.4; // overlap top border by ~40%
+
+            // Draw small FF7 blue box for name
+            this._drawFF7Box(ctx, nameBoxX, nameBoxY, nameWidth, nameBoxH, 4);
+
+            // Name text in lavender-white
+            ctx.font = nameFont;
+            ctx.fillStyle = '#e8e0ff';
             ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            const nameX = this.dialogueSpeakerEmoji ? boxX + pad + cw * 0.06 : boxX + pad;
-            ctx.fillText(this.dialogueSpeaker, nameX, speakerY);
+            ctx.textBaseline = 'middle';
+            ctx.fillText(fullName, nameBoxX + 10, nameBoxY + nameBoxH / 2);
+
+            textStartY = boxY + pad + 6;
         }
 
-        // Dialogue text (with typing effect)
-        const textY = boxY + pad + (this.dialogueSpeaker ? cw * 0.05 : 4);
+        // === Dialogue text (with typing effect) ===
         const displayText = this.dialogueText.substring(0, this.dialogueChars);
         ctx.font = `${cw * 0.032}px Arial`;
         ctx.fillStyle = '#e0e0e0';
@@ -940,27 +1057,63 @@ class StoryEngine {
         ctx.textBaseline = 'top';
 
         // Word wrap
-        this._wrapText(ctx, displayText, boxX + pad, textY, boxW - pad * 2, cw * 0.04);
+        this._wrapText(ctx, displayText, boxX + pad, textStartY, boxW - pad * 2, cw * 0.04);
 
-        // Choices
+        // === Choice Menu Styling (FF7 blue boxes) ===
         if (this.dialogueChoices && !this.dialogueTyping) {
-            const choiceY = boxY + boxH - pad - this.dialogueChoices.length * (cw * 0.042);
+            const choiceLineH = cw * 0.046;
+            const choiceBoxH = this.dialogueChoices.length * choiceLineH + 16;
+            const choiceBoxW = boxW - 24;
+            const choiceBoxX = boxX + 12;
+            const choiceBoxY = boxY + boxH + 6;
+
+            // Draw separate FF7 blue box for choices
+            this._drawFF7Box(ctx, choiceBoxX, choiceBoxY, choiceBoxW, choiceBoxH, 5);
+
+            const now = Date.now();
             for (let i = 0; i < this.dialogueChoices.length; i++) {
-                const cy = choiceY + i * (cw * 0.042);
-                ctx.fillStyle = '#FFD700';
-                ctx.font = `bold ${cw * 0.03}px Arial`;
-                ctx.fillText(`▸ ${this.dialogueChoices[i].text}`, boxX + pad + 4, cy);
+                const cy = choiceBoxY + 10 + i * choiceLineH;
+                const isSelected = (this._selectedChoice === i);
+
+                // Highlight selected vs unselected
+                if (isSelected) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `bold ${cw * 0.03}px Arial`;
+                } else {
+                    ctx.fillStyle = '#a0a0a0';
+                    ctx.font = `${cw * 0.03}px Arial`;
+                }
+
+                // Animated bobbing cursor arrow for selected choice
+                const arrowX = choiceBoxX + 12;
+                const textX = choiceBoxX + 28;
+                if (isSelected) {
+                    const bob = Math.sin(now / 150) * 2;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText('\u25B6', arrowX + bob, cy);
+                }
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText(this.dialogueChoices[i].text, textX, cy);
             }
         }
 
-        // "Tap to continue" indicator
-        if (!this.dialogueTyping && !this.dialogueChoices) {
-            const blink = Math.sin(Date.now() / 300) > 0;
-            if (blink) {
-                ctx.font = `${cw * 0.025}px Arial`;
-                ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                ctx.textAlign = 'right';
-                ctx.fillText('tap to continue ▸', boxX + boxW - pad, boxY + boxH - pad);
+        // === Blinking Continue Indicator (downward triangle) ===
+        if (!this.dialogueTyping && !this.dialogueChoices && this.dialogueChars >= this.dialogueText.length) {
+            const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+            if (blinkOn) {
+                const triX = boxX + boxW - pad - 6;
+                const triY = boxY + boxH - pad - 2;
+                const triSize = 6;
+                ctx.fillStyle = '#a8a0c0';
+                ctx.beginPath();
+                ctx.moveTo(triX - triSize, triY - triSize);
+                ctx.lineTo(triX + triSize, triY - triSize);
+                ctx.lineTo(triX, triY + triSize * 0.6);
+                ctx.closePath();
+                ctx.fill();
             }
         }
     }
@@ -1022,28 +1175,46 @@ class StoryEngine {
             return;
         }
 
-        // If choices, check which was tapped
+        // If choices, check which was tapped (FF7 choice box below dialogue)
         if (this.dialogueChoices) {
             const cw = this.canvas.width;
             const ch = this.canvas.height;
             const boxH = ch * 0.28;
             const boxY = ch - boxH - 8;
-            const pad = 14;
-            const choiceY = boxY + boxH - pad - this.dialogueChoices.length * (cw * 0.042);
+            const boxX = 8;
+            const boxW = cw - 16;
+            const choiceLineH = cw * 0.046;
+            const choiceBoxX = boxX + 12;
+            const choiceBoxY = boxY + boxH + 6;
+            const choiceBoxW = boxW - 24;
+            const choiceBoxH = this.dialogueChoices.length * choiceLineH + 16;
 
-            for (let i = 0; i < this.dialogueChoices.length; i++) {
-                const cy = choiceY + i * (cw * 0.042);
-                if (sy >= cy - 5 && sy <= cy + cw * 0.04) {
-                    const choice = this.dialogueChoices[i];
-                    this.dialogueChoices = null;
-                    this.dialogueText = '';
+            // Check if tap is inside choice box
+            if (sx >= choiceBoxX && sx <= choiceBoxX + choiceBoxW &&
+                sy >= choiceBoxY && sy <= choiceBoxY + choiceBoxH) {
+                for (let i = 0; i < this.dialogueChoices.length; i++) {
+                    const cy = choiceBoxY + 10 + i * choiceLineH;
+                    if (sy >= cy - 4 && sy <= cy + choiceLineH) {
+                        const choice = this.dialogueChoices[i];
+                        this.dialogueChoices = null;
+                        this.dialogueText = '';
 
-                    if (choice.jump !== undefined) {
-                        this.stepIndex = choice.jump;
-                    } else {
-                        this.stepIndex++;
+                        if (choice.jump !== undefined) {
+                            this.stepIndex = choice.jump;
+                        } else {
+                            this.stepIndex++;
+                        }
+                        this._advanceStep();
+                        return;
                     }
-                    this._advanceStep();
+                }
+            }
+
+            // Tap outside choice box: update selected choice based on nearest
+            for (let i = 0; i < this.dialogueChoices.length; i++) {
+                const cy = choiceBoxY + 10 + i * choiceLineH;
+                if (sy >= cy - 4 && sy <= cy + choiceLineH) {
+                    this._selectedChoice = i;
                     return;
                 }
             }

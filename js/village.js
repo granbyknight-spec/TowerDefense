@@ -398,6 +398,9 @@ class Village {
         // Sky/background gradient based on time of day
         this._renderSky(ctx, cw, ch);
 
+        // Subtle parallax background elements (distant hills/mountains)
+        this._renderParallaxBackground(ctx, cw, ch, scrollX, scrollY);
+
         // Translate to camera
         ctx.translate(-scrollX, -scrollY);
 
@@ -588,6 +591,79 @@ class Village {
         grad.addColorStop(1, botColor);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, cw, ch);
+    }
+
+    // === PARALLAX BACKGROUND ===
+
+    _renderParallaxBackground(ctx, cw, ch, scrollX, scrollY) {
+        const t = this.dayTime;
+        const isDay = t > 0.3 && t < 0.75;
+        const isNight = t < 0.2 || t > 0.85;
+
+        // Distant mountain/hill silhouette layer (moves at 10% of camera speed)
+        const parallax1 = scrollX * 0.1;
+        const parallax1Y = scrollY * 0.05;
+        const hillAlpha = isNight ? 0.15 : (isDay ? 0.08 : 0.12);
+
+        ctx.fillStyle = `rgba(${isNight ? '20,25,50' : (isDay ? '60,90,60' : '80,50,60')},${hillAlpha})`;
+        ctx.beginPath();
+        ctx.moveTo(0, ch);
+        for (let i = 0; i <= cw; i += cw / 8) {
+            const hillH = ch * 0.7 + Math.sin((i + parallax1) * 0.003) * ch * 0.08
+                        + Math.sin((i + parallax1) * 0.007) * ch * 0.04;
+            ctx.lineTo(i, hillH - parallax1Y);
+        }
+        ctx.lineTo(cw, ch);
+        ctx.closePath();
+        ctx.fill();
+
+        // Closer hill layer (moves at 20% of camera speed)
+        const parallax2 = scrollX * 0.2;
+        const parallax2Y = scrollY * 0.1;
+        ctx.fillStyle = `rgba(${isNight ? '15,20,40' : (isDay ? '50,80,50' : '70,40,50')},${hillAlpha * 0.8})`;
+        ctx.beginPath();
+        ctx.moveTo(0, ch);
+        for (let i = 0; i <= cw; i += cw / 10) {
+            const hillH = ch * 0.78 + Math.sin((i + parallax2) * 0.005 + 1) * ch * 0.06
+                        + Math.sin((i + parallax2) * 0.012 + 2) * ch * 0.03;
+            ctx.lineTo(i, hillH - parallax2Y);
+        }
+        ctx.lineTo(cw, ch);
+        ctx.closePath();
+        ctx.fill();
+
+        // Distant tree line (moves at 15% of camera speed)
+        if (isDay || (!isNight)) {
+            const parallax3 = scrollX * 0.15;
+            const treeAlpha = isDay ? 0.06 : 0.04;
+            ctx.fillStyle = `rgba(30,60,25,${treeAlpha})`;
+            for (let i = -20; i < cw + 20; i += 18) {
+                const th = ch * 0.76 + Math.sin((i + parallax3) * 0.01) * ch * 0.02 - scrollY * 0.08;
+                const treeH = 10 + Math.sin(i * 0.23) * 5;
+                ctx.beginPath();
+                ctx.moveTo(i + parallax3 % 18, th);
+                ctx.lineTo(i + parallax3 % 18 - 6, th + treeH);
+                ctx.lineTo(i + parallax3 % 18 + 6, th + treeH);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        // Stars at night (very distant, minimal parallax)
+        if (isNight) {
+            const starParallax = scrollX * 0.02;
+            ctx.fillStyle = 'rgba(255,255,240,0.4)';
+            for (let i = 0; i < 15; i++) {
+                const sx = ((i * 137 + 43) % cw + starParallax) % cw;
+                const sy = ((i * 89 + 17) % (ch * 0.5));
+                const twinkle = Math.sin(this.time * (1 + i * 0.3) + i) * 0.5 + 0.5;
+                ctx.globalAlpha = 0.2 + twinkle * 0.3;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 0.8 + twinkle * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
     }
 
     // === TILE RENDERING ===
@@ -2844,57 +2920,76 @@ class Village {
     _renderLighting(ctx, cw, ch, scrollX, scrollY, ts) {
         const t = this.dayTime;
 
-        // Skip lighting during bright daytime
-        if (t > 0.3 && t < 0.65) return;
+        // Skip lighting during bright daytime (but still render subtle ambient)
+        if (t > 0.32 && t < 0.63) return;
 
         // Create darkness overlay
         ctx.save();
         ctx.globalCompositeOperation = 'multiply';
 
-        // Base darkness level
+        // Smoother darkness transitions with multiple breakpoints
         let darkness;
-        if (t < 0.2 || t > 0.85) {
-            darkness = 0.6; // night
-        } else if (t < 0.3) {
-            darkness = 0.6 * (1 - (t - 0.2) / 0.1); // dawn
+        if (t < 0.15 || t > 0.9) {
+            darkness = 0.65; // deep night
+        } else if (t < 0.2) {
+            darkness = 0.65 - (t - 0.15) / 0.05 * 0.1; // late night to pre-dawn
+        } else if (t < 0.32) {
+            darkness = 0.55 * (1 - (t - 0.2) / 0.12); // dawn - smoother ramp
+        } else if (t < 0.63) {
+            darkness = 0; // day
+        } else if (t < 0.75) {
+            darkness = 0.55 * ((t - 0.63) / 0.12); // dusk - smoother ramp
+        } else if (t < 0.9) {
+            darkness = 0.55 + (t - 0.75) / 0.15 * 0.1; // evening to night
         } else {
-            darkness = 0.6 * ((t - 0.65) / 0.2); // dusk
+            darkness = 0.65;
         }
 
-        // Dark tint
-        const tintR = Math.round(255 - darkness * 180);
-        const tintG = Math.round(255 - darkness * 190);
-        const tintB = Math.round(255 - darkness * 150);
-        ctx.fillStyle = `rgb(${tintR},${tintG},${tintB})`;
+        // Soft radial gradient for darkness (lighter in center near player, darker at edges)
+        const darkGrad = ctx.createRadialGradient(cw / 2, ch / 2, 0, cw / 2, ch / 2, cw * 0.7);
+        const tintR = Math.round(255 - darkness * 175);
+        const tintG = Math.round(255 - darkness * 185);
+        const tintB = Math.round(255 - darkness * 145);
+        const edgeR = Math.round(255 - darkness * 200);
+        const edgeG = Math.round(255 - darkness * 210);
+        const edgeB = Math.round(255 - darkness * 170);
+        darkGrad.addColorStop(0, `rgb(${tintR},${tintG},${tintB})`);
+        darkGrad.addColorStop(0.6, `rgb(${Math.round((tintR + edgeR) / 2)},${Math.round((tintG + edgeG) / 2)},${Math.round((tintB + edgeB) / 2)})`);
+        darkGrad.addColorStop(1, `rgb(${edgeR},${edgeG},${edgeB})`);
+        ctx.fillStyle = darkGrad;
         ctx.fillRect(0, 0, cw, ch);
 
         ctx.restore();
 
-        // Light sources (additive)
-        if (darkness > 0.1) {
+        // Light sources (additive) - softer transitions
+        if (darkness > 0.08) {
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
 
-            // Lamp lights
+            const flicker = Math.sin(this.time * 8) * 0.02 + Math.sin(this.time * 13) * 0.01;
+
+            // Lamp lights - more color stops for smoother falloff
             for (let r = 0; r < this.mapH; r++) {
                 for (let c = 0; c < this.mapW; c++) {
                     if (this.objects[r * this.mapW + c] === OBJ.LAMP) {
                         const lx = c * ts + ts * 0.5 - scrollX;
                         const ly = r * ts + ts * 0.3 - scrollY;
-                        if (lx < -100 || lx > cw + 100 || ly < -100 || ly > ch + 100) continue;
+                        if (lx < -120 || lx > cw + 120 || ly < -120 || ly > ch + 120) continue;
 
-                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 3);
-                        const intensity = darkness * 0.6;
-                        grad.addColorStop(0, `rgba(255,220,100,${intensity})`);
-                        grad.addColorStop(0.5, `rgba(255,180,60,${intensity * 0.3})`);
-                        grad.addColorStop(1, 'rgba(255,180,60,0)');
+                        const intensity = darkness * (0.55 + flicker);
+                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 3.5);
+                        grad.addColorStop(0, `rgba(255,225,110,${intensity})`);
+                        grad.addColorStop(0.15, `rgba(255,210,90,${intensity * 0.7})`);
+                        grad.addColorStop(0.35, `rgba(255,190,65,${intensity * 0.35})`);
+                        grad.addColorStop(0.6, `rgba(255,170,50,${intensity * 0.12})`);
+                        grad.addColorStop(1, 'rgba(255,170,50,0)');
                         ctx.fillStyle = grad;
-                        ctx.fillRect(lx - ts * 3, ly - ts * 3, ts * 6, ts * 6);
+                        ctx.fillRect(lx - ts * 3.5, ly - ts * 3.5, ts * 7, ts * 7);
                     }
                 }
             }
 
-            // Custom light sources
+            // Custom light sources with smoother gradients
             for (const light of this.lights) {
                 const lx = light.x * ts - scrollX;
                 const ly = light.y * ts - scrollY;
@@ -2903,27 +2998,45 @@ class Village {
                 const radius = (light.radius || 4) * ts;
                 const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, radius);
                 const lc = light.color || '255,200,100';
-                grad.addColorStop(0, `rgba(${lc},${darkness * 0.5})`);
+                const li = darkness * 0.5;
+                grad.addColorStop(0, `rgba(${lc},${li})`);
+                grad.addColorStop(0.3, `rgba(${lc},${li * 0.5})`);
+                grad.addColorStop(0.7, `rgba(${lc},${li * 0.15})`);
                 grad.addColorStop(1, `rgba(${lc},0)`);
                 ctx.fillStyle = grad;
                 ctx.fillRect(lx - radius, ly - radius, radius * 2, radius * 2);
             }
 
-            // Window glow
+            // Window glow - warmer, softer
             for (let r = 0; r < this.mapH; r++) {
                 for (let c = 0; c < this.mapW; c++) {
                     if (this.objects[r * this.mapW + c] === OBJ.WINDOW) {
                         const lx = c * ts + ts * 0.5 - scrollX;
                         const ly = r * ts + ts * 0.4 - scrollY;
-                        if (lx < -50 || lx > cw + 50 || ly < -50 || ly > ch + 50) continue;
+                        if (lx < -60 || lx > cw + 60 || ly < -60 || ly > ch + 60) continue;
 
-                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 1.5);
-                        grad.addColorStop(0, `rgba(255,200,100,${darkness * 0.35})`);
-                        grad.addColorStop(1, 'rgba(255,200,100,0)');
+                        const winFlicker = Math.sin(this.time * 3 + c * 2) * 0.03;
+                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 2);
+                        grad.addColorStop(0, `rgba(255,210,110,${darkness * (0.35 + winFlicker)})`);
+                        grad.addColorStop(0.3, `rgba(255,195,90,${darkness * (0.2 + winFlicker)})`);
+                        grad.addColorStop(0.7, `rgba(255,180,70,${darkness * 0.06})`);
+                        grad.addColorStop(1, 'rgba(255,180,70,0)');
                         ctx.fillStyle = grad;
-                        ctx.fillRect(lx - ts * 1.5, ly - ts * 1.5, ts * 3, ts * 3);
+                        ctx.fillRect(lx - ts * 2, ly - ts * 2, ts * 4, ts * 4);
                     }
                 }
+            }
+
+            // Subtle player glow (the hero emits a tiny light aura)
+            if (darkness > 0.2) {
+                const plx = this.playerX * ts + ts * 0.5 - scrollX;
+                const ply = this.playerY * ts + ts * 0.5 - scrollY;
+                const pGrad = ctx.createRadialGradient(plx, ply, 0, plx, ply, ts * 1.5);
+                pGrad.addColorStop(0, `rgba(255,240,200,${darkness * 0.12})`);
+                pGrad.addColorStop(0.5, `rgba(255,220,160,${darkness * 0.04})`);
+                pGrad.addColorStop(1, 'rgba(255,220,160,0)');
+                ctx.fillStyle = pGrad;
+                ctx.fillRect(plx - ts * 1.5, ply - ts * 1.5, ts * 3, ts * 3);
             }
 
             ctx.restore();
