@@ -411,6 +411,23 @@ class Village {
             }
         }
 
+        // === TILE TRANSITION BLENDING (soft edges between terrain types) ===
+        for (let r = startRow; r < endRow; r++) {
+            for (let c = startCol; c < endCol; c++) {
+                this._drawTileTransitions(ctx, c, r, ts);
+            }
+        }
+
+        // === BUILDING FRONT FACES (3/4 perspective depth) ===
+        for (let r = startRow; r < endRow; r++) {
+            for (let c = startCol; c < endCol; c++) {
+                const tile = this.tiles[r * this.mapW + c];
+                if (tile === TILE.WALL) {
+                    this._drawWallFrontFace(ctx, c * ts, r * ts, ts, c, r);
+                }
+            }
+        }
+
         // === SHADOWS (cast by objects/NPCs/player before drawing them) ===
         this._renderShadows(ctx, startCol, endCol, startRow, endRow, ts);
 
@@ -1253,6 +1270,288 @@ class Village {
         ctx.strokeRect(x + 1, y + 1, ts * 0.45, ts * 0.45);
         ctx.strokeRect(x + ts * 0.5, y + 1, ts * 0.48, ts * 0.48);
         ctx.strokeRect(x + 2, y + ts * 0.5, ts * 0.5, ts * 0.48);
+    }
+
+    // === TILE TRANSITION BLENDING ===
+
+    _drawTileTransitions(ctx, col, row, ts) {
+        const idx = row * this.mapW + col;
+        const tile = this.tiles[idx];
+        const px = col * ts;
+        const py = row * ts;
+
+        // Get neighbor tiles (default to same tile at map edges to avoid transitions)
+        const above = row > 0 ? this.tiles[(row - 1) * this.mapW + col] : tile;
+        const below = row < this.mapH - 1 ? this.tiles[(row + 1) * this.mapW + col] : tile;
+        const left = col > 0 ? this.tiles[row * this.mapW + col - 1] : tile;
+        const right = col < this.mapW - 1 ? this.tiles[row * this.mapW + col + 1] : tile;
+
+        const blendSize = ts * 0.25; // 25% of tile width for transition zone
+
+        // Helper: check if a tile is a grass-like type
+        const isGrass = (t) => t === TILE.GRASS || t === TILE.DARK_GRASS || t === TILE.FLOWERS;
+        // Helper: check if a tile is a land type (not water)
+        const isLand = (t) => t !== TILE.WATER;
+        // Helper: check if a tile is a wall/building type
+        const isWall = (t) => t === TILE.WALL || t === TILE.ROOF;
+
+        // --- Grass meeting Path: grass fringe bleeds over the path edge ---
+        if (tile === TILE.PATH || tile === TILE.STONE) {
+            let grad;
+            // Grass above this path tile -> grass fringe bleeds down from top
+            if (isGrass(above)) {
+                grad = ctx.createLinearGradient(px, py, px, py + blendSize);
+                grad.addColorStop(0, 'rgba(58,122,30,0.45)');
+                grad.addColorStop(0.5, 'rgba(58,122,30,0.15)');
+                grad.addColorStop(1, 'rgba(58,122,30,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py, ts, blendSize);
+            }
+            // Grass below this path tile -> grass fringe bleeds up from bottom
+            if (isGrass(below)) {
+                grad = ctx.createLinearGradient(px, py + ts, px, py + ts - blendSize);
+                grad.addColorStop(0, 'rgba(58,122,30,0.45)');
+                grad.addColorStop(0.5, 'rgba(58,122,30,0.15)');
+                grad.addColorStop(1, 'rgba(58,122,30,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py + ts - blendSize, ts, blendSize);
+            }
+            // Grass left of this path tile -> grass fringe bleeds right
+            if (isGrass(left)) {
+                grad = ctx.createLinearGradient(px, py, px + blendSize, py);
+                grad.addColorStop(0, 'rgba(58,122,30,0.45)');
+                grad.addColorStop(0.5, 'rgba(58,122,30,0.15)');
+                grad.addColorStop(1, 'rgba(58,122,30,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py, blendSize, ts);
+            }
+            // Grass right of this path tile -> grass fringe bleeds left
+            if (isGrass(right)) {
+                grad = ctx.createLinearGradient(px + ts, py, px + ts - blendSize, py);
+                grad.addColorStop(0, 'rgba(58,122,30,0.45)');
+                grad.addColorStop(0.5, 'rgba(58,122,30,0.15)');
+                grad.addColorStop(1, 'rgba(58,122,30,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px + ts - blendSize, py, blendSize, ts);
+            }
+        }
+
+        // --- Grass meeting Water: sandy shoreline edge ---
+        if (isGrass(tile)) {
+            let grad;
+            // Water above -> earthy shoreline at top edge of this grass
+            if (above === TILE.WATER) {
+                grad = ctx.createLinearGradient(px, py, px, py + blendSize * 1.2);
+                grad.addColorStop(0, 'rgba(180,155,110,0.55)');
+                grad.addColorStop(0.4, 'rgba(160,140,95,0.3)');
+                grad.addColorStop(1, 'rgba(160,140,95,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py, ts, blendSize * 1.2);
+            }
+            // Water below -> shoreline at bottom edge
+            if (below === TILE.WATER) {
+                grad = ctx.createLinearGradient(px, py + ts, px, py + ts - blendSize * 1.2);
+                grad.addColorStop(0, 'rgba(180,155,110,0.55)');
+                grad.addColorStop(0.4, 'rgba(160,140,95,0.3)');
+                grad.addColorStop(1, 'rgba(160,140,95,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py + ts - blendSize * 1.2, ts, blendSize * 1.2);
+            }
+            // Water left -> shoreline at left edge
+            if (left === TILE.WATER) {
+                grad = ctx.createLinearGradient(px, py, px + blendSize * 1.2, py);
+                grad.addColorStop(0, 'rgba(180,155,110,0.55)');
+                grad.addColorStop(0.4, 'rgba(160,140,95,0.3)');
+                grad.addColorStop(1, 'rgba(160,140,95,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py, blendSize * 1.2, ts);
+            }
+            // Water right -> shoreline at right edge
+            if (right === TILE.WATER) {
+                grad = ctx.createLinearGradient(px + ts, py, px + ts - blendSize * 1.2, py);
+                grad.addColorStop(0, 'rgba(180,155,110,0.55)');
+                grad.addColorStop(0.4, 'rgba(160,140,95,0.3)');
+                grad.addColorStop(1, 'rgba(160,140,95,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px + ts - blendSize * 1.2, py, blendSize * 1.2, ts);
+            }
+        }
+
+        // --- Water meeting Land: foam/wet edge on the land side ---
+        // (drawn on the water tile, extending foam toward its land neighbor)
+        if (tile === TILE.WATER) {
+            const foamWave = Math.sin(this._waterOffset * 3 + col * 0.7 + row * 0.5) * ts * 0.02;
+            let grad;
+            // Land above water -> wet foam at top of water tile
+            if (isLand(above) && !isWall(above)) {
+                grad = ctx.createLinearGradient(px, py, px, py + blendSize);
+                grad.addColorStop(0, 'rgba(200,225,240,0.4)');
+                grad.addColorStop(0.3, 'rgba(180,210,230,0.2)');
+                grad.addColorStop(1, 'rgba(180,210,230,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py, ts, blendSize + foamWave);
+            }
+            // Land below water -> wet foam at bottom
+            if (isLand(below) && !isWall(below)) {
+                grad = ctx.createLinearGradient(px, py + ts, px, py + ts - blendSize);
+                grad.addColorStop(0, 'rgba(200,225,240,0.4)');
+                grad.addColorStop(0.3, 'rgba(180,210,230,0.2)');
+                grad.addColorStop(1, 'rgba(180,210,230,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py + ts - blendSize + foamWave, ts, blendSize);
+            }
+            // Land left -> wet foam at left
+            if (isLand(left) && !isWall(left)) {
+                grad = ctx.createLinearGradient(px, py, px + blendSize, py);
+                grad.addColorStop(0, 'rgba(200,225,240,0.4)');
+                grad.addColorStop(0.3, 'rgba(180,210,230,0.2)');
+                grad.addColorStop(1, 'rgba(180,210,230,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py, blendSize + foamWave, ts);
+            }
+            // Land right -> wet foam at right
+            if (isLand(right) && !isWall(right)) {
+                grad = ctx.createLinearGradient(px + ts, py, px + ts - blendSize, py);
+                grad.addColorStop(0, 'rgba(200,225,240,0.4)');
+                grad.addColorStop(0.3, 'rgba(180,210,230,0.2)');
+                grad.addColorStop(1, 'rgba(180,210,230,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px + ts - blendSize + foamWave, py, blendSize, ts);
+            }
+        }
+
+        // --- Path meeting Water: wet darkened edge on path side ---
+        if (tile === TILE.PATH) {
+            let grad;
+            if (above === TILE.WATER) {
+                grad = ctx.createLinearGradient(px, py, px, py + blendSize);
+                grad.addColorStop(0, 'rgba(60,50,35,0.4)');
+                grad.addColorStop(1, 'rgba(60,50,35,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py, ts, blendSize);
+            }
+            if (below === TILE.WATER) {
+                grad = ctx.createLinearGradient(px, py + ts, px, py + ts - blendSize);
+                grad.addColorStop(0, 'rgba(60,50,35,0.4)');
+                grad.addColorStop(1, 'rgba(60,50,35,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py + ts - blendSize, ts, blendSize);
+            }
+            if (left === TILE.WATER) {
+                grad = ctx.createLinearGradient(px, py, px + blendSize, py);
+                grad.addColorStop(0, 'rgba(60,50,35,0.4)');
+                grad.addColorStop(1, 'rgba(60,50,35,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px, py, blendSize, ts);
+            }
+            if (right === TILE.WATER) {
+                grad = ctx.createLinearGradient(px + ts, py, px + ts - blendSize, py);
+                grad.addColorStop(0, 'rgba(60,50,35,0.4)');
+                grad.addColorStop(1, 'rgba(60,50,35,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(px + ts - blendSize, py, blendSize, ts);
+            }
+        }
+    }
+
+    // === BUILDING FRONT FACES (3/4 perspective) ===
+
+    _drawWallFrontFace(ctx, x, y, ts, col, row) {
+        // Only draw a front face if the tile below is NOT a wall/floor/roof
+        // (meaning this is the bottom edge of a building, visible from 3/4 view)
+        if (row >= this.mapH - 1) return;
+        const below = this.tiles[(row + 1) * this.mapW + col];
+        if (below === TILE.WALL || below === TILE.FLOOR || below === TILE.ROOF || below === TILE.DOOR) return;
+
+        const faceHeight = ts * 0.6;
+        const seed = (col * 17 + row * 11) % 13;
+
+        // Base wall colors (match _drawWall tones but darker for the front face)
+        const baseR = 80 + (seed % 5) * 2;
+        const baseG = 62 + (seed % 4) * 2;
+        const baseB = 45 + (seed % 3) * 2;
+
+        // Vertical face gradient: lighter at top (near wall), darker at bottom
+        const faceGrad = ctx.createLinearGradient(x, y + ts, x, y + ts + faceHeight);
+        faceGrad.addColorStop(0, `rgb(${baseR + 25},${baseG + 20},${baseB + 15})`);
+        faceGrad.addColorStop(0.4, `rgb(${baseR + 10},${baseG + 8},${baseB + 5})`);
+        faceGrad.addColorStop(1, `rgb(${baseR - 15},${baseG - 12},${baseB - 10})`);
+        ctx.fillStyle = faceGrad;
+        ctx.fillRect(x, y + ts, ts, faceHeight);
+
+        // Brick lines on the front face for texture
+        const brickH = faceHeight / 3;
+        const brickW = ts / 2;
+        ctx.strokeStyle = 'rgba(30,20,10,0.3)';
+        ctx.lineWidth = 0.6;
+        for (let by = 0; by < 3; by++) {
+            const offset = (by % 2) * brickW * 0.5;
+            const brickY = y + ts + by * brickH;
+            // Horizontal mortar lines
+            ctx.beginPath();
+            ctx.moveTo(x, brickY);
+            ctx.lineTo(x + ts, brickY);
+            ctx.stroke();
+            // Vertical mortar lines
+            for (let bx = 0; bx < 3; bx++) {
+                const mx = x + bx * brickW + offset;
+                if (mx > x && mx < x + ts) {
+                    ctx.beginPath();
+                    ctx.moveTo(mx, brickY);
+                    ctx.lineTo(mx, brickY + brickH);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Individual brick color variation on front face
+        const brickFaceColors = [
+            `rgba(${baseR + 15},${baseG + 12},${baseB + 8},0.3)`,
+            `rgba(${baseR - 8},${baseG - 6},${baseB - 4},0.25)`,
+        ];
+        for (let by = 0; by < 3; by++) {
+            const offset = (by % 2) * brickW * 0.5;
+            for (let bx = 0; bx < 3; bx++) {
+                const ci = (by + bx + seed) % brickFaceColors.length;
+                ctx.fillStyle = brickFaceColors[ci];
+                const brickX = x + bx * brickW + offset;
+                const brickY2 = y + ts + by * brickH;
+                ctx.fillRect(
+                    Math.max(x, brickX) + 0.5,
+                    brickY2 + 0.5,
+                    Math.min(brickW - 1, x + ts - Math.max(x, brickX) - 0.5),
+                    brickH - 1
+                );
+            }
+        }
+
+        // Highlight on the left edge (light source from left)
+        const edgeHighlight = ctx.createLinearGradient(x, y + ts, x + ts * 0.15, y + ts);
+        edgeHighlight.addColorStop(0, 'rgba(180,165,140,0.2)');
+        edgeHighlight.addColorStop(1, 'rgba(180,165,140,0)');
+        ctx.fillStyle = edgeHighlight;
+        ctx.fillRect(x, y + ts, ts * 0.15, faceHeight);
+
+        // Shadow along the right edge
+        const edgeShadow = ctx.createLinearGradient(x + ts, y + ts, x + ts - ts * 0.12, y + ts);
+        edgeShadow.addColorStop(0, 'rgba(20,15,10,0.2)');
+        edgeShadow.addColorStop(1, 'rgba(20,15,10,0)');
+        ctx.fillStyle = edgeShadow;
+        ctx.fillRect(x + ts - ts * 0.12, y + ts, ts * 0.12, faceHeight);
+
+        // Subtle shadow at the very bottom of the front face (ground contact)
+        const bottomShadow = ctx.createLinearGradient(x, y + ts + faceHeight - ts * 0.08, x, y + ts + faceHeight);
+        bottomShadow.addColorStop(0, 'rgba(0,0,0,0)');
+        bottomShadow.addColorStop(1, 'rgba(0,0,0,0.25)');
+        ctx.fillStyle = bottomShadow;
+        ctx.fillRect(x, y + ts + faceHeight - ts * 0.08, ts, ts * 0.08);
+
+        // Ground shadow cast below the building face
+        const groundShadow = ctx.createLinearGradient(x, y + ts + faceHeight, x, y + ts + faceHeight + ts * 0.15);
+        groundShadow.addColorStop(0, 'rgba(0,0,0,0.2)');
+        groundShadow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = groundShadow;
+        ctx.fillRect(x - ts * 0.05, y + ts + faceHeight, ts + ts * 0.1, ts * 0.15);
     }
 
     // === OBJECT RENDERING ===
@@ -2920,46 +3219,102 @@ class Village {
     _renderLighting(ctx, cw, ch, scrollX, scrollY, ts) {
         const t = this.dayTime;
 
-        // Skip lighting during bright daytime (but still render subtle ambient)
-        if (t > 0.32 && t < 0.63) return;
+        // Skip lighting during bright midday (0.3-0.65) for performance
+        if (t > 0.3 && t < 0.65) return;
 
-        // Create darkness overlay
+        // Determine colored ambient tint based on time of day
+        let tintR, tintG, tintB, tintStrength;
+
+        if (t <= 0.2 || t >= 0.85) {
+            // Night: deep blue-purple tint
+            tintR = 60; tintG = 55; tintB = 100;
+            if (t <= 0.2) {
+                tintStrength = 1.0;
+            } else if (t >= 0.9) {
+                tintStrength = 1.0;
+            } else {
+                // 0.85-0.9: transition from dusk to full night
+                tintStrength = (t - 0.85) / 0.05;
+            }
+        } else if (t > 0.2 && t <= 0.3) {
+            // Dawn: warm lavender transitioning to daylight
+            // At 0.2 we are full night tint, at 0.3 we are no tint (daylight)
+            const f = (t - 0.2) / 0.1; // 0 at dawn start, 1 at dawn end
+            // Blend from night blue-purple to warm lavender, then fade out
+            if (f < 0.5) {
+                // First half: night -> lavender
+                const subF = f / 0.5;
+                tintR = Math.round(60 + (200 - 60) * subF);
+                tintG = Math.round(55 + (180 - 55) * subF);
+                tintB = Math.round(100 + (220 - 100) * subF);
+                tintStrength = 1.0 - f * 0.3; // slight fade during transition
+            } else {
+                // Second half: lavender -> daylight (fade out)
+                const subF = (f - 0.5) / 0.5;
+                tintR = 200; tintG = 180; tintB = 220;
+                tintStrength = (1.0 - 0.3) * (1.0 - subF); // fade to zero
+            }
+        } else if (t >= 0.65 && t < 0.75) {
+            // Dusk: warm amber tint
+            const f = (t - 0.65) / 0.1; // 0 at dusk start, 1 at dusk end
+            tintR = 200; tintG = 150; tintB = 120;
+            tintStrength = f; // ramp up from daylight
+        } else if (t >= 0.75 && t < 0.85) {
+            // Deep dusk: orange-red transitioning to night purple
+            const f = (t - 0.75) / 0.1; // 0 at deep dusk start, 1 at deep dusk end
+            tintR = Math.round(200 + (60 - 200) * f);
+            tintG = Math.round(150 + (55 - 150) * f);
+            tintB = Math.round(120 + (100 - 120) * f);
+            tintStrength = 1.0;
+        } else {
+            // Fallback (should not reach here)
+            tintR = 255; tintG = 255; tintB = 255;
+            tintStrength = 0;
+        }
+
+        // Skip if no tint to apply
+        if (tintStrength < 0.01) return;
+
+        // Compute the multiply color: blend between white (no effect) and the tint color
+        // For multiply compositing, rgb(255,255,255) = no change, lower values = darker/tinted
+        const mulR = Math.round(255 - (255 - tintR) * tintStrength);
+        const mulG = Math.round(255 - (255 - tintG) * tintStrength);
+        const mulB = Math.round(255 - (255 - tintB) * tintStrength);
+
+        // Apply colored ambient tint via multiply composite
         ctx.save();
         ctx.globalCompositeOperation = 'multiply';
 
-        // Smoother darkness transitions with multiple breakpoints
-        let darkness;
-        if (t < 0.15 || t > 0.9) {
-            darkness = 0.65; // deep night
-        } else if (t < 0.2) {
-            darkness = 0.65 - (t - 0.15) / 0.05 * 0.1; // late night to pre-dawn
-        } else if (t < 0.32) {
-            darkness = 0.55 * (1 - (t - 0.2) / 0.12); // dawn - smoother ramp
-        } else if (t < 0.63) {
-            darkness = 0; // day
-        } else if (t < 0.75) {
-            darkness = 0.55 * ((t - 0.63) / 0.12); // dusk - smoother ramp
-        } else if (t < 0.9) {
-            darkness = 0.55 + (t - 0.75) / 0.15 * 0.1; // evening to night
-        } else {
-            darkness = 0.65;
-        }
-
-        // Soft radial gradient for darkness (lighter in center near player, darker at edges)
+        // Soft radial gradient: lighter in center (near player), deeper tint at edges
         const darkGrad = ctx.createRadialGradient(cw / 2, ch / 2, 0, cw / 2, ch / 2, cw * 0.7);
-        const tintR = Math.round(255 - darkness * 175);
-        const tintG = Math.round(255 - darkness * 185);
-        const tintB = Math.round(255 - darkness * 145);
-        const edgeR = Math.round(255 - darkness * 200);
-        const edgeG = Math.round(255 - darkness * 210);
-        const edgeB = Math.round(255 - darkness * 170);
-        darkGrad.addColorStop(0, `rgb(${tintR},${tintG},${tintB})`);
-        darkGrad.addColorStop(0.6, `rgb(${Math.round((tintR + edgeR) / 2)},${Math.round((tintG + edgeG) / 2)},${Math.round((tintB + edgeB) / 2)})`);
+        const edgeR = Math.max(0, mulR - Math.round(tintStrength * 20));
+        const edgeG = Math.max(0, mulG - Math.round(tintStrength * 25));
+        const edgeB = Math.max(0, mulB - Math.round(tintStrength * 15));
+        darkGrad.addColorStop(0, `rgb(${mulR},${mulG},${mulB})`);
+        darkGrad.addColorStop(0.6, `rgb(${Math.round((mulR + edgeR) / 2)},${Math.round((mulG + edgeG) / 2)},${Math.round((mulB + edgeB) / 2)})`);
         darkGrad.addColorStop(1, `rgb(${edgeR},${edgeG},${edgeB})`);
         ctx.fillStyle = darkGrad;
         ctx.fillRect(0, 0, cw, ch);
 
         ctx.restore();
+
+        // Calculate darkness level for light source intensity (reused below)
+        let darkness;
+        if (t < 0.15 || t > 0.9) {
+            darkness = 0.65;
+        } else if (t < 0.2) {
+            darkness = 0.65 - (t - 0.15) / 0.05 * 0.1;
+        } else if (t < 0.3) {
+            darkness = 0.55 * (1 - (t - 0.2) / 0.1);
+        } else if (t < 0.65) {
+            darkness = 0;
+        } else if (t < 0.75) {
+            darkness = 0.55 * ((t - 0.65) / 0.1);
+        } else if (t < 0.9) {
+            darkness = 0.55 + (t - 0.75) / 0.15 * 0.1;
+        } else {
+            darkness = 0.65;
+        }
 
         // Light sources (additive) - softer transitions
         if (darkness > 0.08) {
