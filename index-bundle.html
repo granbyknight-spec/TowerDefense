@@ -20139,6 +20139,7 @@ class TacticalBattle {
         this._scenario = null;
         // Victory animation state
         this._victoryAnim = null; // {timer, phase, sparkles[], done}
+        this._victoryScreenTimer = 0; // auto-transition timer after victory screen shows
     }
 
     // ── Loading ───────────────────────────────────────────────────────
@@ -20331,6 +20332,11 @@ class TacticalBattle {
         this.engine.checkStoryTriggers();
         // Victory animation update
         if(this._victoryAnim){this._updateVictoryAnim(dt);}
+        // Auto-transition to cutscene after victory screen shows for a few seconds
+        if(this.engine.state==='victory'&&!this.engine.currentDialogue&&this.onCutscene){
+            this._victoryScreenTimer+=dt;
+            if(this._victoryScreenTimer>=3.5){this.stop();this.onCutscene();return;}
+        }
     }
 
     // ── Victory animation ─────────────────────────────────────────────
@@ -20684,7 +20690,7 @@ class TacticalBattle {
         // Blinking "tap to continue"
         if(Math.floor(this.time*2)%2===0){
             ctx.font='14px monospace';ctx.fillStyle=TPAL.UI_TEXT;
-            ctx.fillText(win&&this.onCutscene?'Tap for cutscene...':'Tap to continue',cw/2,ch/2+35);
+            ctx.fillText(win&&this.onCutscene?'':'Tap to continue',cw/2,ch/2+35);
         }
         ctx.restore();
     }
