@@ -20,6 +20,12 @@ class UI {
         this._lastPanX = 0;
         this._lastPanY = 0;
 
+        // Touch drag-to-pan state (single finger when zoomed)
+        this._touchDragStartX = 0;
+        this._touchDragStartY = 0;
+        this._touchDragging = false;
+        this._touchDragThreshold = 10; // px before recognizing as pan vs tap
+
         // Double-tap detection: toggle zoom in/out
         this._lastTapTime = 0;
         this._lastTapX = 0;
@@ -29,6 +35,9 @@ class UI {
             // Don't process game input when story engine or village is active
             if (window.storyEngine && window.storyEngine.active) return;
             if (window.village && window.village.active) return;
+
+            // Multi-touch guard: only process primary pointer for tap/placement
+            if (!e.isPrimary) return;
 
             if (e.pointerType === 'touch') {
                 const now = performance.now();
@@ -52,15 +61,69 @@ class UI {
                 this._lastTapTime = now;
                 this._lastTapX = e.clientX;
                 this._lastTapY = e.clientY;
+
+                // When zoomed in, defer tap processing to pointerup
+                // so we can detect drag-to-pan vs tap
+                if (this.game.zoom > 1.05) {
+                    this._touchDragStartX = e.clientX;
+                    this._touchDragStartY = e.clientY;
+                    this._touchDragging = false;
+                    this._lastPanX = e.clientX;
+                    this._lastPanY = e.clientY;
+                    return; // don't call onPointerDown yet
+                }
             }
             this.onPointerDown(e);
         });
         canvas.addEventListener('pointermove', (e) => {
             if (window.storyEngine && window.storyEngine.active) return;
             if (window.village && window.village.active) return;
+
+            // Single-finger drag-to-pan when zoomed (touch only)
+            if (e.isPrimary && e.pointerType === 'touch' && this.game.zoom > 1.05) {
+                const dx = e.clientX - this._touchDragStartX;
+                const dy = e.clientY - this._touchDragStartY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (!this._touchDragging && distance > this._touchDragThreshold) {
+                    this._touchDragging = true;
+                    this._panning = true;
+                }
+
+                if (this._touchDragging) {
+                    const rect = canvas.getBoundingClientRect();
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+                    const panDx = (e.clientX - this._lastPanX) * scaleX / this.game.zoom;
+                    const panDy = (e.clientY - this._lastPanY) * scaleY / this.game.zoom;
+                    this.game.camX += panDx;
+                    this.game.camY += panDy;
+                    this.game._clampCamera();
+                    this._lastPanX = e.clientX;
+                    this._lastPanY = e.clientY;
+                    return;
+                }
+            }
+
             this.onPointerMove(e);
         });
-        canvas.addEventListener('pointerup', (e) => { this._panning = false; });
+        canvas.addEventListener('pointerup', (e) => {
+            // Single-finger pan: if we were dragging, just stop panning
+            // If zoomed but didn't drag past threshold, treat as tap
+            if (e.isPrimary && e.pointerType === 'touch' && this.game.zoom > 1.05) {
+                if (this._touchDragging) {
+                    this._touchDragging = false;
+                    this._panning = false;
+                    return; // was panning, don't process as tap
+                }
+                // Was not dragging - treat as a tap (tower placement / selection)
+                this._touchDragging = false;
+                this._panning = false;
+                this.onPointerDown(e);
+                return;
+            }
+            this._panning = false;
+        });
         canvas.addEventListener('pointercancel', () => { this._panning = false; });
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
         canvas.addEventListener('dblclick', (e) => e.preventDefault());

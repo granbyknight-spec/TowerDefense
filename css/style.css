@@ -11,6 +11,14 @@
     user-select: none;
 }
 
+html {
+    overflow: hidden;
+}
+
+html, body {
+    overscroll-behavior: none;
+}
+
 body {
     background: #000011;
     color: #e0e8f0;
@@ -483,8 +491,8 @@ body {
 }
 
 .ctrl-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border: 2px solid rgba(100, 140, 255, 0.25);
     border-radius: 8px;
     background: rgba(5, 5, 30, 0.7);
@@ -890,7 +898,6 @@ body {
     justify-content: flex-start;
     padding: 0 12px 40px;
     gap: 12px;
-    -webkit-overflow-scrolling: touch;
     background: linear-gradient(180deg, #000022 0%, #000838 30%, #000d44 60%, #000022 100%);
 }
 
@@ -1245,7 +1252,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    min-height: 32px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     transition: all 0.15s;
@@ -1633,7 +1640,7 @@ body {
     font-weight: bold;
     cursor: pointer;
     display: none;
-    min-height: 36px;
+    min-height: 44px;
 }
 
 .village-back-btn:active {
@@ -1663,4 +1670,66 @@ body {
     background: rgba(30, 50, 100, 0.6);
     border-color: #FFD700;
     color: #FFD700;
+}
+
+/* === Pause Menu Overlay === */
+.pause-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 15, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+}
+
+.pause-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 32px 40px;
+    background: linear-gradient(180deg, #0a1040 0%, #060825 100%);
+    border: 2px solid rgba(100, 160, 255, 0.4);
+    border-radius: 18px;
+    box-shadow: 0 0 30px rgba(50, 100, 200, 0.2);
+}
+
+.pause-title {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: #FFD700;
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.pause-menu-btn {
+    padding: 14px 48px;
+    border: 2px solid transparent;
+    border-radius: 22px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    color: #fff;
+    letter-spacing: 1px;
+    min-height: 44px;
+    min-width: 200px;
+    text-align: center;
+}
+
+.pause-menu-btn:active {
+    transform: scale(0.95);
+}
+
+.pause-resume {
+    background: linear-gradient(180deg, #4CAF50 0%, #2E7D32 100%);
+    border-color: rgba(100, 220, 100, 0.4);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3), 0 0 10px rgba(76, 175, 80, 0.2);
+}
+
+.pause-quit {
+    background: linear-gradient(180deg, #37474F 0%, #263238 100%);
+    border-color: rgba(100, 140, 200, 0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }

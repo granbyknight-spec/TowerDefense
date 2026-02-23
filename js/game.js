@@ -36,6 +36,22 @@ class Game {
         // 2.5D perspective mode
         this.perspectiveMode = false;
 
+        // Visibility change: auto-pause when switching apps / phone call
+        this._savedGameSpeed = null;
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (this.state === 'playing' && this.gameSpeed > 0) {
+                    this._savedGameSpeed = this.gameSpeed;
+                    this.gameSpeed = 0;
+                }
+            } else {
+                if (this._savedGameSpeed !== null) {
+                    this.gameSpeed = this._savedGameSpeed;
+                    this._savedGameSpeed = null;
+                }
+            }
+        });
+
         // Player name & stats
         this.playerName = '';
         this.kills = 0;
@@ -1426,6 +1442,8 @@ class Game {
         document.getElementById('bottom-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
+        const pauseOv = document.getElementById('pause-overlay');
+        if (pauseOv) pauseOv.style.display = 'none';
         const screen = document.getElementById('game-over-screen');
         screen.style.display = 'flex';
         document.getElementById('go-wave').textContent = this.waveManager.currentWave;
@@ -1459,6 +1477,8 @@ class Game {
         document.getElementById('bottom-bar').style.display = 'none';
         document.getElementById('upgrade-panel').style.display = 'none';
         document.getElementById('game-controls').style.display = 'none';
+        const pauseOv2 = document.getElementById('pause-overlay');
+        if (pauseOv2) pauseOv2.style.display = 'none';
         const screen = document.getElementById('victory-screen');
         screen.style.display = 'flex';
         document.getElementById('vic-gold').textContent = this.gold;
@@ -1600,6 +1620,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-over-screen').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'none';
         document.getElementById('level-complete-screen').style.display = 'none';
+        if (pauseOverlay) pauseOverlay.style.display = 'none';
 
         if (storyBattlePending) {
             storyBattlePending = false;
@@ -1691,6 +1712,44 @@ window.addEventListener('DOMContentLoaded', () => {
         hsBtn.addEventListener('click', () => {
             GameAudio.unlock();
             game.showLeaderboard();
+        });
+    }
+
+    // Pause button + overlay wiring
+    const pauseBtn = document.getElementById('pause-btn');
+    const pauseOverlay = document.getElementById('pause-overlay');
+    const pauseResumeBtn = document.getElementById('pause-resume-btn');
+    const pauseQuitBtn = document.getElementById('pause-quit-btn');
+    let _pauseSavedSpeed = 1;
+
+    function showPauseMenu() {
+        if (game.state !== 'playing') return;
+        _pauseSavedSpeed = game.gameSpeed;
+        game.gameSpeed = 0;
+        if (pauseOverlay) pauseOverlay.style.display = 'flex';
+    }
+
+    function hidePauseMenu() {
+        game.gameSpeed = _pauseSavedSpeed;
+        if (pauseOverlay) pauseOverlay.style.display = 'none';
+    }
+
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+            GameAudio.unlock();
+            showPauseMenu();
+        });
+    }
+    if (pauseResumeBtn) {
+        pauseResumeBtn.addEventListener('click', () => {
+            hidePauseMenu();
+        });
+    }
+    if (pauseQuitBtn) {
+        pauseQuitBtn.addEventListener('click', () => {
+            if (pauseOverlay) pauseOverlay.style.display = 'none';
+            game.gameSpeed = 1;
+            game.returnToHub();
         });
     }
 
