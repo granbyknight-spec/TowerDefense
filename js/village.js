@@ -597,35 +597,171 @@ class Village {
     }
 
     _drawGrass(ctx, x, y, ts, col, row, dark) {
-        // Rich multi-tone grass
+        // Rich multi-tone grass with FF7-style depth
+        const seed = (col * 7 + row * 13) % 17;
+        const seed2 = (col * 31 + row * 47) % 23;
+
+        // Base gradient - two-tone per tile for depth
         const base = dark ? '#2d5016' : '#3a7a1e';
         const alt = dark ? '#245012' : '#328a18';
+        const mid = dark ? '#295214' : '#35841c';
         ctx.fillStyle = (col + row) % 2 === 0 ? base : alt;
         ctx.fillRect(x, y, ts, ts);
 
-        // Subtle grass blade details
-        const seed = (col * 7 + row * 13) % 17;
-        ctx.fillStyle = dark ? 'rgba(20,80,10,0.4)' : 'rgba(80,180,40,0.25)';
+        // Subtle diagonal gradient overlay for terrain variation
+        const grad = ctx.createLinearGradient(x, y, x + ts, y + ts);
+        grad.addColorStop(0, `rgba(${dark ? '20,60,10' : '60,140,30'},0.15)`);
+        grad.addColorStop(0.5, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, `rgba(${dark ? '40,90,20' : '80,180,50'},0.12)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, ts, ts);
+
+        // Secondary color patches for natural variation
+        ctx.fillStyle = dark ? 'rgba(35,70,18,0.35)' : 'rgba(50,150,25,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(
+            x + ((seed * 5) % ts),
+            y + ((seed2 * 3) % ts),
+            ts * 0.3, ts * 0.2, seed * 0.5, 0, Math.PI * 2
+        );
+        ctx.fill();
+
+        // Animated grass blades with wind sway
+        const windPhase = this.time * 1.5 + col * 0.7 + row * 0.5;
+        const windSway = Math.sin(windPhase) * ts * 0.03;
+        const bladeColor1 = dark ? 'rgba(25,90,12,0.6)' : 'rgba(70,170,35,0.45)';
+        const bladeColor2 = dark ? 'rgba(40,100,20,0.5)' : 'rgba(90,200,50,0.35)';
+
+        ctx.strokeStyle = bladeColor1;
+        ctx.lineWidth = 0.8;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 5; i++) {
+            const bx = x + ((seed + i * 7) % (ts - 2)) + 1;
+            const by = y + ((seed2 + i * 11) % (ts - 4)) + 4;
+            const h = ts * (0.08 + (seed + i) % 3 * 0.03);
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo(bx + windSway * (1 + i * 0.2), by - h * 0.6, bx + windSway * (1.5 + i * 0.15), by - h);
+            ctx.stroke();
+        }
+
+        // Second set of blades, slightly different shade
+        ctx.strokeStyle = bladeColor2;
+        ctx.lineWidth = 0.6;
         for (let i = 0; i < 3; i++) {
-            const gx = x + ((seed + i * 5) % ts);
-            const gy = y + ((seed * 3 + i * 7) % ts);
-            ctx.fillRect(gx, gy, 1, 2);
+            const bx = x + ((seed2 + i * 9) % (ts - 2)) + 1;
+            const by = y + ((seed + i * 5) % (ts - 3)) + 3;
+            const h = ts * (0.06 + (seed2 + i) % 3 * 0.025);
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo(bx + windSway * 1.2, by - h * 0.5, bx + windSway * 1.8, by - h);
+            ctx.stroke();
+        }
+
+        // Small wildflower details on some tiles
+        if ((col * 13 + row * 7) % 11 < 2 && !dark) {
+            const flowerColors = ['#ffeb3b', '#e8f5e9', '#fff9c4', '#f8bbd0'];
+            const fc = flowerColors[(col + row) % flowerColors.length];
+            const fx = x + ((seed * 4) % (ts - 6)) + 3;
+            const fy = y + ((seed2 * 2) % (ts - 6)) + 3;
+            // Tiny flower petals
+            ctx.fillStyle = fc;
+            const petalR = ts * 0.025;
+            for (let p = 0; p < 4; p++) {
+                const pa = p * Math.PI * 0.5 + this.time * 0.3;
+                ctx.beginPath();
+                ctx.arc(fx + Math.cos(pa) * petalR * 1.2, fy + Math.sin(pa) * petalR * 1.2, petalR, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.fillStyle = '#fdd835';
+            ctx.beginPath();
+            ctx.arc(fx, fy, petalR * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Dew sparkle (very subtle)
+        if ((col * 3 + row * 11) % 19 === 0) {
+            const sparkle = Math.sin(this.time * 2.5 + seed) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(255,255,240,${sparkle * 0.25})`;
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.6, y + ts * 0.3, ts * 0.02, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 
     _drawPath(ctx, x, y, ts, col, row) {
-        // Earthy path with subtle texture
-        ctx.fillStyle = '#a08060';
+        // Cobblestone-style path with individual stone shapes
+        const seed = (col * 11 + row * 7) % 13;
+        const seed2 = (col * 23 + row * 31) % 19;
+
+        // Base earthy fill
+        ctx.fillStyle = '#8a7050';
         ctx.fillRect(x, y, ts, ts);
 
-        // Lighter center
-        ctx.fillStyle = 'rgba(180,150,120,0.3)';
-        ctx.fillRect(x + ts * 0.15, y + ts * 0.15, ts * 0.7, ts * 0.7);
+        // Mortar/grout lines (darker gaps between stones)
+        ctx.fillStyle = '#6a5535';
+        ctx.fillRect(x, y, ts, ts);
 
-        // Dirt speckles
-        const seed = (col * 11 + row * 7) % 13;
-        ctx.fillStyle = 'rgba(80,60,40,0.3)';
-        ctx.fillRect(x + (seed % ts), y + ((seed * 3) % ts), 2, 2);
+        // Draw individual cobblestones
+        const stoneColors = ['#a08565', '#b09575', '#988060', '#a89070', '#b8a080'];
+        const stones = [
+            // row 1
+            { sx: 0.02, sy: 0.02, sw: 0.30, sh: 0.30, r: 3 },
+            { sx: 0.35, sy: 0.03, sw: 0.28, sh: 0.28, r: 2 },
+            { sx: 0.66, sy: 0.02, sw: 0.32, sh: 0.30, r: 3 },
+            // row 2
+            { sx: 0.05, sy: 0.35, sw: 0.26, sh: 0.28, r: 2 },
+            { sx: 0.34, sy: 0.34, sw: 0.32, sh: 0.30, r: 3 },
+            { sx: 0.69, sy: 0.35, sw: 0.28, sh: 0.28, r: 2 },
+            // row 3
+            { sx: 0.02, sy: 0.66, sw: 0.32, sh: 0.32, r: 3 },
+            { sx: 0.37, sy: 0.67, sw: 0.28, sh: 0.30, r: 2 },
+            { sx: 0.68, sy: 0.66, sw: 0.30, sh: 0.32, r: 3 },
+        ];
+
+        for (let i = 0; i < stones.length; i++) {
+            const s = stones[i];
+            const colorIdx = (seed + i) % stoneColors.length;
+            ctx.fillStyle = stoneColors[colorIdx];
+
+            // Rounded stone shape
+            const sx = x + s.sx * ts;
+            const sy = y + s.sy * ts;
+            const sw = s.sw * ts;
+            const sh = s.sh * ts;
+            ctx.beginPath();
+            ctx.roundRect(sx, sy, sw, sh, s.r);
+            ctx.fill();
+
+            // Stone highlight (top-left)
+            ctx.fillStyle = 'rgba(220,200,170,0.2)';
+            ctx.beginPath();
+            ctx.roundRect(sx + 1, sy + 1, sw * 0.5, sh * 0.4, s.r);
+            ctx.fill();
+
+            // Stone shadow (bottom-right)
+            ctx.fillStyle = 'rgba(40,30,20,0.15)';
+            ctx.beginPath();
+            ctx.roundRect(sx + sw * 0.3, sy + sh * 0.5, sw * 0.65, sh * 0.45, s.r);
+            ctx.fill();
+        }
+
+        // Occasional dirt in cracks
+        ctx.fillStyle = 'rgba(60,45,25,0.3)';
+        ctx.fillRect(x + ((seed * 4) % (ts - 3)), y + ((seed2 * 2) % (ts - 2)), 2, 1);
+        ctx.fillRect(x + ((seed2 * 3) % (ts - 2)), y + ((seed * 5) % (ts - 2)), 1, 2);
+
+        // Tiny weed poking through cracks on some tiles
+        if (seed % 7 === 0) {
+            const wx = x + ts * 0.33;
+            const wy = y + ts * 0.34;
+            ctx.strokeStyle = 'rgba(60,130,30,0.5)';
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(wx, wy);
+            ctx.quadraticCurveTo(wx - 1, wy - ts * 0.04, wx - 1.5, wy - ts * 0.07);
+            ctx.stroke();
+        }
 
         // Path border detection - draw edge shadows where path meets grass
         const above = row > 0 ? this.tiles[(row - 1) * this.mapW + col] : -1;
@@ -633,12 +769,18 @@ class Village {
         const left = col > 0 ? this.tiles[row * this.mapW + col - 1] : -1;
         const right = col < this.mapW - 1 ? this.tiles[row * this.mapW + col + 1] : -1;
 
-        ctx.fillStyle = 'rgba(60,40,20,0.2)';
+        ctx.fillStyle = 'rgba(40,25,10,0.25)';
         if (above !== TILE.PATH && above !== TILE.BRIDGE && above !== TILE.DOOR && above !== TILE.FLOOR) {
             ctx.fillRect(x, y, ts, 2);
         }
+        if (below !== TILE.PATH && below !== TILE.BRIDGE && below !== TILE.DOOR && below !== TILE.FLOOR) {
+            ctx.fillRect(x, y + ts - 2, ts, 2);
+        }
         if (left !== TILE.PATH && left !== TILE.BRIDGE && left !== TILE.DOOR && left !== TILE.FLOOR) {
             ctx.fillRect(x, y, 2, ts);
+        }
+        if (right !== TILE.PATH && right !== TILE.BRIDGE && right !== TILE.DOOR && right !== TILE.FLOOR) {
+            ctx.fillRect(x + ts - 2, y, 2, ts);
         }
     }
 
