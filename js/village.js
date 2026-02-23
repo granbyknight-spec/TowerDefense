@@ -893,10 +893,15 @@ class Village {
                 // Path edge-shadow detection is static per-frame but cheap; keep it
                 this._drawPathEdges(ctx, px, py, ts, col, row);
                 break;
-            case TILE.WATER:
-                // Water is fully animated - not cached
-                this._drawWater(ctx, px, py, ts, col, row);
+            case TILE.WATER: {
+                // Use cached water animation frames for the base, overlay dynamic effects
+                const waterFrameIdx = Math.floor((this._waterOffset * 2 + col * 0.3 + row * 0.5) % 8);
+                const waterFrame = this._tileTextures.water[((waterFrameIdx % 8) + 8) % 8];
+                ctx.drawImage(waterFrame, px, py, ts, ts);
+                // Animated overlays: caustics, shimmer, ripples, edge foam
+                this._drawWaterAnimOverlay(ctx, px, py, ts, col, row);
                 break;
+            }
             case TILE.WALL:
                 ctx.drawImage(pickVariant(this._tileTextures.wall), px, py, ts, ts);
                 // Moss growth depends on neighbour tiles - draw on top of cached base
@@ -906,19 +911,19 @@ class Village {
                 ctx.drawImage(pickVariant(this._tileTextures.floor), px, py, ts, ts);
                 break;
             case TILE.FENCE:
-                // Grass base first, then cached fence overlay on top
-                ctx.drawImage(pickVariant(this._tileTextures.grass), px, py, ts, ts);
-                this._drawGrassAnimOverlay(ctx, px, py, ts, col, row, false);
+                // Cached fence tile (includes grass base + fence slats)
                 ctx.drawImage(pickVariant(this._tileTextures.fence), px, py, ts, ts);
+                // Animated grass overlay visible through fence gaps
+                this._drawGrassAnimOverlay(ctx, px, py, ts, col, row, false);
                 break;
             case TILE.BRIDGE:
                 ctx.drawImage(pickVariant(this._tileTextures.bridge), px, py, ts, ts);
                 break;
             case TILE.FLOWERS:
-                // Cached grass base, then static flower overlay on top
-                ctx.drawImage(pickVariant(this._tileTextures.grass), px, py, ts, ts);
+                // Cached flower tile (includes grass base + pixel-art flowers)
+                ctx.drawImage(pickVariant(this._tileTextures.flowers), px, py, ts, ts);
+                // Animated grass overlay on top
                 this._drawGrassAnimOverlay(ctx, px, py, ts, col, row, false);
-                this._drawFlowers(ctx, px, py, ts, col, row);
                 break;
             case TILE.SAND:
                 ctx.drawImage(pickVariant(this._tileTextures.sand), px, py, ts, ts);
@@ -1074,6 +1079,96 @@ class Village {
             ctx.beginPath();
             ctx.ellipse(x + ts - 2, y + ts * 0.6, ts * 0.04, ts * 0.1, 0, 0, Math.PI * 2);
             ctx.fill();
+        }
+    }
+
+    // Animated water overlay: caustics, shimmer highlights, ripple rings, and edge foam.
+    // Drawn over the cached water base frames for dynamic visual richness.
+    _drawWaterAnimOverlay(ctx, x, y, ts, col, row) {
+        const wave1 = Math.sin(this._waterOffset * 3 + col * 0.8 + row * 0.6);
+        const wave2 = Math.sin(this._waterOffset * 2.2 + col * 1.1 - row * 0.4);
+        const wave3 = Math.cos(this._waterOffset * 1.7 + col * 0.5 + row * 0.9);
+
+        // Caustic light pattern
+        ctx.fillStyle = `rgba(100,200,255,${0.06 + wave3 * 0.03})`;
+        const caustX = x + ts * 0.2 + Math.sin(this._waterOffset * 1.3 + col * 2) * ts * 0.15;
+        const caustY = y + ts * 0.3 + Math.cos(this._waterOffset * 1.1 + row * 2) * ts * 0.15;
+        ctx.beginPath();
+        ctx.ellipse(caustX, caustY, ts * 0.18, ts * 0.1, wave1 * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Surface shimmer highlights
+        const shimmer1 = 0.08 + wave1 * 0.06;
+        const shimmer2 = 0.06 + wave2 * 0.05;
+        ctx.fillStyle = `rgba(255,255,255,${shimmer1})`;
+        const sx1 = x + ts * 0.15 + Math.sin(this._waterOffset * 2 + col) * ts * 0.15;
+        const sy1 = y + ts * 0.3 + Math.cos(this._waterOffset * 1.5 + row) * ts * 0.1;
+        ctx.fillRect(sx1, sy1, ts * 0.2, ts * 0.04);
+
+        ctx.fillStyle = `rgba(200,240,255,${shimmer2})`;
+        const sx2 = x + ts * 0.55 + Math.sin(this._waterOffset * 1.8 + col + 1) * ts * 0.1;
+        const sy2 = y + ts * 0.6 + Math.cos(this._waterOffset * 1.2 + row + 1) * ts * 0.1;
+        ctx.fillRect(sx2, sy2, ts * 0.15, ts * 0.03);
+
+        // Small shimmer dot
+        ctx.fillStyle = `rgba(255,255,255,${0.15 + wave3 * 0.1})`;
+        ctx.beginPath();
+        ctx.arc(
+            x + ts * 0.7 + Math.sin(this._waterOffset * 2.5 + col * 0.7) * ts * 0.08,
+            y + ts * 0.2 + Math.cos(this._waterOffset * 2 + row * 0.5) * ts * 0.08,
+            ts * 0.02, 0, Math.PI * 2
+        );
+        ctx.fill();
+
+        // Ripple rings
+        if ((col * 7 + row * 3) % 9 < 2) {
+            const ripplePhase = this._waterOffset * 1.5 + col * 2 + row;
+            const rippleAlpha = (Math.sin(ripplePhase) * 0.5 + 0.5) * 0.12;
+            const rippleR = ts * 0.1 + (ripplePhase % (Math.PI * 2)) / (Math.PI * 2) * ts * 0.2;
+            ctx.strokeStyle = `rgba(200,230,255,${rippleAlpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.5, y + ts * 0.5, rippleR, 0, Math.PI * 2);
+            ctx.stroke();
+            if (rippleR > ts * 0.08) {
+                ctx.strokeStyle = `rgba(200,230,255,${rippleAlpha * 0.6})`;
+                ctx.beginPath();
+                ctx.arc(x + ts * 0.5, y + ts * 0.5, rippleR * 0.6, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        // Edge foam where water meets land
+        const above = row > 0 ? this.tiles[(row - 1) * this.mapW + col] : TILE.WATER;
+        const below = row < this.mapH - 1 ? this.tiles[(row + 1) * this.mapW + col] : TILE.WATER;
+        const left = col > 0 ? this.tiles[row * this.mapW + col - 1] : TILE.WATER;
+        const right = col < this.mapW - 1 ? this.tiles[row * this.mapW + col + 1] : TILE.WATER;
+
+        const foamWave = Math.sin(this._waterOffset * 4 + col + row) * 0.1;
+        if (above !== TILE.WATER) {
+            const foamAlpha = 0.3 + foamWave;
+            ctx.fillStyle = `rgba(210,235,255,${foamAlpha})`;
+            const foamH = ts * 0.1 + Math.sin(this._waterOffset * 3 + col * 1.5) * ts * 0.03;
+            ctx.fillRect(x, y, ts, foamH);
+            ctx.fillStyle = `rgba(255,255,255,${foamAlpha * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.3 + Math.sin(this._waterOffset + col) * 3, y + foamH * 0.5, 1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.7 + Math.cos(this._waterOffset + col) * 2, y + foamH * 0.7, 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (below !== TILE.WATER) {
+            ctx.fillStyle = `rgba(210,235,255,${0.2 + foamWave})`;
+            ctx.fillRect(x, y + ts - ts * 0.08, ts, ts * 0.08);
+        }
+        if (left !== TILE.WATER) {
+            ctx.fillStyle = `rgba(210,235,255,${0.2 + foamWave})`;
+            ctx.fillRect(x, y, ts * 0.08, ts);
+        }
+        if (right !== TILE.WATER) {
+            ctx.fillStyle = `rgba(210,235,255,${0.2 + foamWave})`;
+            ctx.fillRect(x + ts - ts * 0.08, y, ts * 0.08, ts);
         }
     }
 
@@ -1611,6 +1706,1089 @@ class Village {
         ctx.strokeRect(x + 1, y + 1, ts * 0.45, ts * 0.45);
         ctx.strokeRect(x + ts * 0.5, y + 1, ts * 0.48, ts * 0.48);
         ctx.strokeRect(x + 2, y + ts * 0.5, ts * 0.5, ts * 0.48);
+    }
+
+    // === PROCEDURAL TILE TEXTURE CACHE ===
+
+    _buildTileCache() {
+        this._tileTextures = {};
+        const ts = this.ts;
+        const types = ['grass', 'path', 'water', 'wall', 'floor', 'fence', 'bridge', 'flowers', 'sand', 'darkGrass', 'roof', 'door', 'stone'];
+        for (const type of types) {
+            this._tileTextures[type] = [];
+            const variantCount = (type === 'water') ? 8 : 4;
+            for (let v = 0; v < variantCount; v++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = ts;
+                canvas.height = ts;
+                const tCtx = canvas.getContext('2d');
+                tCtx.imageSmoothingEnabled = false;
+                this['_genTile_' + type](tCtx, ts, v);
+                this._tileTextures[type].push(canvas);
+            }
+        }
+
+        // Also build the noise overlay texture for FF7 "painted" grain
+        if (typeof this._buildNoiseTexture === 'function') {
+            this._buildNoiseTexture();
+        }
+    }
+
+    // 2x2 Bayer dithering for retro pixel-art look
+    _dither(ctx, x, y, r1, g1, b1, r2, g2, b2, threshold) {
+        const bayerMatrix = [[0, 2], [3, 1]];
+        const bayerValue = bayerMatrix[y % 2][x % 2] / 4;
+        if (bayerValue < threshold) {
+            ctx.fillStyle = `rgb(${r1},${g1},${b1})`;
+        } else {
+            ctx.fillStyle = `rgb(${r2},${g2},${b2})`;
+        }
+        ctx.fillRect(x, y, 1, 1);
+    }
+
+    // Seeded pseudo-random for deterministic tile generation
+    _tileSeed(v, x, y) {
+        let h = (v * 374761 + x * 668265 + y * 982451) & 0x7fffffff;
+        h = ((h >> 16) ^ h) * 0x45d9f3b;
+        h = ((h >> 16) ^ h) * 0x45d9f3b;
+        h = (h >> 16) ^ h;
+        return (h & 0x7fffffff) / 0x7fffffff;
+    }
+
+    // --- GRASS tile generator ---
+    _genTile_grass(ctx, ts, variant) {
+        const palettes = [
+            { base: [58, 122, 30], mid: [50, 110, 25], dark: [38, 85, 18], light: [72, 145, 38], highlight: [85, 165, 48] },
+            { base: [52, 115, 28], mid: [45, 105, 22], dark: [35, 80, 16], light: [68, 138, 35], highlight: [80, 158, 45] },
+            { base: [55, 118, 32], mid: [48, 108, 26], dark: [40, 88, 20], light: [70, 142, 40], highlight: [82, 160, 50] },
+            { base: [60, 125, 34], mid: [53, 112, 28], dark: [42, 90, 22], light: [75, 148, 42], highlight: [88, 168, 52] },
+        ];
+        const pal = palettes[variant];
+
+        // Fill base with dithered multi-tone pattern
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const noise = this._tileSeed(variant, x * 3, y * 5);
+                const noise2 = this._tileSeed(variant + 7, x * 7 + 3, y * 11 + 5);
+                const gradFactor = (x + y) / (ts * 2);
+                const threshold = 0.4 + gradFactor * 0.3 + noise * 0.2;
+
+                if (noise2 < 0.08) {
+                    ctx.fillStyle = `rgb(${pal.dark[0]},${pal.dark[1]},${pal.dark[2]})`;
+                    ctx.fillRect(x, y, 1, 1);
+                } else if (noise2 > 0.92) {
+                    ctx.fillStyle = `rgb(${pal.highlight[0]},${pal.highlight[1]},${pal.highlight[2]})`;
+                    ctx.fillRect(x, y, 1, 1);
+                } else {
+                    this._dither(ctx, x, y,
+                        pal.base[0], pal.base[1], pal.base[2],
+                        pal.mid[0], pal.mid[1], pal.mid[2],
+                        threshold
+                    );
+                }
+            }
+        }
+
+        // Grass blade clumps
+        const clumpCount = 6 + variant;
+        for (let i = 0; i < clumpCount; i++) {
+            const cx = Math.floor(this._tileSeed(variant, i * 17, 100) * (ts - 2)) + 1;
+            const cy = Math.floor(this._tileSeed(variant, i * 23, 200) * (ts - 6)) + 4;
+            const bladeH = 2 + Math.floor(this._tileSeed(variant, i * 31, 300) * 3);
+            const isLight = this._tileSeed(variant, i * 41, 400) > 0.5;
+            const col = isLight ? pal.light : pal.dark;
+            ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+            ctx.fillRect(cx, cy - bladeH, 1, bladeH);
+            if (bladeH > 2) {
+                const tipDir = this._tileSeed(variant, i * 53, 500) > 0.5 ? 1 : -1;
+                if (cx + tipDir >= 0 && cx + tipDir < ts) {
+                    ctx.fillRect(cx + tipDir, cy - bladeH - 1, 1, 1);
+                }
+            }
+        }
+
+        // Tiny stones
+        const stoneCount = Math.floor(this._tileSeed(variant, 999, 999) * 2);
+        for (let i = 0; i < stoneCount; i++) {
+            const sx = Math.floor(this._tileSeed(variant, i * 67, 600) * (ts - 3)) + 1;
+            const sy = Math.floor(this._tileSeed(variant, i * 71, 700) * (ts - 3)) + 1;
+            ctx.fillStyle = `rgb(${110 + Math.floor(this._tileSeed(variant, i, 800) * 30)},${100 + Math.floor(this._tileSeed(variant, i, 801) * 25)},${85 + Math.floor(this._tileSeed(variant, i, 802) * 20)})`;
+            ctx.fillRect(sx, sy, 2, 1);
+        }
+
+        // Edge shadow for ambient occlusion
+        for (let x = 0; x < ts; x++) {
+            const a = 0.06 + this._tileSeed(variant, x, 900) * 0.04;
+            ctx.fillStyle = `rgba(20,40,10,${a})`;
+            ctx.fillRect(x, ts - 1, 1, 1);
+        }
+        for (let y = 0; y < ts; y++) {
+            const a = 0.04 + this._tileSeed(variant, 901, y) * 0.03;
+            ctx.fillStyle = `rgba(20,40,10,${a})`;
+            ctx.fillRect(ts - 1, y, 1, 1);
+        }
+    }
+
+    // --- DARK GRASS tile generator ---
+    _genTile_darkGrass(ctx, ts, variant) {
+        const palettes = [
+            { base: [38, 72, 18], mid: [32, 62, 14], dark: [22, 48, 10], light: [48, 88, 24], highlight: [55, 100, 28] },
+            { base: [35, 68, 16], mid: [28, 58, 12], dark: [20, 44, 8], light: [45, 82, 22], highlight: [52, 95, 26] },
+            { base: [40, 75, 20], mid: [34, 65, 16], dark: [24, 50, 12], light: [50, 90, 26], highlight: [58, 105, 30] },
+            { base: [36, 70, 17], mid: [30, 60, 13], dark: [21, 46, 9], light: [46, 85, 23], highlight: [54, 98, 27] },
+        ];
+        const pal = palettes[variant];
+
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const noise = this._tileSeed(variant + 50, x * 3, y * 5);
+                const noise2 = this._tileSeed(variant + 57, x * 7 + 3, y * 11 + 5);
+                const gradFactor = (x + y) / (ts * 2);
+                const threshold = 0.35 + gradFactor * 0.35 + noise * 0.2;
+
+                if (noise2 < 0.12) {
+                    ctx.fillStyle = `rgb(${pal.dark[0]},${pal.dark[1]},${pal.dark[2]})`;
+                    ctx.fillRect(x, y, 1, 1);
+                } else if (noise2 > 0.94) {
+                    ctx.fillStyle = `rgb(${pal.highlight[0]},${pal.highlight[1]},${pal.highlight[2]})`;
+                    ctx.fillRect(x, y, 1, 1);
+                } else {
+                    this._dither(ctx, x, y,
+                        pal.base[0], pal.base[1], pal.base[2],
+                        pal.dark[0], pal.dark[1], pal.dark[2],
+                        threshold
+                    );
+                }
+            }
+        }
+
+        // Thicker, wilder grass blades
+        const clumpCount = 8 + variant;
+        for (let i = 0; i < clumpCount; i++) {
+            const cx = Math.floor(this._tileSeed(variant + 50, i * 17, 100) * (ts - 2)) + 1;
+            const cy = Math.floor(this._tileSeed(variant + 50, i * 23, 200) * (ts - 7)) + 5;
+            const bladeH = 3 + Math.floor(this._tileSeed(variant + 50, i * 31, 300) * 4);
+            const isLight = this._tileSeed(variant + 50, i * 41, 400) > 0.6;
+            const col = isLight ? pal.light : pal.dark;
+            ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+            ctx.fillRect(cx, cy - bladeH, 1, bladeH);
+            if (this._tileSeed(variant + 50, i * 47, 450) > 0.4 && cx + 1 < ts) {
+                ctx.fillRect(cx + 1, cy - bladeH + 1, 1, bladeH - 2);
+            }
+            const tipDir = this._tileSeed(variant + 50, i * 53, 500) > 0.5 ? 1 : -1;
+            if (cx + tipDir >= 0 && cx + tipDir < ts && cy - bladeH - 1 >= 0) {
+                ctx.fillRect(cx + tipDir, cy - bladeH - 1, 1, 1);
+            }
+        }
+
+        // Shadow patches
+        for (let i = 0; i < 3; i++) {
+            const sx = Math.floor(this._tileSeed(variant + 50, i * 89, 650) * (ts - 6)) + 2;
+            const sy = Math.floor(this._tileSeed(variant + 50, i * 97, 660) * (ts - 4)) + 2;
+            const sw = 2 + Math.floor(this._tileSeed(variant + 50, i * 83, 670) * 4);
+            const sh = 1 + Math.floor(this._tileSeed(variant + 50, i * 79, 680) * 2);
+            ctx.fillStyle = 'rgba(15,30,8,0.25)';
+            ctx.fillRect(sx, sy, sw, sh);
+        }
+
+        // Edge AO
+        for (let x = 0; x < ts; x++) {
+            ctx.fillStyle = `rgba(10,20,5,${0.08 + this._tileSeed(variant + 50, x, 900) * 0.05})`;
+            ctx.fillRect(x, ts - 1, 1, 1);
+        }
+        for (let y = 0; y < ts; y++) {
+            ctx.fillStyle = `rgba(10,20,5,${0.06 + this._tileSeed(variant + 50, 901, y) * 0.04})`;
+            ctx.fillRect(ts - 1, y, 1, 1);
+        }
+    }
+
+    // --- PATH/COBBLESTONE tile generator ---
+    _genTile_path(ctx, ts, variant) {
+        const mortarColor = [90, 72, 52];
+
+        // Fill mortar base
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const noise = this._tileSeed(variant + 100, x * 5, y * 7);
+                this._dither(ctx, x, y,
+                    mortarColor[0] - 5, mortarColor[1] - 5, mortarColor[2] - 5,
+                    mortarColor[0] + 8, mortarColor[1] + 6, mortarColor[2] + 4,
+                    0.5 + noise * 0.2
+                );
+            }
+        }
+
+        // Cobblestone layouts per variant
+        const stoneLayouts = [
+            [
+                { x: 1, y: 1, w: 9, h: 7 }, { x: 11, y: 1, w: 10, h: 7 }, { x: 22, y: 1, w: 9, h: 7 },
+                { x: 1, y: 9, w: 7, h: 7 }, { x: 9, y: 9, w: 10, h: 7 }, { x: 20, y: 9, w: 11, h: 7 },
+                { x: 1, y: 17, w: 10, h: 7 }, { x: 12, y: 17, w: 8, h: 7 }, { x: 21, y: 17, w: 10, h: 7 },
+                { x: 1, y: 25, w: 8, h: 6 }, { x: 10, y: 25, w: 11, h: 6 }, { x: 22, y: 25, w: 9, h: 6 },
+            ],
+            [
+                { x: 1, y: 1, w: 14, h: 7 }, { x: 16, y: 1, w: 15, h: 7 },
+                { x: 1, y: 9, w: 8, h: 7 }, { x: 10, y: 9, w: 12, h: 7 }, { x: 23, y: 9, w: 8, h: 7 },
+                { x: 1, y: 17, w: 15, h: 7 }, { x: 17, y: 17, w: 14, h: 7 },
+                { x: 1, y: 25, w: 10, h: 6 }, { x: 12, y: 25, w: 10, h: 6 }, { x: 23, y: 25, w: 8, h: 6 },
+            ],
+            [
+                { x: 1, y: 1, w: 10, h: 9 }, { x: 12, y: 1, w: 8, h: 6 }, { x: 21, y: 1, w: 10, h: 9 },
+                { x: 12, y: 8, w: 8, h: 8 },
+                { x: 1, y: 11, w: 10, h: 6 }, { x: 21, y: 11, w: 10, h: 6 },
+                { x: 1, y: 18, w: 8, h: 7 }, { x: 10, y: 17, w: 12, h: 8 }, { x: 23, y: 18, w: 8, h: 7 },
+                { x: 1, y: 26, w: 14, h: 5 }, { x: 16, y: 26, w: 15, h: 5 },
+            ],
+            [
+                { x: 1, y: 1, w: 7, h: 8 }, { x: 9, y: 1, w: 12, h: 6 }, { x: 22, y: 1, w: 9, h: 8 },
+                { x: 9, y: 8, w: 6, h: 8 }, { x: 16, y: 7, w: 5, h: 5 },
+                { x: 1, y: 10, w: 7, h: 7 }, { x: 16, y: 13, w: 7, h: 7 }, { x: 24, y: 10, w: 7, h: 7 },
+                { x: 1, y: 18, w: 10, h: 6 }, { x: 12, y: 17, w: 9, h: 8 }, { x: 22, y: 18, w: 9, h: 6 },
+                { x: 1, y: 25, w: 8, h: 6 }, { x: 10, y: 26, w: 11, h: 5 }, { x: 22, y: 25, w: 9, h: 6 },
+            ],
+        ];
+
+        const stones = stoneLayouts[variant % stoneLayouts.length];
+        const stoneBaseColors = [
+            [148, 128, 100], [156, 135, 108], [140, 120, 95],
+            [160, 140, 112], [145, 125, 98], [152, 132, 105],
+        ];
+
+        for (let si = 0; si < stones.length; si++) {
+            const s = stones[si];
+            const baseCol = stoneBaseColors[(si + variant * 3) % stoneBaseColors.length];
+
+            // Fill stone body with dithered texture
+            for (let y = s.y; y < Math.min(s.y + s.h, ts); y++) {
+                for (let x = s.x; x < Math.min(s.x + s.w, ts); x++) {
+                    const n = this._tileSeed(variant + 100, x * 13 + si, y * 17 + si);
+                    const bv = Math.floor(n * 12) - 6;
+                    this._dither(ctx, x, y,
+                        baseCol[0] + bv, baseCol[1] + bv, baseCol[2] + bv,
+                        baseCol[0] - 4 + bv, baseCol[1] - 4 + bv, baseCol[2] - 3 + bv,
+                        0.5 + n * 0.15
+                    );
+                }
+            }
+
+            // Top edge highlight
+            for (let x = s.x + 1; x < Math.min(s.x + s.w - 1, ts); x++) {
+                if (s.y < ts) {
+                    const ha = 0.15 + this._tileSeed(variant + 100, x + si * 10, 1000) * 0.1;
+                    ctx.fillStyle = `rgba(220,200,175,${ha})`;
+                    ctx.fillRect(x, s.y, 1, 1);
+                }
+            }
+            // Left edge highlight
+            for (let y = s.y + 1; y < Math.min(s.y + s.h - 1, ts); y++) {
+                if (s.x < ts) {
+                    const ha = 0.08 + this._tileSeed(variant + 100, 1001 + si * 10, y) * 0.08;
+                    ctx.fillStyle = `rgba(210,190,165,${ha})`;
+                    ctx.fillRect(s.x, y, 1, 1);
+                }
+            }
+
+            // Bottom edge shadow
+            const bottomY = Math.min(s.y + s.h - 1, ts - 1);
+            for (let x = s.x; x < Math.min(s.x + s.w, ts); x++) {
+                const sa = 0.18 + this._tileSeed(variant + 100, x + si * 10, 1002) * 0.12;
+                ctx.fillStyle = `rgba(40,30,20,${sa})`;
+                ctx.fillRect(x, bottomY, 1, 1);
+            }
+            // Right edge shadow
+            const rightX = Math.min(s.x + s.w - 1, ts - 1);
+            for (let y = s.y; y < Math.min(s.y + s.h, ts); y++) {
+                const sa = 0.12 + this._tileSeed(variant + 100, 1003 + si * 10, y) * 0.1;
+                ctx.fillStyle = `rgba(40,30,20,${sa})`;
+                ctx.fillRect(rightX, y, 1, 1);
+            }
+
+            // Occasional crack
+            if (this._tileSeed(variant + 100, si * 37, 1100) > 0.7) {
+                const crackStartX = s.x + Math.floor(s.w * 0.3);
+                const crackStartY = s.y + Math.floor(s.h * 0.2);
+                ctx.fillStyle = 'rgba(50,38,25,0.35)';
+                for (let ci = 0; ci < 3; ci++) {
+                    const px = crackStartX + ci;
+                    const py = crackStartY + ci;
+                    if (px < ts && py < ts) ctx.fillRect(px, py, 1, 1);
+                }
+            }
+        }
+
+        // Worn center
+        for (let y = Math.floor(ts * 0.3); y < Math.floor(ts * 0.7); y++) {
+            for (let x = Math.floor(ts * 0.2); x < Math.floor(ts * 0.8); x++) {
+                if (this._tileSeed(variant + 100, x + 2000, y + 2000) > 0.85) {
+                    ctx.fillStyle = 'rgba(50,40,25,0.06)';
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+    }
+
+    // --- WATER tile generator (animation frames) ---
+    _genTile_water(ctx, ts, frame) {
+        const phase = (frame / 8) * Math.PI * 2;
+
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const wave1 = Math.sin(phase + x * 0.4 + y * 0.3) * 0.5 + 0.5;
+                const wave2 = Math.sin(phase * 0.7 + x * 0.2 - y * 0.5) * 0.5 + 0.5;
+                const wave3 = Math.cos(phase * 1.3 + x * 0.6 + y * 0.15) * 0.5 + 0.5;
+                const combined = wave1 * 0.5 + wave2 * 0.3 + wave3 * 0.2;
+
+                const deepR = 18 + Math.floor(combined * 25);
+                const deepG = 58 + Math.floor(combined * 40);
+                const deepB = 140 + Math.floor(combined * 50);
+
+                const surfR = 35 + Math.floor(wave1 * 30);
+                const surfG = 95 + Math.floor(wave1 * 45);
+                const surfB = 180 + Math.floor(wave1 * 40);
+
+                const threshold = 0.4 + combined * 0.3;
+                this._dither(ctx, x, y, deepR, deepG, deepB, surfR, surfG, surfB, threshold);
+            }
+        }
+
+        // Foam highlights
+        const foamCount = 3 + frame % 3;
+        for (let i = 0; i < foamCount; i++) {
+            const fx = Math.floor((Math.sin(phase + i * 2.1) * 0.3 + 0.5) * ts);
+            const fy = Math.floor((Math.cos(phase * 0.8 + i * 1.7) * 0.3 + 0.5) * ts);
+            const fw = 2 + Math.floor(Math.abs(Math.sin(phase + i)) * 4);
+            for (let dx = 0; dx < fw; dx++) {
+                const px = fx + dx;
+                if (px >= 0 && px < ts && fy >= 0 && fy < ts) {
+                    const fa = 0.3 + Math.sin(phase + dx * 0.5) * 0.15;
+                    ctx.fillStyle = `rgba(200,230,255,${fa})`;
+                    ctx.fillRect(px, fy, 1, 1);
+                    if (fy + 1 < ts) {
+                        ctx.fillStyle = `rgba(180,215,245,${fa * 0.5})`;
+                        ctx.fillRect(px, fy + 1, 1, 1);
+                    }
+                }
+            }
+        }
+
+        // Reflection patches
+        for (let i = 0; i < 2; i++) {
+            const rx = Math.floor(this._tileSeed(frame, i * 31, 500) * (ts - 4)) + 2;
+            const ry = Math.floor(this._tileSeed(frame, i * 37, 501) * (ts - 3)) + 1;
+            const rw = 2 + Math.floor(this._tileSeed(frame, i * 41, 502) * 3);
+            for (let dx = 0; dx < rw; dx++) {
+                if (rx + dx < ts) {
+                    ctx.fillStyle = 'rgba(140,200,240,0.15)';
+                    ctx.fillRect(rx + dx, ry, 1, 1);
+                }
+            }
+        }
+
+        // Sparkle
+        const sparkX = Math.floor((Math.sin(phase * 1.5) * 0.3 + 0.5) * ts);
+        const sparkY = Math.floor((Math.cos(phase * 0.9) * 0.25 + 0.4) * ts);
+        if (sparkX >= 0 && sparkX < ts && sparkY >= 0 && sparkY < ts) {
+            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.fillRect(sparkX, sparkY, 1, 1);
+        }
+    }
+
+    // --- WALL tile generator ---
+    _genTile_wall(ctx, ts, variant) {
+        const seed = variant * 17;
+        const baseR = 100 + (variant % 3) * 5;
+        const baseG = 78 + (variant % 4) * 4;
+        const baseB = 58 + (variant % 2) * 6;
+
+        // Fill base
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const n = this._tileSeed(variant + 200, x * 3, y * 5);
+                this._dither(ctx, x, y,
+                    baseR - 5, baseG - 4, baseB - 3,
+                    baseR + 5, baseG + 4, baseB + 3,
+                    0.5 + n * 0.15
+                );
+            }
+        }
+
+        // Brick pattern
+        const brickH = Math.floor(ts / 4);
+        const brickW = Math.floor(ts / 2);
+        const brickColors = [
+            [baseR + 10, baseG + 8, baseB + 6],
+            [baseR - 6, baseG - 5, baseB - 4],
+            [baseR + 4, baseG + 3, baseB + 7],
+            [baseR - 10, baseG - 8, baseB - 3],
+        ];
+
+        for (let by = 0; by < 4; by++) {
+            const offset = (by % 2) * Math.floor(brickW * 0.5);
+            for (let bx = -1; bx < 3; bx++) {
+                const brickStartX = bx * brickW + offset;
+                const brickStartY = by * brickH;
+                const ci = ((by * 3 + bx + seed) % brickColors.length + brickColors.length) % brickColors.length;
+                const bc = brickColors[ci];
+
+                for (let iy = brickStartY + 1; iy < brickStartY + brickH - 1 && iy < ts; iy++) {
+                    for (let ix = brickStartX + 1; ix < brickStartX + brickW - 1 && ix < ts; ix++) {
+                        if (ix < 0) continue;
+                        const n = this._tileSeed(variant + 200, ix * 7 + by, iy * 11 + bx);
+                        const bv = Math.floor(n * 8) - 4;
+                        ctx.fillStyle = `rgb(${bc[0] + bv},${bc[1] + bv},${bc[2] + bv})`;
+                        ctx.fillRect(ix, iy, 1, 1);
+                    }
+                }
+
+                // Top highlight
+                for (let ix = brickStartX + 1; ix < brickStartX + brickW - 1 && ix < ts; ix++) {
+                    if (ix < 0 || brickStartY >= ts) continue;
+                    ctx.fillStyle = 'rgba(180,160,140,0.2)';
+                    ctx.fillRect(ix, brickStartY, 1, 1);
+                }
+
+                // Bottom shadow
+                const botY = brickStartY + brickH - 1;
+                if (botY >= 0 && botY < ts) {
+                    for (let ix = brickStartX + 1; ix < brickStartX + brickW - 1 && ix < ts; ix++) {
+                        if (ix < 0) continue;
+                        ctx.fillStyle = 'rgba(30,20,10,0.2)';
+                        ctx.fillRect(ix, botY, 1, 1);
+                    }
+                }
+            }
+        }
+
+        // Mortar lines (horizontal)
+        for (let by = 0; by < 4; by++) {
+            const my = by * brickH;
+            if (my >= 0 && my < ts) {
+                for (let x = 0; x < ts; x++) {
+                    ctx.fillStyle = `rgba(35,25,15,${0.35 + this._tileSeed(variant + 200, x, my + 2000) * 0.15})`;
+                    ctx.fillRect(x, my, 1, 1);
+                }
+            }
+        }
+
+        // Mortar lines (vertical)
+        for (let by = 0; by < 4; by++) {
+            const offset = (by % 2) * Math.floor(brickW * 0.5);
+            for (let bx = -1; bx < 3; bx++) {
+                const mx = bx * brickW + offset;
+                if (mx >= 0 && mx < ts) {
+                    for (let y = by * brickH; y < (by + 1) * brickH && y < ts; y++) {
+                        ctx.fillStyle = `rgba(35,25,15,${0.3 + this._tileSeed(variant + 200, mx + 3000, y) * 0.15})`;
+                        ctx.fillRect(mx, y, 1, 1);
+                    }
+                }
+            }
+        }
+
+        // Weathering
+        if (variant % 3 === 0) {
+            for (let i = 0; i < 4; i++) {
+                const wx = Math.floor(this._tileSeed(variant + 200, i * 43, 1200) * (ts - 4)) + 1;
+                const wy = Math.floor(this._tileSeed(variant + 200, i * 47, 1201) * (ts - 3)) + 1;
+                ctx.fillStyle = 'rgba(40,30,20,0.12)';
+                ctx.fillRect(wx, wy, 2, 1);
+            }
+        }
+
+        // Corner moss
+        if (variant === 1 || variant === 3) {
+            for (let x = 0; x < 4; x++) {
+                for (let y = ts - 3; y < ts; y++) {
+                    if (this._tileSeed(variant + 200, x + 4000, y) > 0.6) {
+                        ctx.fillStyle = 'rgba(45,100,25,0.2)';
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
+        }
+    }
+
+    // --- FLOOR (wood) tile generator ---
+    _genTile_floor(ctx, ts, variant) {
+        const plankCount = 4;
+        const plankH = Math.floor(ts / plankCount);
+        const plankBaseColors = [
+            [168, 130, 90], [175, 135, 95], [162, 125, 85], [172, 132, 92],
+        ];
+
+        for (let p = 0; p < plankCount; p++) {
+            const pColor = plankBaseColors[(p + variant) % plankBaseColors.length];
+            const plankY = p * plankH;
+
+            for (let y = plankY; y < plankY + plankH && y < ts; y++) {
+                for (let x = 0; x < ts; x++) {
+                    const grainNoise = this._tileSeed(variant + 300, x * 3 + p * 100, y * 2);
+                    const grainLine = Math.sin(x * 0.8 + p * 2 + grainNoise * 3) * 0.5 + 0.5;
+                    const bv = Math.floor(grainLine * 12) - 6;
+                    const darkGrain = Math.sin(x * 0.3 + y * 0.1 + p * 5) > 0.85;
+                    if (darkGrain) {
+                        ctx.fillStyle = `rgb(${pColor[0] - 18},${pColor[1] - 15},${pColor[2] - 12})`;
+                        ctx.fillRect(x, y, 1, 1);
+                    } else {
+                        this._dither(ctx, x, y,
+                            pColor[0] + bv, pColor[1] + bv, pColor[2] + bv,
+                            pColor[0] - 4 + bv, pColor[1] - 3 + bv, pColor[2] - 2 + bv,
+                            0.5 + grainNoise * 0.2
+                        );
+                    }
+                }
+            }
+
+            // Plank gap
+            if (plankY > 0) {
+                for (let x = 0; x < ts; x++) {
+                    ctx.fillStyle = `rgba(50,35,18,${0.4 + this._tileSeed(variant + 300, x, plankY + 3000) * 0.2})`;
+                    ctx.fillRect(x, plankY, 1, 1);
+                }
+            }
+
+            // Top edge highlight
+            if (plankY + 1 < ts) {
+                for (let x = 0; x < ts; x++) {
+                    ctx.fillStyle = `rgba(210,185,155,${0.08 + this._tileSeed(variant + 300, x, plankY + 4000) * 0.06})`;
+                    ctx.fillRect(x, plankY + 1, 1, 1);
+                }
+            }
+        }
+
+        // Wood knots
+        const knotCount = 1 + (variant % 2);
+        for (let k = 0; k < knotCount; k++) {
+            const kx = Math.floor(this._tileSeed(variant + 300, k * 61, 1500) * (ts - 6)) + 3;
+            const ky = Math.floor(this._tileSeed(variant + 300, k * 67, 1501) * (ts - 6)) + 3;
+            ctx.fillStyle = 'rgba(80,55,30,0.4)';
+            ctx.fillRect(kx, ky, 2, 2);
+            ctx.fillStyle = 'rgba(100,70,35,0.25)';
+            ctx.fillRect(kx - 1, ky, 1, 2);
+            ctx.fillRect(kx + 2, ky, 1, 2);
+            ctx.fillRect(kx, ky - 1, 2, 1);
+            ctx.fillRect(kx, ky + 2, 2, 1);
+        }
+
+        // Warm highlight at top-left
+        for (let y = 0; y < Math.floor(ts * 0.4); y++) {
+            for (let x = 0; x < Math.floor(ts * 0.4); x++) {
+                if (this._tileSeed(variant + 300, x + 5000, y + 5000) > 0.8) {
+                    ctx.fillStyle = 'rgba(230,200,150,0.04)';
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+    }
+
+    // --- FENCE tile generator ---
+    _genTile_fence(ctx, ts, variant) {
+        // Grass base
+        this._genTile_grass(ctx, ts, variant);
+
+        const woodBase = [139, 115, 85];
+        const woodLight = [165, 138, 105];
+        const woodDark = [105, 82, 58];
+
+        const slatWidth = Math.floor(ts * 0.18);
+        const slatGap = Math.floor(ts * 0.07);
+        const slatCount = 3;
+        const startX = Math.floor((ts - slatCount * slatWidth - (slatCount - 1) * slatGap) / 2);
+
+        for (let s = 0; s < slatCount; s++) {
+            const sx = startX + s * (slatWidth + slatGap);
+            const slatTop = 2;
+            const slatBot = ts - 1;
+
+            // Slat body
+            for (let y = slatTop + 2; y < slatBot; y++) {
+                for (let x = sx; x < sx + slatWidth && x < ts; x++) {
+                    if (x < 0) continue;
+                    const grain = Math.sin(y * 0.6 + variant + s) * 0.5 + 0.5;
+                    const gv = Math.floor(grain * 8) - 4;
+                    const n = this._tileSeed(variant + 400, x + s * 50, y);
+                    this._dither(ctx, x, y,
+                        woodBase[0] + gv, woodBase[1] + gv, woodBase[2] + gv,
+                        woodDark[0] + gv, woodDark[1] + gv, woodDark[2] + gv,
+                        0.55 + n * 0.15
+                    );
+                }
+            }
+
+            // Pointed top
+            const peakX = sx + Math.floor(slatWidth / 2);
+            for (let dy = 0; dy < 3; dy++) {
+                const halfW = Math.max(0, Math.floor(slatWidth / 2) - dy);
+                for (let dx = -halfW; dx <= halfW; dx++) {
+                    const px = peakX + dx;
+                    const py = slatTop + dy;
+                    if (px >= 0 && px < ts && py >= 0 && py < ts) {
+                        ctx.fillStyle = `rgb(${woodLight[0]},${woodLight[1]},${woodLight[2]})`;
+                        ctx.fillRect(px, py, 1, 1);
+                    }
+                }
+            }
+
+            // Left highlight
+            if (sx >= 0 && sx < ts) {
+                for (let y = slatTop + 2; y < slatBot; y++) {
+                    ctx.fillStyle = 'rgba(200,180,150,0.15)';
+                    ctx.fillRect(sx, y, 1, 1);
+                }
+            }
+
+            // Right shadow
+            const rx = sx + slatWidth - 1;
+            if (rx >= 0 && rx < ts) {
+                for (let y = slatTop + 2; y < slatBot; y++) {
+                    ctx.fillStyle = 'rgba(50,35,20,0.2)';
+                    ctx.fillRect(rx, y, 1, 1);
+                }
+            }
+        }
+
+        // Horizontal beams
+        const beamY1 = Math.floor(ts * 0.3);
+        const beamY2 = Math.floor(ts * 0.7);
+        for (const by of [beamY1, beamY2]) {
+            for (let x = 0; x < ts; x++) {
+                for (let dy = 0; dy < 3; dy++) {
+                    if (by + dy < ts) {
+                        const n = this._tileSeed(variant + 400, x + 2000, by + dy);
+                        const bv = Math.floor(n * 6) - 3;
+                        ctx.fillStyle = `rgb(${woodDark[0] + bv},${woodDark[1] + bv},${woodDark[2] + bv})`;
+                        ctx.fillRect(x, by + dy, 1, 1);
+                    }
+                }
+                if (by < ts) {
+                    ctx.fillStyle = 'rgba(190,170,140,0.12)';
+                    ctx.fillRect(x, by, 1, 1);
+                }
+            }
+        }
+    }
+
+    // --- BRIDGE tile generator ---
+    _genTile_bridge(ctx, ts, variant) {
+        const plankBaseColors = [
+            [155, 122, 80], [160, 128, 85], [148, 118, 78], [152, 125, 82],
+        ];
+
+        const baseCol = plankBaseColors[variant];
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const n = this._tileSeed(variant + 500, x * 3, y * 2);
+                this._dither(ctx, x, y,
+                    baseCol[0], baseCol[1], baseCol[2],
+                    baseCol[0] - 8, baseCol[1] - 6, baseCol[2] - 4,
+                    0.5 + n * 0.2
+                );
+            }
+        }
+
+        // Plank lines
+        const plankH = Math.floor(ts / 4);
+        for (let p = 0; p < 4; p++) {
+            const py = p * plankH;
+            for (let x = 2; x < ts - 2; x++) {
+                ctx.fillStyle = `rgba(30,20,10,${0.4 + this._tileSeed(variant + 500, x, py + 3000) * 0.2})`;
+                ctx.fillRect(x, py, 1, 1);
+                if (this._tileSeed(variant + 500, x, py + 3001) > 0.7 && py + 1 < ts) {
+                    ctx.fillStyle = 'rgba(20,50,100,0.3)';
+                    ctx.fillRect(x, py + 1, 1, 1);
+                }
+            }
+
+            // Wood grain
+            for (let y = py + 1; y < py + plankH && y < ts; y++) {
+                for (let x = 3; x < ts - 3; x++) {
+                    if (Math.sin(x * 0.5 + p * 3 + variant) > 0.8) {
+                        ctx.fillStyle = 'rgba(90,65,35,0.15)';
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
+
+            // Nails
+            ctx.fillStyle = 'rgba(80,80,80,0.5)';
+            ctx.fillRect(3, py + Math.floor(plankH / 2), 1, 1);
+            ctx.fillRect(ts - 4, py + Math.floor(plankH / 2), 1, 1);
+        }
+
+        // Side rails
+        for (let y = 0; y < ts; y++) {
+            for (let dx = 0; dx < 3; dx++) {
+                const n = this._tileSeed(variant + 500, dx, y + 4000);
+                ctx.fillStyle = `rgb(${95 + Math.floor(n * 10)},${70 + Math.floor(n * 8)},${42 + Math.floor(n * 6)})`;
+                ctx.fillRect(dx, y, 1, 1);
+                ctx.fillRect(ts - 1 - dx, y, 1, 1);
+            }
+            ctx.fillStyle = 'rgba(180,155,120,0.12)';
+            ctx.fillRect(2, y, 1, 1);
+            ctx.fillRect(ts - 3, y, 1, 1);
+        }
+    }
+
+    // --- FLOWERS tile generator ---
+    _genTile_flowers(ctx, ts, variant) {
+        this._genTile_grass(ctx, ts, variant);
+
+        const flowerPalettes = [
+            [[255, 107, 138], [255, 179, 71], [255, 244, 79], [126, 200, 227], [201, 177, 255]],
+            [[255, 130, 150], [255, 160, 60], [240, 230, 70], [100, 185, 210], [220, 190, 255]],
+            [[230, 90, 120], [245, 170, 80], [255, 255, 100], [140, 210, 235], [190, 165, 240]],
+            [[250, 120, 160], [255, 190, 90], [248, 240, 85], [115, 195, 220], [205, 180, 250]],
+        ];
+        const flowers = flowerPalettes[variant];
+
+        const flowerCount = 4 + variant;
+        for (let i = 0; i < flowerCount; i++) {
+            const fx = Math.floor(this._tileSeed(variant + 600, i * 19, 100) * (ts - 6)) + 3;
+            const fy = Math.floor(this._tileSeed(variant + 600, i * 23, 101) * (ts - 6)) + 3;
+            const fc = flowers[i % flowers.length];
+
+            // Stem
+            ctx.fillStyle = 'rgba(50,110,25,0.7)';
+            if (fy + 1 < ts) ctx.fillRect(fx, fy + 1, 1, 2);
+
+            // 4 petals
+            const petalPositions = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+            for (const [dx, dy] of petalPositions) {
+                const px = fx + dx;
+                const py = fy + dy;
+                if (px >= 0 && px < ts && py >= 0 && py < ts) {
+                    ctx.fillStyle = `rgb(${fc[0]},${fc[1]},${fc[2]})`;
+                    ctx.fillRect(px, py, 1, 1);
+                }
+            }
+
+            // Center
+            ctx.fillStyle = 'rgb(255,220,50)';
+            ctx.fillRect(fx, fy, 1, 1);
+
+            // Extra petals
+            if (this._tileSeed(variant + 600, i * 29, 102) > 0.5) {
+                const diagPetals = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+                for (const [dx, dy] of diagPetals) {
+                    const px = fx + dx;
+                    const py = fy + dy;
+                    if (px >= 0 && px < ts && py >= 0 && py < ts) {
+                        ctx.fillStyle = `rgba(${fc[0]},${fc[1]},${fc[2]},0.6)`;
+                        ctx.fillRect(px, py, 1, 1);
+                    }
+                }
+            }
+        }
+    }
+
+    // --- SAND tile generator ---
+    _genTile_sand(ctx, ts, variant) {
+        const baseColors = [
+            [212, 184, 150], [208, 180, 146], [215, 188, 155], [210, 182, 148],
+        ];
+        const base = baseColors[variant];
+
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const n1 = this._tileSeed(variant + 700, x * 5, y * 7);
+                const n2 = this._tileSeed(variant + 700, x * 11 + 3, y * 13 + 7);
+                const ripple = Math.sin(x * 0.3 + y * 0.15 + variant * 2) * 0.5 + 0.5;
+                const bv = Math.floor(n1 * 10) - 5 + Math.floor(ripple * 6);
+
+                this._dither(ctx, x, y,
+                    base[0] + bv, base[1] + bv, base[2] + bv,
+                    base[0] - 4 + bv, base[1] - 3 + bv, base[2] - 2 + bv,
+                    0.5 + n2 * 0.2
+                );
+            }
+        }
+
+        // Sand specks
+        const speckCount = 8 + variant * 2;
+        for (let i = 0; i < speckCount; i++) {
+            const sx = Math.floor(this._tileSeed(variant + 700, i * 31, 200) * ts);
+            const sy = Math.floor(this._tileSeed(variant + 700, i * 37, 201) * ts);
+            ctx.fillStyle = this._tileSeed(variant + 700, i * 41, 202) > 0.5 ? 'rgba(235,215,185,0.4)' : 'rgba(170,145,110,0.3)';
+            ctx.fillRect(sx, sy, 1, 1);
+        }
+
+        // Wind ridges
+        for (let y = 0; y < ts; y++) {
+            if (Math.sin(y * 0.6 + variant * 1.5) > 0.7) {
+                for (let x = 0; x < ts; x++) {
+                    if (this._tileSeed(variant + 700, x + 3000, y) > 0.4) {
+                        ctx.fillStyle = 'rgba(230,205,170,0.12)';
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
+        }
+
+        // AO at bottom-right
+        for (let x = ts - 3; x < ts; x++) {
+            for (let y = ts - 3; y < ts; y++) {
+                ctx.fillStyle = 'rgba(150,125,90,0.08)';
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+    }
+
+    // --- ROOF tile generator ---
+    _genTile_roof(ctx, ts, variant) {
+        const baseColors = [
+            [139, 69, 19], [145, 75, 25], [132, 62, 15], [142, 72, 22],
+        ];
+        const base = baseColors[variant];
+
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const n = this._tileSeed(variant + 800, x * 3, y * 5);
+                this._dither(ctx, x, y,
+                    base[0], base[1], base[2],
+                    base[0] - 10, base[1] - 6, base[2] - 4,
+                    0.5 + n * 0.2
+                );
+            }
+        }
+
+        // Shingle rows
+        const shingleH = Math.floor(ts / 3);
+        for (let row = 0; row < 3; row++) {
+            const sy = row * shingleH;
+            const offset = (row % 2) * Math.floor(ts * 0.25);
+            const shingleW = Math.floor(ts * 0.5);
+
+            for (let s = -1; s < 3; s++) {
+                const sx = s * shingleW + offset;
+
+                // Bottom shadow
+                const botY = sy + shingleH - 1;
+                if (botY >= 0 && botY < ts) {
+                    for (let x = Math.max(0, sx); x < Math.min(sx + shingleW, ts); x++) {
+                        ctx.fillStyle = `rgba(60,30,5,${0.3 + this._tileSeed(variant + 800, x, botY + 2000) * 0.15})`;
+                        ctx.fillRect(x, botY, 1, 1);
+                        if (botY - 1 >= 0) {
+                            const distFromCenter = Math.abs(x - (sx + shingleW / 2)) / (shingleW / 2);
+                            if (distFromCenter < 0.8) {
+                                ctx.fillStyle = `rgba(180,110,50,${0.12 * (1 - distFromCenter)})`;
+                                ctx.fillRect(x, botY - 1, 1, 1);
+                            }
+                        }
+                    }
+                }
+
+                // Top highlight
+                if (sy >= 0 && sy < ts) {
+                    for (let x = Math.max(0, sx + 1); x < Math.min(sx + shingleW - 1, ts); x++) {
+                        ctx.fillStyle = `rgba(200,130,60,${0.12 + this._tileSeed(variant + 800, x, sy + 3000) * 0.08})`;
+                        ctx.fillRect(x, sy, 1, 1);
+                    }
+                }
+
+                // Vertical divider
+                if (sx >= 0 && sx < ts) {
+                    for (let y = sy; y < Math.min(sy + shingleH, ts); y++) {
+                        ctx.fillStyle = `rgba(70,35,10,${0.2 + this._tileSeed(variant + 800, sx + 4000, y) * 0.1})`;
+                        ctx.fillRect(sx, y, 1, 1);
+                    }
+                }
+            }
+        }
+
+        // Weathering
+        for (let i = 0; i < 3; i++) {
+            const wx = Math.floor(this._tileSeed(variant + 800, i * 53, 1300) * (ts - 4)) + 2;
+            const wy = Math.floor(this._tileSeed(variant + 800, i * 59, 1301) * (ts - 3)) + 1;
+            ctx.fillStyle = 'rgba(180,120,60,0.08)';
+            ctx.fillRect(wx, wy, 2, 2);
+        }
+    }
+
+    // --- DOOR tile generator ---
+    _genTile_door(ctx, ts, variant) {
+        // Floor base
+        this._genTile_floor(ctx, ts, variant);
+
+        const frameW = Math.floor(ts * 0.2);
+        const frameTop = Math.floor(ts * 0.05);
+        const doorLeft = frameW;
+        const doorRight = ts - frameW;
+        const doorTop = frameTop;
+        const doorBottom = ts - 1;
+        const doorWidth = doorRight - doorLeft;
+        const doorHeight = doorBottom - doorTop;
+
+        const doorBaseColors = [
+            [95, 65, 38], [100, 70, 42], [88, 60, 35], [92, 63, 36],
+        ];
+        const doorCol = doorBaseColors[variant];
+
+        // Door planks
+        for (let y = doorTop; y < doorBottom; y++) {
+            for (let x = doorLeft; x < doorRight; x++) {
+                const grain = Math.sin(y * 0.4 + variant + (x - doorLeft) * 0.15) * 0.5 + 0.5;
+                const gv = Math.floor(grain * 10) - 5;
+                const n = this._tileSeed(variant + 900, x, y);
+                this._dither(ctx, x, y,
+                    doorCol[0] + gv, doorCol[1] + gv, doorCol[2] + gv,
+                    doorCol[0] - 6 + gv, doorCol[1] - 5 + gv, doorCol[2] - 3 + gv,
+                    0.5 + n * 0.15
+                );
+            }
+        }
+
+        // Plank divider
+        const midX = Math.floor(ts / 2);
+        for (let y = doorTop + 1; y < doorBottom - 1; y++) {
+            ctx.fillStyle = `rgba(40,25,12,${0.3 + this._tileSeed(variant + 900, midX, y + 5000) * 0.15})`;
+            ctx.fillRect(midX, y, 1, 1);
+        }
+
+        // Frame edges
+        for (let y = doorTop; y < doorBottom; y++) {
+            ctx.fillStyle = `rgba(55,38,20,${0.6 + this._tileSeed(variant + 900, doorLeft - 1, y + 6000) * 0.2})`;
+            if (doorLeft - 1 >= 0) ctx.fillRect(doorLeft - 1, y, 1, 1);
+            ctx.fillRect(doorLeft, y, 1, 1);
+            if (doorRight < ts) ctx.fillRect(doorRight, y, 1, 1);
+            if (doorRight - 1 >= 0) {
+                ctx.fillStyle = 'rgba(55,38,20,0.5)';
+                ctx.fillRect(doorRight - 1, y, 1, 1);
+            }
+        }
+        for (let x = doorLeft - 1; x <= doorRight && x < ts; x++) {
+            if (x >= 0 && doorTop >= 0) {
+                ctx.fillStyle = 'rgba(55,38,20,0.6)';
+                ctx.fillRect(x, doorTop, 1, 1);
+            }
+        }
+
+        // Metal bands
+        const bandY1 = doorTop + Math.floor(doorHeight * 0.25);
+        const bandY2 = doorTop + Math.floor(doorHeight * 0.75);
+        for (const bandY of [bandY1, bandY2]) {
+            for (let x = doorLeft + 1; x < doorRight - 1; x++) {
+                const n = this._tileSeed(variant + 900, x, bandY + 7000);
+                ctx.fillStyle = `rgb(${65 + Math.floor(n * 15)},${60 + Math.floor(n * 12)},${55 + Math.floor(n * 10)})`;
+                ctx.fillRect(x, bandY, 1, 1);
+                if (bandY - 1 >= doorTop) {
+                    ctx.fillStyle = 'rgba(120,115,105,0.15)';
+                    ctx.fillRect(x, bandY - 1, 1, 1);
+                }
+            }
+        }
+
+        // Handle
+        const handleX = doorLeft + Math.floor(doorWidth * 0.7);
+        const handleY = doorTop + Math.floor(doorHeight * 0.5);
+        ctx.fillStyle = 'rgba(255,215,0,0.3)';
+        ctx.fillRect(handleX - 1, handleY - 1, 3, 3);
+        ctx.fillStyle = 'rgb(255,215,0)';
+        ctx.fillRect(handleX, handleY, 1, 1);
+        ctx.fillStyle = 'rgb(255,240,150)';
+        ctx.fillRect(handleX, handleY - 1, 1, 1);
+    }
+
+    // --- STONE tile generator ---
+    _genTile_stone(ctx, ts, variant) {
+        const baseColors = [
+            [128, 128, 128], [122, 122, 125], [132, 130, 126], [125, 125, 130],
+        ];
+        const base = baseColors[variant];
+
+        // Mortar base
+        for (let y = 0; y < ts; y++) {
+            for (let x = 0; x < ts; x++) {
+                const n = this._tileSeed(variant + 1000, x * 3, y * 5);
+                this._dither(ctx, x, y,
+                    base[0] - 20, base[1] - 18, base[2] - 15,
+                    base[0] - 28, base[1] - 26, base[2] - 22,
+                    0.5 + n * 0.15
+                );
+            }
+        }
+
+        // Stone blocks
+        const stoneLayouts = [
+            [
+                { x: 1, y: 1, w: 14, h: 14 }, { x: 16, y: 1, w: 15, h: 14 },
+                { x: 1, y: 16, w: 10, h: 15 }, { x: 12, y: 16, w: 10, h: 15 }, { x: 23, y: 16, w: 8, h: 15 },
+            ],
+            [
+                { x: 1, y: 1, w: 10, h: 10 }, { x: 12, y: 1, w: 10, h: 10 }, { x: 23, y: 1, w: 8, h: 10 },
+                { x: 1, y: 12, w: 15, h: 10 }, { x: 17, y: 12, w: 14, h: 10 },
+                { x: 1, y: 23, w: 8, h: 8 }, { x: 10, y: 23, w: 12, h: 8 }, { x: 23, y: 23, w: 8, h: 8 },
+            ],
+            [
+                { x: 1, y: 1, w: 20, h: 10 }, { x: 22, y: 1, w: 9, h: 10 },
+                { x: 1, y: 12, w: 9, h: 10 }, { x: 11, y: 12, w: 20, h: 10 },
+                { x: 1, y: 23, w: 14, h: 8 }, { x: 16, y: 23, w: 15, h: 8 },
+            ],
+            [
+                { x: 1, y: 1, w: 12, h: 12 }, { x: 14, y: 1, w: 8, h: 7 }, { x: 23, y: 1, w: 8, h: 12 },
+                { x: 14, y: 9, w: 8, h: 8 },
+                { x: 1, y: 14, w: 10, h: 8 }, { x: 12, y: 18, w: 10, h: 8 }, { x: 23, y: 14, w: 8, h: 8 },
+                { x: 1, y: 23, w: 15, h: 8 }, { x: 17, y: 23, w: 14, h: 8 },
+            ],
+        ];
+
+        const blocks = stoneLayouts[variant % stoneLayouts.length];
+        const stoneShades = [
+            [base[0] + 5, base[1] + 5, base[2] + 5],
+            [base[0] - 3, base[1] - 2, base[2] - 1],
+            [base[0] + 10, base[1] + 8, base[2] + 6],
+            [base[0] - 8, base[1] - 6, base[2] - 4],
+        ];
+
+        for (let bi = 0; bi < blocks.length; bi++) {
+            const b = blocks[bi];
+            const shade = stoneShades[(bi + variant) % stoneShades.length];
+
+            for (let y = b.y; y < Math.min(b.y + b.h, ts); y++) {
+                for (let x = b.x; x < Math.min(b.x + b.w, ts); x++) {
+                    const n = this._tileSeed(variant + 1000, x * 7 + bi, y * 11 + bi);
+                    const sv = Math.floor(n * 10) - 5;
+                    this._dither(ctx, x, y,
+                        shade[0] + sv, shade[1] + sv, shade[2] + sv,
+                        shade[0] - 3 + sv, shade[1] - 3 + sv, shade[2] - 2 + sv,
+                        0.5 + n * 0.15
+                    );
+                }
+            }
+
+            // Top highlight
+            for (let x = b.x; x < Math.min(b.x + b.w, ts); x++) {
+                if (b.y < ts) {
+                    ctx.fillStyle = 'rgba(200,200,205,0.18)';
+                    ctx.fillRect(x, b.y, 1, 1);
+                }
+            }
+            // Left highlight
+            for (let y = b.y; y < Math.min(b.y + b.h, ts); y++) {
+                if (b.x < ts) {
+                    ctx.fillStyle = 'rgba(190,190,195,0.12)';
+                    ctx.fillRect(b.x, y, 1, 1);
+                }
+            }
+            // Bottom shadow
+            const bBot = Math.min(b.y + b.h - 1, ts - 1);
+            for (let x = b.x; x < Math.min(b.x + b.w, ts); x++) {
+                ctx.fillStyle = 'rgba(40,40,45,0.2)';
+                ctx.fillRect(x, bBot, 1, 1);
+            }
+            // Right shadow
+            const bRight = Math.min(b.x + b.w - 1, ts - 1);
+            for (let y = b.y; y < Math.min(b.y + b.h, ts); y++) {
+                ctx.fillStyle = 'rgba(45,45,50,0.15)';
+                ctx.fillRect(bRight, y, 1, 1);
+            }
+        }
+
+        // Surface noise
+        for (let i = 0; i < 6; i++) {
+            const sx = Math.floor(this._tileSeed(variant + 1000, i * 71, 2000) * ts);
+            const sy = Math.floor(this._tileSeed(variant + 1000, i * 73, 2001) * ts);
+            ctx.fillStyle = this._tileSeed(variant + 1000, i * 79, 2002) > 0.5 ? 'rgba(160,160,165,0.15)' : 'rgba(80,80,85,0.12)';
+            ctx.fillRect(sx, sy, 1, 1);
+        }
     }
 
     // === TILE TRANSITION BLENDING ===
@@ -4171,307 +5349,6 @@ class Village {
             return [parseInt(match[0]), parseInt(match[1]), parseInt(match[2])];
         }
         return [128, 128, 128]; // default gray
-    }
-
-    // === PROCEDURAL TILE TEXTURE CACHE ===
-    // Pre-renders rich pixel-art textures for each tile type at startup.
-    // Uses offscreen canvases cached as ImageBitmap for fast drawImage() stamping.
-
-    _buildTileCache() {
-        this._tileTextures = {};
-        const ts = this.ts;
-        const types = {
-            grass: TILE.GRASS,
-            darkGrass: TILE.DARK_GRASS,
-            path: TILE.PATH,
-            wall: TILE.WALL,
-            floor: TILE.FLOOR,
-            fence: TILE.FENCE,
-            bridge: TILE.BRIDGE,
-            sand: TILE.SAND,
-            roof: TILE.ROOF,
-            door: TILE.DOOR,
-            stone: TILE.STONE,
-        };
-
-        // Seeded pseudo-random for reproducible textures
-        const srand = (seed) => {
-            let s = seed;
-            return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
-        };
-
-        // 2x2 Bayer dithering for FF7 pixel art look
-        const bayer2 = [[0, 2], [3, 1]];
-        const dither = (x, y, threshold) => bayer2[y % 2][x % 2] / 4 < threshold;
-
-        for (const [name, tileType] of Object.entries(types)) {
-            this._tileTextures[name] = [];
-            const variantCount = (name === 'wall' || name === 'roof' || name === 'door') ? 2 : 4;
-
-            for (let v = 0; v < variantCount; v++) {
-                const c = document.createElement('canvas');
-                c.width = ts; c.height = ts;
-                const ctx = c.getContext('2d');
-                ctx.imageSmoothingEnabled = false;
-                const rng = srand(v * 1000 + tileType * 100);
-
-                switch (name) {
-                    case 'grass':
-                    case 'darkGrass': {
-                        const dark = name === 'darkGrass';
-                        const colors = dark
-                            ? ['#1e4010', '#245012', '#2a5814', '#1a3a0e', '#2e6016']
-                            : ['#2e6a18', '#357a1e', '#3c8a24', '#2a6014', '#409028'];
-                        // Base fill with noise
-                        for (let py = 0; py < ts; py++) {
-                            for (let px = 0; px < ts; px++) {
-                                const ci = Math.floor(rng() * colors.length);
-                                // Dither between two adjacent colors for painterly look
-                                const c1 = colors[ci];
-                                const c2 = colors[(ci + 1) % colors.length];
-                                ctx.fillStyle = dither(px, py, 0.5 + rng() * 0.3) ? c1 : c2;
-                                ctx.fillRect(px, py, 1, 1);
-                            }
-                        }
-                        // Shadow patches (ambient occlusion)
-                        ctx.fillStyle = 'rgba(0,20,0,0.15)';
-                        for (let i = 0; i < 3; i++) {
-                            ctx.beginPath();
-                            ctx.ellipse(rng() * ts, rng() * ts, ts * 0.15 + rng() * ts * 0.15,
-                                ts * 0.1 + rng() * ts * 0.1, rng() * Math.PI, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
-                        // Highlight patches
-                        ctx.fillStyle = dark ? 'rgba(60,120,30,0.12)' : 'rgba(100,200,50,0.1)';
-                        ctx.beginPath();
-                        ctx.ellipse(rng() * ts, rng() * ts, ts * 0.2, ts * 0.15, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                        // Tiny stones/dirt specks
-                        ctx.fillStyle = 'rgba(100,80,60,0.25)';
-                        for (let i = 0; i < 2; i++) {
-                            ctx.fillRect(Math.floor(rng() * ts), Math.floor(rng() * ts), 1, 1);
-                        }
-                        break;
-                    }
-                    case 'path': {
-                        // Cobblestone pattern
-                        const stoneColors = ['#7a6a50', '#8a7a60', '#6a5a45', '#8a7560', '#756550'];
-                        const mortarColor = '#5a4a35';
-                        // Fill with mortar
-                        ctx.fillStyle = mortarColor;
-                        ctx.fillRect(0, 0, ts, ts);
-                        // Draw stones
-                        const stoneW = ts / 4;
-                        const stoneH = ts / 3;
-                        for (let sy = 0; sy < 3; sy++) {
-                            const offset = (sy % 2) * stoneW * 0.5;
-                            for (let sx = 0; sx < 5; sx++) {
-                                const cx = sx * stoneW + offset - stoneW * 0.25;
-                                const cy = sy * stoneH;
-                                const sw = stoneW - 1.5 + rng() * 1;
-                                const sh = stoneH - 1.5 + rng() * 1;
-                                ctx.fillStyle = stoneColors[Math.floor(rng() * stoneColors.length)];
-                                ctx.fillRect(cx + 0.75, cy + 0.75, sw, sh);
-                                // Highlight top edge
-                                ctx.fillStyle = 'rgba(255,240,200,0.12)';
-                                ctx.fillRect(cx + 1, cy + 0.75, sw - 1, 1);
-                                // Shadow bottom edge
-                                ctx.fillStyle = 'rgba(0,0,0,0.15)';
-                                ctx.fillRect(cx + 1, cy + sh, sw - 1, 1);
-                            }
-                        }
-                        // Wear in center (lighter)
-                        ctx.fillStyle = 'rgba(180,160,130,0.08)';
-                        ctx.beginPath();
-                        ctx.ellipse(ts / 2, ts / 2, ts * 0.35, ts * 0.3, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                        break;
-                    }
-                    case 'wall': {
-                        const brickColors = ['#8a7060', '#7a6050', '#9a8070', '#856555', '#8f7565'];
-                        const mortar = '#5a4a3a';
-                        ctx.fillStyle = mortar;
-                        ctx.fillRect(0, 0, ts, ts);
-                        const brickH = ts / 4;
-                        const brickW = ts / 2;
-                        for (let by = 0; by < 4; by++) {
-                            const offset = (by % 2) * brickW * 0.5;
-                            for (let bx = -1; bx < 3; bx++) {
-                                const cx = bx * brickW + offset;
-                                const cy = by * brickH;
-                                ctx.fillStyle = brickColors[Math.floor(rng() * brickColors.length)];
-                                ctx.fillRect(cx + 0.5, cy + 0.5, brickW - 1, brickH - 1);
-                                // Dithered texture on brick surface
-                                for (let dy = 0; dy < brickH - 1; dy++) {
-                                    for (let dx = 0; dx < brickW - 1; dx++) {
-                                        if (rng() < 0.08) {
-                                            ctx.fillStyle = `rgba(0,0,0,${rng() * 0.12})`;
-                                            ctx.fillRect(cx + 0.5 + dx, cy + 0.5 + dy, 1, 1);
-                                        }
-                                    }
-                                }
-                                // Top highlight
-                                ctx.fillStyle = 'rgba(255,240,220,0.1)';
-                                ctx.fillRect(cx + 1, cy + 0.5, brickW - 2, 1);
-                            }
-                        }
-                        break;
-                    }
-                    case 'floor': {
-                        const plankColors = ['#6a5030', '#7a5a38', '#5a4528', '#6e5535'];
-                        const plankH = ts / 4;
-                        for (let py = 0; py < 4; py++) {
-                            ctx.fillStyle = plankColors[py % plankColors.length];
-                            ctx.fillRect(0, py * plankH, ts, plankH - 0.5);
-                            // Wood grain
-                            ctx.fillStyle = 'rgba(0,0,0,0.06)';
-                            for (let gy = 0; gy < plankH; gy += 2) {
-                                const gx = Math.sin(gy * 0.5 + py) * 2 + rng() * ts;
-                                ctx.fillRect(gx % ts, py * plankH + gy, ts * 0.3, 0.5);
-                            }
-                            // Knot
-                            if (rng() > 0.6) {
-                                ctx.fillStyle = 'rgba(60,35,15,0.3)';
-                                ctx.beginPath();
-                                ctx.arc(rng() * ts, py * plankH + plankH * 0.5, 1.5, 0, Math.PI * 2);
-                                ctx.fill();
-                            }
-                            // Gap shadow
-                            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                            ctx.fillRect(0, (py + 1) * plankH - 0.5, ts, 0.5);
-                        }
-                        break;
-                    }
-                    case 'roof': {
-                        const shingleColors = ['#5a3a20', '#6a4528', '#503218', '#5e3e22'];
-                        const rowH = ts / 4;
-                        for (let ry = 0; ry < 4; ry++) {
-                            const offset = (ry % 2) * ts * 0.25;
-                            for (let rx = -1; rx < 5; rx++) {
-                                const sx = rx * (ts * 0.25) + offset;
-                                ctx.fillStyle = shingleColors[Math.floor(rng() * shingleColors.length)];
-                                ctx.fillRect(sx, ry * rowH, ts * 0.24, rowH - 0.5);
-                                // Overlap shadow at top
-                                ctx.fillStyle = 'rgba(0,0,0,0.15)';
-                                ctx.fillRect(sx, ry * rowH, ts * 0.24, 1);
-                                // Bottom highlight
-                                ctx.fillStyle = 'rgba(255,220,180,0.08)';
-                                ctx.fillRect(sx, ry * rowH + rowH - 1.5, ts * 0.24, 0.5);
-                            }
-                        }
-                        break;
-                    }
-                    case 'sand': {
-                        const sandColors = ['#c8a870', '#d0b078', '#c0a068', '#c4a870'];
-                        for (let py = 0; py < ts; py++) {
-                            for (let px = 0; px < ts; px++) {
-                                ctx.fillStyle = sandColors[Math.floor(rng() * sandColors.length)];
-                                if (dither(px, py, rng())) {
-                                    ctx.fillStyle = 'rgba(200,180,140,0.5)';
-                                }
-                                ctx.fillRect(px, py, 1, 1);
-                            }
-                        }
-                        // Wind ripple pattern
-                        ctx.strokeStyle = 'rgba(180,150,110,0.15)';
-                        ctx.lineWidth = 0.5;
-                        for (let i = 0; i < 3; i++) {
-                            ctx.beginPath();
-                            const wy = rng() * ts;
-                            ctx.moveTo(0, wy);
-                            ctx.quadraticCurveTo(ts * 0.5, wy + rng() * 3 - 1.5, ts, wy + rng() * 2);
-                            ctx.stroke();
-                        }
-                        break;
-                    }
-                    case 'stone': {
-                        const stColors = ['#606060', '#6a6a6a', '#585858', '#707070'];
-                        ctx.fillStyle = '#555555';
-                        ctx.fillRect(0, 0, ts, ts);
-                        const blockH = ts / 3;
-                        const blockW = ts / 2;
-                        for (let sy = 0; sy < 3; sy++) {
-                            const off = (sy % 2) * blockW * 0.5;
-                            for (let sx = -1; sx < 3; sx++) {
-                                const cx = sx * blockW + off;
-                                ctx.fillStyle = stColors[Math.floor(rng() * stColors.length)];
-                                ctx.fillRect(cx + 0.5, sy * blockH + 0.5, blockW - 1, blockH - 1);
-                                // Rough surface texture
-                                for (let d = 0; d < 4; d++) {
-                                    ctx.fillStyle = `rgba(${rng() > 0.5 ? '80,80,80' : '50,50,50'},0.2)`;
-                                    ctx.fillRect(cx + rng() * blockW, sy * blockH + rng() * blockH, 1, 1);
-                                }
-                            }
-                        }
-                        break;
-                    }
-                    case 'fence': {
-                        // Transparent base, vertical wooden slats
-                        ctx.clearRect(0, 0, ts, ts);
-                        ctx.fillStyle = '#6a5030';
-                        const slatW = ts / 5;
-                        for (let i = 0; i < 5; i++) {
-                            ctx.fillStyle = i % 2 === 0 ? '#6a5030' : '#7a5a38';
-                            ctx.fillRect(i * slatW + 0.5, ts * 0.1, slatW - 1, ts * 0.85);
-                            // Pointed top
-                            ctx.beginPath();
-                            ctx.moveTo(i * slatW + 0.5, ts * 0.1);
-                            ctx.lineTo(i * slatW + slatW * 0.5, 0);
-                            ctx.lineTo(i * slatW + slatW - 0.5, ts * 0.1);
-                            ctx.fill();
-                        }
-                        // Horizontal rail
-                        ctx.fillStyle = '#5a4020';
-                        ctx.fillRect(0, ts * 0.35, ts, 2);
-                        ctx.fillRect(0, ts * 0.7, ts, 2);
-                        break;
-                    }
-                    case 'bridge': {
-                        const plankC = ['#7a5a30', '#8a6a38', '#6a5028'];
-                        const pw = ts / 4;
-                        for (let i = 0; i < 4; i++) {
-                            ctx.fillStyle = plankC[i % plankC.length];
-                            ctx.fillRect(0, i * pw, ts, pw - 1);
-                            ctx.fillStyle = 'rgba(0,0,0,0.15)';
-                            ctx.fillRect(0, (i + 1) * pw - 1, ts, 1);
-                        }
-                        // Side rails
-                        ctx.fillStyle = '#5a3a18';
-                        ctx.fillRect(0, 0, 2, ts);
-                        ctx.fillRect(ts - 2, 0, 2, ts);
-                        break;
-                    }
-                    case 'door': {
-                        // Floor base
-                        ctx.fillStyle = '#5a4525';
-                        ctx.fillRect(0, 0, ts, ts);
-                        // Door planks
-                        const doorW = ts * 0.7;
-                        const doorX = (ts - doorW) / 2;
-                        ctx.fillStyle = '#4a3018';
-                        ctx.fillRect(doorX, 0, doorW, ts);
-                        // Plank lines
-                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                        ctx.fillRect(doorX + doorW * 0.33, 0, 0.5, ts);
-                        ctx.fillRect(doorX + doorW * 0.66, 0, 0.5, ts);
-                        // Metal band
-                        ctx.fillStyle = '#4a4a4a';
-                        ctx.fillRect(doorX, ts * 0.25, doorW, 1.5);
-                        ctx.fillRect(doorX, ts * 0.7, doorW, 1.5);
-                        // Handle
-                        ctx.fillStyle = '#b8a040';
-                        ctx.beginPath();
-                        ctx.arc(doorX + doorW * 0.75, ts * 0.5, 1.5, 0, Math.PI * 2);
-                        ctx.fill();
-                        break;
-                    }
-                }
-                this._tileTextures[name].push(c);
-            }
-        }
-
-        // Also build a noise overlay texture for FF7 "painted" grain
-        this._buildNoiseTexture();
     }
 
     _buildNoiseTexture() {
