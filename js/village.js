@@ -785,40 +785,156 @@ class Village {
     }
 
     _drawWater(ctx, x, y, ts, col, row) {
-        // Animated water
-        const wave = Math.sin(this._waterOffset * 3 + col * 0.8 + row * 0.6);
-        const r = 30 + wave * 10;
-        const g = 100 + wave * 15;
-        const b = 200 + wave * 20;
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        // Dynamic animated water with depth and reflections
+        const wave1 = Math.sin(this._waterOffset * 3 + col * 0.8 + row * 0.6);
+        const wave2 = Math.sin(this._waterOffset * 2.2 + col * 1.1 - row * 0.4);
+        const wave3 = Math.cos(this._waterOffset * 1.7 + col * 0.5 + row * 0.9);
+
+        // Deep water base with gradient
+        const deepR = 20 + wave1 * 8;
+        const deepG = 70 + wave1 * 12 + wave2 * 5;
+        const deepB = 170 + wave1 * 15 + wave2 * 10;
+        const surfR = 40 + wave2 * 10;
+        const surfG = 110 + wave2 * 15;
+        const surfB = 210 + wave2 * 20;
+
+        const grad = ctx.createLinearGradient(x, y, x + ts, y + ts);
+        grad.addColorStop(0, `rgb(${Math.round(deepR)},${Math.round(deepG)},${Math.round(deepB)})`);
+        grad.addColorStop(0.5, `rgb(${Math.round(surfR)},${Math.round(surfG)},${Math.round(surfB)})`);
+        grad.addColorStop(1, `rgb(${Math.round(deepR + 5)},${Math.round(deepG + 8)},${Math.round(deepB + 5)})`);
+        ctx.fillStyle = grad;
         ctx.fillRect(x, y, ts, ts);
 
-        // Shimmer highlights
-        ctx.fillStyle = `rgba(255,255,255,${0.1 + wave * 0.08})`;
-        const sx = x + ts * 0.3 + Math.sin(this._waterOffset * 2 + col) * ts * 0.2;
-        const sy = y + ts * 0.4 + Math.cos(this._waterOffset * 1.5 + row) * ts * 0.2;
-        ctx.fillRect(sx, sy, ts * 0.15, ts * 0.06);
-        ctx.fillRect(sx + ts * 0.3, sy + ts * 0.25, ts * 0.1, ts * 0.04);
+        // Caustic light patterns (underwater light refraction)
+        ctx.fillStyle = `rgba(100,200,255,${0.06 + wave3 * 0.03})`;
+        const caustX = x + ts * 0.2 + Math.sin(this._waterOffset * 1.3 + col * 2) * ts * 0.15;
+        const caustY = y + ts * 0.3 + Math.cos(this._waterOffset * 1.1 + row * 2) * ts * 0.15;
+        ctx.beginPath();
+        ctx.ellipse(caustX, caustY, ts * 0.18, ts * 0.1, wave1 * 0.5, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Edge foam where water meets land
+        // Surface shimmer highlights - elongated streaks
+        const shimmer1 = 0.08 + wave1 * 0.06;
+        const shimmer2 = 0.06 + wave2 * 0.05;
+        ctx.fillStyle = `rgba(255,255,255,${shimmer1})`;
+        const sx1 = x + ts * 0.15 + Math.sin(this._waterOffset * 2 + col) * ts * 0.15;
+        const sy1 = y + ts * 0.3 + Math.cos(this._waterOffset * 1.5 + row) * ts * 0.1;
+        ctx.fillRect(sx1, sy1, ts * 0.2, ts * 0.04);
+
+        ctx.fillStyle = `rgba(200,240,255,${shimmer2})`;
+        const sx2 = x + ts * 0.55 + Math.sin(this._waterOffset * 1.8 + col + 1) * ts * 0.1;
+        const sy2 = y + ts * 0.6 + Math.cos(this._waterOffset * 1.2 + row + 1) * ts * 0.1;
+        ctx.fillRect(sx2, sy2, ts * 0.15, ts * 0.03);
+
+        // Small shimmer dot
+        ctx.fillStyle = `rgba(255,255,255,${0.15 + wave3 * 0.1})`;
+        ctx.beginPath();
+        ctx.arc(
+            x + ts * 0.7 + Math.sin(this._waterOffset * 2.5 + col * 0.7) * ts * 0.08,
+            y + ts * 0.2 + Math.cos(this._waterOffset * 2 + row * 0.5) * ts * 0.08,
+            ts * 0.02, 0, Math.PI * 2
+        );
+        ctx.fill();
+
+        // Ripple rings (concentric circles that pulse)
+        if ((col * 7 + row * 3) % 9 < 2) {
+            const ripplePhase = this._waterOffset * 1.5 + col * 2 + row;
+            const rippleAlpha = (Math.sin(ripplePhase) * 0.5 + 0.5) * 0.12;
+            const rippleR = ts * 0.1 + (ripplePhase % (Math.PI * 2)) / (Math.PI * 2) * ts * 0.2;
+            ctx.strokeStyle = `rgba(200,230,255,${rippleAlpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.5, y + ts * 0.5, rippleR, 0, Math.PI * 2);
+            ctx.stroke();
+            // Inner ring
+            if (rippleR > ts * 0.08) {
+                ctx.strokeStyle = `rgba(200,230,255,${rippleAlpha * 0.6})`;
+                ctx.beginPath();
+                ctx.arc(x + ts * 0.5, y + ts * 0.5, rippleR * 0.6, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        // Edge foam where water meets land (all edges)
         const above = row > 0 ? this.tiles[(row - 1) * this.mapW + col] : TILE.WATER;
+        const below = row < this.mapH - 1 ? this.tiles[(row + 1) * this.mapW + col] : TILE.WATER;
+        const left = col > 0 ? this.tiles[row * this.mapW + col - 1] : TILE.WATER;
+        const right = col < this.mapW - 1 ? this.tiles[row * this.mapW + col + 1] : TILE.WATER;
+
+        const foamWave = Math.sin(this._waterOffset * 4 + col + row) * 0.1;
         if (above !== TILE.WATER) {
-            const foamAlpha = 0.3 + Math.sin(this._waterOffset * 4 + col) * 0.1;
-            ctx.fillStyle = `rgba(200,230,255,${foamAlpha})`;
-            ctx.fillRect(x, y, ts, ts * 0.12);
+            const foamAlpha = 0.3 + foamWave;
+            ctx.fillStyle = `rgba(210,235,255,${foamAlpha})`;
+            const foamH = ts * 0.1 + Math.sin(this._waterOffset * 3 + col * 1.5) * ts * 0.03;
+            ctx.fillRect(x, y, ts, foamH);
+            // Foam bubbles
+            ctx.fillStyle = `rgba(255,255,255,${foamAlpha * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.3 + Math.sin(this._waterOffset + col) * 3, y + foamH * 0.5, 1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.7 + Math.cos(this._waterOffset + col) * 2, y + foamH * 0.7, 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (below !== TILE.WATER) {
+            ctx.fillStyle = `rgba(210,235,255,${0.2 + foamWave})`;
+            ctx.fillRect(x, y + ts - ts * 0.08, ts, ts * 0.08);
+        }
+        if (left !== TILE.WATER) {
+            ctx.fillStyle = `rgba(210,235,255,${0.2 + foamWave})`;
+            ctx.fillRect(x, y, ts * 0.08, ts);
+        }
+        if (right !== TILE.WATER) {
+            ctx.fillStyle = `rgba(210,235,255,${0.2 + foamWave})`;
+            ctx.fillRect(x + ts - ts * 0.08, y, ts * 0.08, ts);
         }
     }
 
     _drawWall(ctx, x, y, ts, col, row) {
-        // Stone/brick wall
-        ctx.fillStyle = '#6d5540';
+        // Detailed stone/brick wall with FF7-style texture
+        const seed = (col * 17 + row * 11) % 13;
+
+        // Base wall color with slight variation per tile
+        const baseR = 100 + (seed % 5) * 3;
+        const baseG = 78 + (seed % 4) * 3;
+        const baseB = 58 + (seed % 3) * 3;
+        ctx.fillStyle = `rgb(${baseR},${baseG},${baseB})`;
         ctx.fillRect(x, y, ts, ts);
 
-        // Brick pattern
+        // Brick pattern with individual brick colors
         const brickH = ts / 4;
         const brickW = ts / 2;
-        ctx.strokeStyle = 'rgba(40,30,20,0.4)';
-        ctx.lineWidth = 1;
+        const brickColors = [
+            `rgb(${baseR + 8},${baseG + 6},${baseB + 4})`,
+            `rgb(${baseR - 5},${baseG - 4},${baseB - 3})`,
+            `rgb(${baseR + 3},${baseG + 2},${baseB + 5})`,
+            `rgb(${baseR - 8},${baseG - 6},${baseB - 2})`,
+        ];
+
+        for (let by = 0; by < 4; by++) {
+            const offset = (by % 2) * brickW * 0.5;
+            for (let bx = -1; bx < 3; bx++) {
+                const brickX = x + bx * brickW + offset;
+                const brickY = y + by * brickH;
+                const ci = ((by * 3 + bx + seed) % brickColors.length + brickColors.length) % brickColors.length;
+
+                // Individual brick fill
+                ctx.fillStyle = brickColors[ci];
+                ctx.fillRect(brickX + 0.5, brickY + 0.5, brickW - 1, brickH - 1);
+
+                // Brick highlight (top edge)
+                ctx.fillStyle = 'rgba(180,160,140,0.15)';
+                ctx.fillRect(brickX + 1, brickY + 0.5, brickW - 2, 1);
+
+                // Brick shadow (bottom edge)
+                ctx.fillStyle = 'rgba(30,20,10,0.15)';
+                ctx.fillRect(brickX + 1, brickY + brickH - 1.5, brickW - 2, 1);
+            }
+        }
+
+        // Mortar lines
+        ctx.strokeStyle = 'rgba(35,25,15,0.45)';
+        ctx.lineWidth = 0.8;
         for (let by = 0; by < 4; by++) {
             const offset = (by % 2) * brickW * 0.5;
             for (let bx = -1; bx < 3; bx++) {
@@ -826,11 +942,71 @@ class Village {
             }
         }
 
-        // Top edge highlight
+        // Weathering/aging marks
+        if (seed % 5 === 0) {
+            ctx.fillStyle = 'rgba(40,30,20,0.12)';
+            ctx.beginPath();
+            ctx.ellipse(x + ts * 0.6, y + ts * 0.7, ts * 0.15, ts * 0.08, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Moss growth at edges - check adjacent tiles
+        const above = row > 0 ? this.tiles[(row - 1) * this.mapW + col] : TILE.WALL;
         const below = row < this.mapH - 1 ? this.tiles[(row + 1) * this.mapW + col] : TILE.WALL;
+        const left = col > 0 ? this.tiles[row * this.mapW + col - 1] : TILE.WALL;
+        const right = col < this.mapW - 1 ? this.tiles[row * this.mapW + col + 1] : TILE.WALL;
+
+        // Moss at base where wall meets ground
         if (below !== TILE.WALL && below !== TILE.ROOF) {
-            ctx.fillStyle = 'rgba(100,80,60,0.6)';
+            // Bottom edge shadow
+            ctx.fillStyle = 'rgba(60,45,30,0.5)';
             ctx.fillRect(x, y + ts - 3, ts, 3);
+
+            // Moss patches at base
+            ctx.fillStyle = 'rgba(50,120,30,0.35)';
+            for (let i = 0; i < 3; i++) {
+                const mx = x + ((seed + i * 11) % (ts - 6)) + 1;
+                const mh = ts * (0.06 + ((seed + i) % 3) * 0.02);
+                ctx.beginPath();
+                ctx.ellipse(mx + 3, y + ts - 1, ts * 0.08, mh, 0, Math.PI, 0);
+                ctx.fill();
+            }
+        }
+
+        // Moss at top edge
+        if (above !== TILE.WALL && above !== TILE.ROOF) {
+            ctx.fillStyle = 'rgba(45,110,25,0.3)';
+            for (let i = 0; i < 2; i++) {
+                const mx = x + ((seed * 3 + i * 13) % (ts - 4));
+                ctx.beginPath();
+                ctx.ellipse(mx + 2, y + 2, ts * 0.06, ts * 0.04, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Moss along side edges
+        if (left !== TILE.WALL && left !== TILE.ROOF) {
+            ctx.fillStyle = 'rgba(45,110,25,0.25)';
+            ctx.beginPath();
+            ctx.ellipse(x + 2, y + ts * 0.7, ts * 0.04, ts * 0.12, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (right !== TILE.WALL && right !== TILE.ROOF) {
+            ctx.fillStyle = 'rgba(45,110,25,0.25)';
+            ctx.beginPath();
+            ctx.ellipse(x + ts - 2, y + ts * 0.6, ts * 0.04, ts * 0.1, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Corner crack detail
+        if (seed % 4 === 0) {
+            ctx.strokeStyle = 'rgba(30,20,10,0.2)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(x + ts * 0.3, y + ts * 0.2);
+            ctx.lineTo(x + ts * 0.35, y + ts * 0.35);
+            ctx.lineTo(x + ts * 0.32, y + ts * 0.45);
+            ctx.stroke();
         }
     }
 
@@ -1018,33 +1194,128 @@ class Village {
     }
 
     _drawTreeOak(ctx, x, y, ts) {
-        // Trunk
-        ctx.fillStyle = '#5d3a1a';
-        ctx.fillRect(x + ts * 0.35, y + ts * 0.5, ts * 0.3, ts * 0.5);
-
-        // Canopy - layered circles for volume
         const cx = x + ts * 0.5;
         const sway = Math.sin(this.time * 0.8 + x * 0.1) * ts * 0.02;
+        const microSway = Math.sin(this.time * 1.5 + x * 0.2) * ts * 0.01;
 
-        ctx.fillStyle = '#1a6b0a';
+        // Trunk with bark texture
+        ctx.fillStyle = '#4a2a10';
         ctx.beginPath();
-        ctx.ellipse(cx + sway - ts * 0.2, y + ts * 0.3, ts * 0.28, ts * 0.25, 0, 0, Math.PI * 2);
+        ctx.moveTo(x + ts * 0.38, y + ts * 0.95);
+        ctx.lineTo(x + ts * 0.35, y + ts * 0.55);
+        ctx.quadraticCurveTo(cx + sway * 0.3, y + ts * 0.45, x + ts * 0.42 + sway * 0.3, y + ts * 0.38);
+        ctx.lineTo(x + ts * 0.58 + sway * 0.3, y + ts * 0.38);
+        ctx.quadraticCurveTo(cx + sway * 0.3, y + ts * 0.45, x + ts * 0.65, y + ts * 0.55);
+        ctx.lineTo(x + ts * 0.62, y + ts * 0.95);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = '#2a8b15';
+        // Bark texture lines
+        ctx.strokeStyle = 'rgba(30,15,5,0.35)';
+        ctx.lineWidth = 0.6;
+        for (let i = 0; i < 4; i++) {
+            const by = y + ts * (0.55 + i * 0.1);
+            ctx.beginPath();
+            ctx.moveTo(x + ts * 0.37, by);
+            ctx.quadraticCurveTo(cx, by + ts * 0.02, x + ts * 0.63, by);
+            ctx.stroke();
+        }
+        // Bark highlight
+        ctx.fillStyle = 'rgba(100,65,30,0.3)';
+        ctx.fillRect(x + ts * 0.39, y + ts * 0.55, ts * 0.06, ts * 0.35);
+
+        // Trunk knot
+        ctx.fillStyle = 'rgba(35,18,5,0.4)';
         ctx.beginPath();
-        ctx.ellipse(cx + sway + ts * 0.15, y + ts * 0.28, ts * 0.3, ts * 0.27, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + ts * 0.52, y + ts * 0.68, ts * 0.04, ts * 0.03, 0.2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#35a020';
+        // Visible branches extending from trunk into canopy
+        ctx.strokeStyle = '#4a2a10';
+        ctx.lineWidth = ts * 0.04;
+        ctx.lineCap = 'round';
+        // Left branch
         ctx.beginPath();
-        ctx.ellipse(cx + sway, y + ts * 0.15, ts * 0.35, ts * 0.28, 0, 0, Math.PI * 2);
+        ctx.moveTo(cx + sway * 0.3, y + ts * 0.42);
+        ctx.quadraticCurveTo(cx - ts * 0.15 + sway, y + ts * 0.32, cx - ts * 0.28 + sway, y + ts * 0.22);
+        ctx.stroke();
+        // Right branch
+        ctx.lineWidth = ts * 0.035;
+        ctx.beginPath();
+        ctx.moveTo(cx + sway * 0.3 + ts * 0.05, y + ts * 0.44);
+        ctx.quadraticCurveTo(cx + ts * 0.18 + sway, y + ts * 0.3, cx + ts * 0.25 + sway, y + ts * 0.18);
+        ctx.stroke();
+
+        // Canopy - multiple leaf cluster layers for volume
+        // Back/shadow layer
+        ctx.fillStyle = '#145808';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway - ts * 0.18, y + ts * 0.32, ts * 0.24, ts * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + sway + ts * 0.2, y + ts * 0.3, ts * 0.22, ts * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Highlight
-        ctx.fillStyle = 'rgba(100,200,50,0.3)';
+        // Middle layer
+        ctx.fillStyle = '#1d7a0c';
         ctx.beginPath();
-        ctx.ellipse(cx + sway - ts * 0.08, y + ts * 0.08, ts * 0.15, ts * 0.12, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + sway - ts * 0.12, y + ts * 0.25, ts * 0.26, ts * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + sway + ts * 0.14, y + ts * 0.23, ts * 0.25, ts * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Front/top layer - main canopy
+        ctx.fillStyle = '#2a9518';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway, y + ts * 0.16, ts * 0.3, ts * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Individual leaf cluster bumps on top
+        ctx.fillStyle = '#32a51e';
+        const clusterPositions = [
+            [-0.2, 0.12], [-0.05, 0.05], [0.12, 0.08], [0.22, 0.18],
+            [-0.15, 0.22], [0.08, 0.28], [-0.25, 0.28]
+        ];
+        for (let i = 0; i < clusterPositions.length; i++) {
+            const [ox, oy] = clusterPositions[i];
+            const clusterSway = sway + Math.sin(this.time * 1.2 + i * 1.1) * ts * 0.008;
+            ctx.beginPath();
+            ctx.arc(cx + ox * ts + clusterSway, y + oy * ts + microSway, ts * 0.09, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Sunlight dapple highlights on canopy
+        ctx.fillStyle = 'rgba(120,210,60,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway - ts * 0.1, y + ts * 0.08, ts * 0.12, ts * 0.08, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(140,220,70,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway + ts * 0.1, y + ts * 0.14, ts * 0.09, ts * 0.06, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bottom shadow on canopy (depth)
+        ctx.fillStyle = 'rgba(10,40,5,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(cx + sway, y + ts * 0.35, ts * 0.28, ts * 0.06, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tiny leaf detail specks
+        ctx.fillStyle = 'rgba(80,180,40,0.35)';
+        for (let i = 0; i < 4; i++) {
+            const lx = cx + sway + Math.sin(i * 2.5 + x * 0.1) * ts * 0.2;
+            const ly = y + ts * 0.1 + Math.cos(i * 1.8 + y * 0.1) * ts * 0.12;
+            ctx.fillRect(lx, ly, 1.5, 1.5);
+        }
+
+        // Root bumps at base
+        ctx.fillStyle = '#3a2010';
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.35, y + ts * 0.92, ts * 0.08, ts * 0.03, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + ts * 0.65, y + ts * 0.93, ts * 0.07, ts * 0.03, 0.2, 0, Math.PI * 2);
         ctx.fill();
     }
 
