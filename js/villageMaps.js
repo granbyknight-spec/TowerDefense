@@ -237,9 +237,13 @@ const VILLAGE_ACADEMY = (() => {
             },
         ],
         lights: [
-            { x: 14.5, y: 6, radius: 5, color: '255,200,100' },
-            { x: 25, y: 6, radius: 3, color: '255,200,100' },
-            { x: 5, y: 6, radius: 3, color: '255,200,100' },
+            { x: 14.5, y: 6, radius: 6, color: '255,210,120' },   // main hall warm glow
+            { x: 25, y: 6, radius: 4, color: '255,200,100' },      // east wing
+            { x: 5, y: 6, radius: 4, color: '255,200,100' },       // west wing
+            { x: 14.5, y: 14, radius: 3, color: '200,255,180' },   // training yard mako glow
+            { x: 10, y: 2, radius: 3, color: '255,180,80' },       // north torch
+            { x: 20, y: 2, radius: 3, color: '255,180,80' },       // north torch
+            { x: 14.5, y: 10, radius: 2.5, color: '180,220,255' }, // fountain cool light
         ]
     };
 })();
@@ -486,10 +490,18 @@ const VILLAGE_BARKSVILLE = (() => {
             },
         ],
         lights: [
-            { x: 19.5, y: 16.5, radius: 6, color: '255,220,150' }, // town square
-            { x: 7, y: 7, radius: 4, color: '255,180,80' },         // bakery
-            { x: 30, y: 7, radius: 4, color: '200,220,255' },        // pet shop
-            { x: 33, y: 23, radius: 5, color: '255,200,100' },       // town hall
+            { x: 19.5, y: 16.5, radius: 7, color: '255,220,150' },   // town square main
+            { x: 7, y: 7, radius: 4.5, color: '255,180,80' },        // bakery warm glow
+            { x: 30, y: 7, radius: 4.5, color: '200,220,255' },      // pet shop cool light
+            { x: 33, y: 23, radius: 5.5, color: '255,200,100' },     // town hall
+            { x: 19.5, y: 10, radius: 3, color: '255,190,90' },      // market street lamp
+            { x: 12, y: 16, radius: 3, color: '255,190,90' },        // west street lamp
+            { x: 27, y: 16, radius: 3, color: '255,190,90' },        // east street lamp
+            { x: 15, y: 25, radius: 3.5, color: '150,255,180' },     // park mako glow
+            { x: 25, y: 25, radius: 3.5, color: '150,255,180' },     // park mako glow
+            { x: 19.5, y: 3, radius: 4, color: '180,200,255' },      // north gate moonlight
+            { x: 5, y: 30, radius: 3, color: '255,160,100' },        // south campfire
+            { x: 35, y: 30, radius: 3, color: '255,160,100' },       // south campfire
         ]
     };
 })();

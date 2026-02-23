@@ -55,7 +55,7 @@ class Village {
 
         // Time
         this.time = 0;        // total elapsed
-        this.dayTime = 0.35;  // 0-1 day cycle (0.35 = morning)
+        this.dayTime = 0.78;  // 0-1 day cycle (0.78 = golden dusk - shows off FF7 lighting)
 
         // Tile size (pixels per tile)
         this.ts = 32;
@@ -134,6 +134,10 @@ class Village {
         this.camY = this.playerY * this.ts;
         this.camTargetX = this.camX;
         this.camTargetY = this.camY;
+
+        // Build procedural tile texture cache
+        this._buildTileCache();
+        this._buildObjectCache();
 
         // Generate ambient particles
         this._initParticles();
@@ -314,6 +318,19 @@ class Village {
         this.camX += (this.camTargetX - this.camX) * this.camSmooth * dt;
         this.camY += (this.camTargetY - this.camY) * this.camSmooth * dt;
 
+        // Screen transition update
+        if (this._transitionDir) {
+            this._transitionAlpha = (this._transitionAlpha || 0) + this._transitionDir * (this._transitionSpeed || 2) * dt;
+            if (this._transitionDir > 0 && this._transitionAlpha >= 1) {
+                this._transitionAlpha = 1;
+                this._transitionDir = 0;
+                if (this._transitionCallback) this._transitionCallback();
+            } else if (this._transitionDir < 0 && this._transitionAlpha <= 0) {
+                this._transitionAlpha = 0;
+                this._transitionDir = 0;
+            }
+        }
+
         // NPC wandering
         for (const npc of this.npcs) {
             npc.animTimer += dt;
@@ -357,14 +374,26 @@ class Village {
         // Particles (type-specific movement)
         for (const p of this.particles) {
             if (p.type === 'dust') {
-                // Dust drifts with gentle sinusoidal sway
                 const driftPhase = p.driftPhase || 0;
                 p.x += (p.vx + Math.sin(this.time * 0.5 + driftPhase) * 0.02) * dt;
                 p.y += (p.vy + Math.cos(this.time * 0.3 + driftPhase) * 0.01) * dt;
             } else if (p.type === 'sparkle') {
-                // Sparkles drift very slowly, mostly stationary
                 p.x += p.vx * dt * 0.5;
                 p.y += p.vy * dt * 0.5;
+            } else if (p.type === 'fog') {
+                // Fog: very slow drift with large sinusoidal sway
+                const driftPhase = p.driftPhase || 0;
+                p.x += (p.vx + Math.sin(this.time * 0.15 + driftPhase) * 0.03) * dt;
+                p.y += (p.vy + Math.cos(this.time * 0.1 + driftPhase) * 0.015) * dt;
+            } else if (p.type === 'firefly') {
+                // Fireflies: erratic movement with sudden direction changes
+                p.x += (p.vx + Math.sin(this.time * 2 + (p.sparklePhase || 0)) * 0.08) * dt;
+                p.y += (p.vy + Math.cos(this.time * 1.5 + (p.sparklePhase || 0)) * 0.06) * dt;
+            } else if (p.type === 'ember') {
+                // Embers: rise and drift with turbulence
+                p.x += (p.vx + Math.sin(this.time * 3 + p.x) * 0.1) * dt;
+                p.y += p.vy * dt;
+                p.vy *= 0.998; // slow down as they rise
             } else {
                 p.x += p.vx * dt;
                 p.y += p.vy * dt;
@@ -504,33 +533,78 @@ class Village {
                 if (sparkleAlpha <= 0) continue;
                 ctx.globalAlpha = sparkleAlpha;
                 ctx.fillStyle = p.color;
-                // Cross-shaped sparkle
                 const sz = p.size * (0.8 + sparkle * 0.5);
                 ctx.fillRect(px2 - sz * 0.15, py2 - sz, sz * 0.3, sz * 2);
                 ctx.fillRect(px2 - sz, py2 - sz * 0.15, sz * 2, sz * 0.3);
-                // Center glow dot
                 ctx.beginPath();
                 ctx.arc(px2, py2, sz * 0.4, 0, Math.PI * 2);
                 ctx.fill();
             } else if (p.type === 'dust') {
-                // Dust: soft, slow, slightly transparent circle
                 ctx.globalAlpha = p.alpha * lifeRatio;
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
                 ctx.arc(px2, py2, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (p.type === 'fog') {
+                // Fog: large, soft, diffuse circles (FF7 mist effect)
+                const fogAlpha = p.alpha * lifeRatio * (0.5 + Math.sin(this.time * 0.3 + (p.driftPhase || 0)) * 0.5);
+                if (fogAlpha <= 0.005) continue;
+                ctx.globalAlpha = fogAlpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(px2, py2, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                // Softer outer ring
+                ctx.globalAlpha = fogAlpha * 0.4;
+                ctx.beginPath();
+                ctx.arc(px2, py2, p.size * 1.8, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (p.type === 'firefly') {
+                // Firefly: blinking warm light with glow halo
+                const blink = Math.sin((p.sparklePhase || 0) + this.time * (p.sparkleSpeed || 2));
+                const ffAlpha = p.alpha * lifeRatio * Math.max(0, blink);
+                if (ffAlpha <= 0) continue;
+                // Outer glow
+                ctx.globalAlpha = ffAlpha * 0.25;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(px2, py2, p.size * 4, 0, Math.PI * 2);
+                ctx.fill();
+                // Inner bright core
+                ctx.globalAlpha = ffAlpha;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(px2, py2, p.size * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                // Colored ring
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(px2, py2, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (p.type === 'ember') {
+                // Ember: tiny bright spark with trail
+                ctx.globalAlpha = p.alpha * lifeRatio;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(px2, py2, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                // Fading trail below
+                ctx.globalAlpha = p.alpha * lifeRatio * 0.3;
+                ctx.beginPath();
+                ctx.arc(px2 - p.vx * ts * 0.3, py2 - p.vy * ts * 0.3, p.size * 0.6, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                // Default mote: simple glowing dot
+                // Default mote: glowing dot with halo
                 ctx.globalAlpha = p.alpha * lifeRatio;
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
                 ctx.arc(px2, py2, p.size, 0, Math.PI * 2);
                 ctx.fill();
-                // Soft glow around mote
+                // Soft glow halo
                 if (p.size > 1) {
-                    ctx.globalAlpha = p.alpha * lifeRatio * 0.3;
+                    ctx.globalAlpha = p.alpha * lifeRatio * 0.25;
                     ctx.beginPath();
-                    ctx.arc(px2, py2, p.size * 2.5, 0, Math.PI * 2);
+                    ctx.arc(px2, py2, p.size * 3, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
@@ -544,6 +618,9 @@ class Village {
 
         // === VIGNETTE ===
         this._renderVignette(ctx, cw, ch);
+
+        // === SCREEN TRANSITION OVERLAY ===
+        this._renderTransition(ctx, cw, ch);
 
         // NPC name plates and interaction indicators (screen-space)
         ctx.save();
@@ -575,37 +652,63 @@ class Village {
     // === SKY ===
 
     _renderSky(ctx, cw, ch) {
-        // Time-of-day sky gradient
+        // FF7-style rich sky gradients with multiple color stops
         const t = this.dayTime;
-        let topColor, botColor;
+        const grad = ctx.createLinearGradient(0, 0, 0, ch);
 
-        if (t < 0.25) {
-            // Night
-            topColor = '#0a0a1a';
-            botColor = '#141428';
-        } else if (t < 0.35) {
-            // Dawn
-            const f = (t - 0.25) / 0.1;
-            topColor = this._lerpColor('#0a0a1a', '#4a6fa5', f);
-            botColor = this._lerpColor('#141428', '#e8b87d', f);
-        } else if (t < 0.7) {
-            // Day
-            topColor = '#4a6fa5';
-            botColor = '#87CEEB';
-        } else if (t < 0.8) {
-            // Dusk
-            const f = (t - 0.7) / 0.1;
-            topColor = this._lerpColor('#4a6fa5', '#2a1a3a', f);
-            botColor = this._lerpColor('#87CEEB', '#d4645c', f);
+        if (t < 0.2) {
+            // Deep night - mako-tinged deep blue
+            grad.addColorStop(0, '#050510');
+            grad.addColorStop(0.3, '#0a0a20');
+            grad.addColorStop(0.7, '#0f1030');
+            grad.addColorStop(1, '#141432');
+        } else if (t < 0.3) {
+            // Dawn - warm horizon, cool zenith
+            const f = (t - 0.2) / 0.1;
+            const top = this._lerpColor('#050510', '#3a5580', f);
+            const mid = this._lerpColor('#0a0a20', '#6a7090', f);
+            const low = this._lerpColor('#141432', '#c89060', f);
+            const bot = this._lerpColor('#141432', '#e8a870', f);
+            grad.addColorStop(0, top);
+            grad.addColorStop(0.4, mid);
+            grad.addColorStop(0.75, low);
+            grad.addColorStop(1, bot);
+        } else if (t < 0.65) {
+            // Day - clear blue sky
+            grad.addColorStop(0, '#3a5a90');
+            grad.addColorStop(0.3, '#5a80b0');
+            grad.addColorStop(0.65, '#7ab0d0');
+            grad.addColorStop(1, '#90cce8');
+        } else if (t < 0.75) {
+            // Early dusk - golden hour (FF7 Cosmo Canyon sunset)
+            const f = (t - 0.65) / 0.1;
+            const top = this._lerpColor('#3a5a90', '#2a2050', f);
+            const mid = this._lerpColor('#5a80b0', '#8a4060', f);
+            const low = this._lerpColor('#7ab0d0', '#d07040', f);
+            const bot = this._lerpColor('#90cce8', '#e08850', f);
+            grad.addColorStop(0, top);
+            grad.addColorStop(0.35, mid);
+            grad.addColorStop(0.7, low);
+            grad.addColorStop(1, bot);
+        } else if (t < 0.85) {
+            // Deep dusk - purple sky with orange horizon
+            const f = (t - 0.75) / 0.1;
+            const top = this._lerpColor('#2a2050', '#0a0a1a', f);
+            const mid = this._lerpColor('#8a4060', '#1a1535', f);
+            const low = this._lerpColor('#d07040', '#3a2040', f);
+            const bot = this._lerpColor('#e08850', '#2a1530', f);
+            grad.addColorStop(0, top);
+            grad.addColorStop(0.35, mid);
+            grad.addColorStop(0.7, low);
+            grad.addColorStop(1, bot);
         } else {
             // Night
-            topColor = '#0a0a1a';
-            botColor = '#141428';
+            grad.addColorStop(0, '#050510');
+            grad.addColorStop(0.3, '#0a0a20');
+            grad.addColorStop(0.7, '#0f1030');
+            grad.addColorStop(1, '#141432');
         }
 
-        const grad = ctx.createLinearGradient(0, 0, 0, ch);
-        grad.addColorStop(0, topColor);
-        grad.addColorStop(1, botColor);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, cw, ch);
     }
@@ -616,70 +719,140 @@ class Village {
         const t = this.dayTime;
         const isDay = t > 0.3 && t < 0.75;
         const isNight = t < 0.2 || t > 0.85;
+        const isDusk = t >= 0.65 && t < 0.85;
 
-        // Distant mountain/hill silhouette layer (moves at 10% of camera speed)
-        const parallax1 = scrollX * 0.1;
-        const parallax1Y = scrollY * 0.05;
-        const hillAlpha = isNight ? 0.15 : (isDay ? 0.08 : 0.12);
-
-        ctx.fillStyle = `rgba(${isNight ? '20,25,50' : (isDay ? '60,90,60' : '80,50,60')},${hillAlpha})`;
+        // === LAYER 1: Very distant mountains (5% parallax) - FF7 painted backdrop ===
+        const p0 = scrollX * 0.05;
+        const p0Y = scrollY * 0.025;
+        const mtnColor = isNight ? '15,18,40' : (isDusk ? '60,30,50' : (isDay ? '70,90,110' : '50,60,80'));
+        const mtnAlpha = isNight ? 0.2 : (isDusk ? 0.18 : 0.1);
+        ctx.fillStyle = `rgba(${mtnColor},${mtnAlpha})`;
         ctx.beginPath();
         ctx.moveTo(0, ch);
-        for (let i = 0; i <= cw; i += cw / 8) {
-            const hillH = ch * 0.7 + Math.sin((i + parallax1) * 0.003) * ch * 0.08
-                        + Math.sin((i + parallax1) * 0.007) * ch * 0.04;
-            ctx.lineTo(i, hillH - parallax1Y);
+        for (let i = 0; i <= cw; i += cw / 16) {
+            const h = ch * 0.6 + Math.sin((i + p0) * 0.002) * ch * 0.1
+                    + Math.sin((i + p0) * 0.005) * ch * 0.05
+                    + Math.sin((i + p0) * 0.0013) * ch * 0.07;
+            ctx.lineTo(i, h - p0Y);
         }
         ctx.lineTo(cw, ch);
         ctx.closePath();
         ctx.fill();
 
-        // Closer hill layer (moves at 20% of camera speed)
-        const parallax2 = scrollX * 0.2;
-        const parallax2Y = scrollY * 0.1;
-        ctx.fillStyle = `rgba(${isNight ? '15,20,40' : (isDay ? '50,80,50' : '70,40,50')},${hillAlpha * 0.8})`;
+        // Snow caps on mountains (daytime/dusk only)
+        if (!isNight) {
+            ctx.fillStyle = `rgba(220,230,240,${mtnAlpha * 0.6})`;
+            ctx.beginPath();
+            ctx.moveTo(0, ch);
+            for (let i = 0; i <= cw; i += cw / 16) {
+                const h = ch * 0.6 + Math.sin((i + p0) * 0.002) * ch * 0.1
+                        + Math.sin((i + p0) * 0.005) * ch * 0.05
+                        + Math.sin((i + p0) * 0.0013) * ch * 0.07;
+                ctx.lineTo(i, h + ch * 0.01 - p0Y);
+            }
+            ctx.lineTo(cw, ch);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // === LAYER 2: Mid-distance hills (10% parallax) ===
+        const p1 = scrollX * 0.1;
+        const p1Y = scrollY * 0.05;
+        const hillColor = isNight ? '20,25,50' : (isDusk ? '70,40,50' : (isDay ? '55,85,55' : '60,70,60'));
+        const hillAlpha = isNight ? 0.18 : (isDusk ? 0.15 : 0.1);
+        ctx.fillStyle = `rgba(${hillColor},${hillAlpha})`;
         ctx.beginPath();
         ctx.moveTo(0, ch);
-        for (let i = 0; i <= cw; i += cw / 10) {
-            const hillH = ch * 0.78 + Math.sin((i + parallax2) * 0.005 + 1) * ch * 0.06
-                        + Math.sin((i + parallax2) * 0.012 + 2) * ch * 0.03;
-            ctx.lineTo(i, hillH - parallax2Y);
+        for (let i = 0; i <= cw; i += cw / 12) {
+            const h = ch * 0.68 + Math.sin((i + p1) * 0.003) * ch * 0.08
+                    + Math.sin((i + p1) * 0.007) * ch * 0.04;
+            ctx.lineTo(i, h - p1Y);
         }
         ctx.lineTo(cw, ch);
         ctx.closePath();
         ctx.fill();
 
-        // Distant tree line (moves at 15% of camera speed)
-        if (isDay || (!isNight)) {
-            const parallax3 = scrollX * 0.15;
-            const treeAlpha = isDay ? 0.06 : 0.04;
-            ctx.fillStyle = `rgba(30,60,25,${treeAlpha})`;
-            for (let i = -20; i < cw + 20; i += 18) {
-                const th = ch * 0.76 + Math.sin((i + parallax3) * 0.01) * ch * 0.02 - scrollY * 0.08;
-                const treeH = 10 + Math.sin(i * 0.23) * 5;
+        // === LAYER 3: Close foothills (20% parallax) ===
+        const p2 = scrollX * 0.2;
+        const p2Y = scrollY * 0.1;
+        const footColor = isNight ? '12,18,35' : (isDusk ? '55,35,40' : (isDay ? '45,75,45' : '50,55,50'));
+        ctx.fillStyle = `rgba(${footColor},${hillAlpha * 0.9})`;
+        ctx.beginPath();
+        ctx.moveTo(0, ch);
+        for (let i = 0; i <= cw; i += cw / 14) {
+            const h = ch * 0.76 + Math.sin((i + p2) * 0.005 + 1) * ch * 0.06
+                    + Math.sin((i + p2) * 0.012 + 2) * ch * 0.03;
+            ctx.lineTo(i, h - p2Y);
+        }
+        ctx.lineTo(cw, ch);
+        ctx.closePath();
+        ctx.fill();
+
+        // === LAYER 4: Distant tree line (15% parallax) ===
+        if (!isNight) {
+            const p3 = scrollX * 0.15;
+            const treeAlpha = isDusk ? 0.08 : (isDay ? 0.07 : 0.05);
+            const treeColor = isDusk ? '40,30,25' : '25,55,20';
+            ctx.fillStyle = `rgba(${treeColor},${treeAlpha})`;
+            for (let i = -20; i < cw + 20; i += 14) {
+                const th = ch * 0.75 + Math.sin((i + p3) * 0.01) * ch * 0.02 - scrollY * 0.08;
+                const treeH = 8 + Math.sin(i * 0.23) * 4 + Math.sin(i * 0.47) * 3;
                 ctx.beginPath();
-                ctx.moveTo(i + parallax3 % 18, th);
-                ctx.lineTo(i + parallax3 % 18 - 6, th + treeH);
-                ctx.lineTo(i + parallax3 % 18 + 6, th + treeH);
+                ctx.moveTo(i + p3 % 14, th);
+                ctx.lineTo(i + p3 % 14 - 5, th + treeH);
+                ctx.lineTo(i + p3 % 14 + 5, th + treeH);
+                ctx.closePath();
+                ctx.fill();
+            }
+            // Second row offset
+            ctx.fillStyle = `rgba(${treeColor},${treeAlpha * 0.7})`;
+            for (let i = -13; i < cw + 20; i += 16) {
+                const th = ch * 0.74 + Math.sin((i + p3 + 50) * 0.008) * ch * 0.015 - scrollY * 0.08;
+                const treeH = 10 + Math.sin(i * 0.31) * 4;
+                ctx.beginPath();
+                ctx.moveTo(i + p3 % 16 + 7, th);
+                ctx.lineTo(i + p3 % 16 + 1, th + treeH);
+                ctx.lineTo(i + p3 % 16 + 13, th + treeH);
                 ctx.closePath();
                 ctx.fill();
             }
         }
 
-        // Stars at night (very distant, minimal parallax)
-        if (isNight) {
+        // === STARS (night and dusk) ===
+        if (isNight || isDusk) {
             const starParallax = scrollX * 0.02;
-            ctx.fillStyle = 'rgba(255,255,240,0.4)';
-            for (let i = 0; i < 15; i++) {
+            const starAlpha = isNight ? 0.5 : 0.15;
+            const starCount = isNight ? 40 : 12;
+            for (let i = 0; i < starCount; i++) {
                 const sx = ((i * 137 + 43) % cw + starParallax) % cw;
-                const sy = ((i * 89 + 17) % (ch * 0.5));
+                const sy = ((i * 89 + 17) % (ch * 0.55));
                 const twinkle = Math.sin(this.time * (1 + i * 0.3) + i) * 0.5 + 0.5;
-                ctx.globalAlpha = 0.2 + twinkle * 0.3;
+                ctx.globalAlpha = (0.15 + twinkle * 0.35) * starAlpha;
+
+                // Bright stars get cross-shaped glints
+                if (i < starCount * 0.2) {
+                    ctx.fillStyle = '#ffffee';
+                    const gs = 1 + twinkle * 1.5;
+                    ctx.fillRect(sx - gs, sy - 0.3, gs * 2, 0.6);
+                    ctx.fillRect(sx - 0.3, sy - gs, 0.6, gs * 2);
+                }
+
+                ctx.fillStyle = i % 7 === 0 ? '#aaddff' : (i % 5 === 0 ? '#ffddaa' : '#ffffee');
                 ctx.beginPath();
-                ctx.arc(sx, sy, 0.8 + twinkle * 0.5, 0, Math.PI * 2);
+                ctx.arc(sx, sy, 0.6 + twinkle * 0.6, 0, Math.PI * 2);
                 ctx.fill();
             }
             ctx.globalAlpha = 1;
+        }
+
+        // === DISTANT MAKO GLOW (FF7 signature - faint green glow on horizon) ===
+        if (isNight || isDusk) {
+            const makoGlow = ctx.createRadialGradient(cw * 0.3, ch * 0.7, 0, cw * 0.3, ch * 0.7, cw * 0.25);
+            const glowA = isNight ? 0.04 : 0.02;
+            makoGlow.addColorStop(0, `rgba(0,255,136,${glowA})`);
+            makoGlow.addColorStop(1, 'rgba(0,255,136,0)');
+            ctx.fillStyle = makoGlow;
+            ctx.fillRect(0, ch * 0.5, cw, ch * 0.5);
         }
     }
 
@@ -1560,6 +1733,32 @@ class Village {
         const x = col * ts;
         const y = row * ts;
 
+        // Lookup cached texture for this object type
+        const cacheKey = this._objCacheKeyMap && this._objCacheKeyMap[obj];
+        if (cacheKey && this._objTextures && this._objTextures[cacheKey]) {
+            const variants = this._objTextures[cacheKey];
+            // Pick variant based on position hash for deterministic variety
+            const variantIdx = ((col * 7 + row * 13) & 0x7FFFFFFF) % variants.length;
+            const cached = variants[variantIdx];
+            // Cached canvases are sized to the object's bounding box.
+            // They are anchored so that the bottom-center of the cached image
+            // aligns with the center-bottom of the tile the object sits on.
+            const drawX = x + ts * 0.5 - cached.width * 0.5;
+            const drawY = y + ts - cached.height;
+            ctx.drawImage(cached, drawX, drawY);
+
+            // Some objects need animated overlays drawn on top of the cached sprite
+            if (obj === OBJ.FOUNTAIN) {
+                this._drawFountainOverlay(ctx, x, y, ts);
+            } else if (obj === OBJ.LAMP) {
+                this._drawLampGlow(ctx, x, y, ts);
+            } else if (obj === OBJ.CHIMNEY) {
+                this._drawChimneySmoke(ctx, x, y, ts);
+            }
+            return;
+        }
+
+        // Fallback to real-time drawing for uncached types
         switch (obj) {
             case OBJ.TREE_OAK:
                 this._drawTreeOak(ctx, x, y, ts);
@@ -2388,42 +2587,108 @@ class Village {
     // === SHADOWS ===
 
     _renderShadows(ctx, startCol, endCol, startRow, endRow, ts) {
-        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        // FF7-style directional shadows with soft edges
+        // Shadow direction based on time of day (sun angle)
+        const t = this.dayTime;
+        let shadowAngle, shadowLength, shadowAlpha;
+        if (t < 0.25 || t > 0.85) {
+            // Night: multiple soft ambient shadows
+            shadowAngle = 0; shadowLength = 0.15; shadowAlpha = 0.12;
+        } else if (t < 0.4) {
+            // Morning: shadows cast to the left (sun from east)
+            shadowAngle = -0.4; shadowLength = 0.6; shadowAlpha = 0.2;
+        } else if (t < 0.6) {
+            // Midday: short shadows
+            shadowAngle = 0; shadowLength = 0.2; shadowAlpha = 0.22;
+        } else {
+            // Evening: long shadows to the right (sun from west)
+            shadowAngle = 0.5; shadowLength = 0.7; shadowAlpha = 0.25;
+        }
+
+        const offX = Math.sin(shadowAngle) * ts * shadowLength;
+        const offY = ts * 0.15 + Math.abs(shadowLength) * ts * 0.1;
 
         for (let r = startRow; r < endRow; r++) {
             for (let c = startCol; c < endCol; c++) {
                 const obj = this.objects[r * this.mapW + c];
                 if (obj === OBJ.TREE_OAK || obj === OBJ.TREE_PINE) {
-                    const sx = c * ts + ts * 0.3;
-                    const sy = r * ts + ts * 0.7;
+                    const sx = c * ts + ts * 0.5 + offX;
+                    const sy = r * ts + ts * 0.85 + offY * 0.3;
+                    // Multi-layer shadow for softness
+                    ctx.fillStyle = `rgba(0,0,20,${shadowAlpha * 0.4})`;
                     ctx.beginPath();
-                    ctx.ellipse(sx + ts * 0.4, sy + ts * 0.1, ts * 0.45, ts * 0.15, 0.3, 0, Math.PI * 2);
+                    ctx.ellipse(sx, sy, ts * 0.6, ts * 0.2, shadowAngle * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = `rgba(0,0,20,${shadowAlpha})`;
+                    ctx.beginPath();
+                    ctx.ellipse(sx, sy, ts * 0.4, ts * 0.13, shadowAngle * 0.3, 0, Math.PI * 2);
                     ctx.fill();
                 } else if (obj === OBJ.STATUE || obj === OBJ.WELL || obj === OBJ.FOUNTAIN) {
+                    ctx.fillStyle = `rgba(0,0,20,${shadowAlpha * 0.5})`;
                     ctx.beginPath();
-                    ctx.ellipse(c * ts + ts * 0.6, r * ts + ts * 0.85, ts * 0.35, ts * 0.12, 0.2, 0, Math.PI * 2);
+                    ctx.ellipse(c * ts + ts * 0.6 + offX * 0.7, r * ts + ts * 0.88, ts * 0.4, ts * 0.14, shadowAngle * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = `rgba(0,0,20,${shadowAlpha})`;
+                    ctx.beginPath();
+                    ctx.ellipse(c * ts + ts * 0.55 + offX * 0.5, r * ts + ts * 0.85, ts * 0.3, ts * 0.1, shadowAngle * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obj === OBJ.BARREL || obj === OBJ.CRATE) {
+                    ctx.fillStyle = `rgba(0,0,20,${shadowAlpha})`;
+                    ctx.beginPath();
+                    ctx.ellipse(c * ts + ts * 0.55 + offX * 0.4, r * ts + ts * 0.9, ts * 0.2, ts * 0.07, shadowAngle * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obj === OBJ.LAMP) {
+                    ctx.fillStyle = `rgba(0,0,20,${shadowAlpha * 0.6})`;
+                    ctx.beginPath();
+                    ctx.ellipse(c * ts + ts * 0.5 + offX * 0.3, r * ts + ts * 0.92, ts * 0.12, ts * 0.05, shadowAngle * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obj === OBJ.BENCH || obj === OBJ.SIGN) {
+                    ctx.fillStyle = `rgba(0,0,20,${shadowAlpha * 0.7})`;
+                    ctx.beginPath();
+                    ctx.ellipse(c * ts + ts * 0.5 + offX * 0.4, r * ts + ts * 0.9, ts * 0.25, ts * 0.06, shadowAngle * 0.3, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
         }
 
-        // Player shadow
+        // Building wall shadows (ambient occlusion at base of walls)
+        ctx.fillStyle = `rgba(0,0,20,${shadowAlpha * 0.4})`;
+        for (let r = startRow; r < endRow; r++) {
+            for (let c = startCol; c < endCol; c++) {
+                const tile = this.tiles[r * this.mapW + c];
+                if (tile === TILE.WALL) {
+                    // Check if tile below is NOT a wall (bottom edge)
+                    const below = r + 1 < this.mapH ? this.tiles[(r + 1) * this.mapW + c] : -1;
+                    if (below !== TILE.WALL && below !== TILE.ROOF) {
+                        ctx.fillRect(c * ts, (r + 1) * ts, ts, ts * 0.15);
+                    }
+                }
+            }
+        }
+
+        // Player shadow (soft, directional)
+        const plsx = this.playerX * ts + ts * 0.5 + offX * 0.3;
+        const plsy = this.playerY * ts + ts * 0.92;
+        ctx.fillStyle = `rgba(0,0,20,${shadowAlpha * 0.5})`;
         ctx.beginPath();
-        ctx.ellipse(
-            this.playerX * ts + ts * 0.55,
-            this.playerY * ts + ts * 0.9,
-            ts * 0.25, ts * 0.08, 0, 0, Math.PI * 2
-        );
+        ctx.ellipse(plsx, plsy, ts * 0.28, ts * 0.08, shadowAngle * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(0,0,20,${shadowAlpha})`;
+        ctx.beginPath();
+        ctx.ellipse(plsx, plsy, ts * 0.18, ts * 0.06, shadowAngle * 0.2, 0, Math.PI * 2);
         ctx.fill();
 
         // NPC shadows
         for (const npc of this.npcs) {
+            const nsx = npc.x * ts + ts * 0.5 + offX * 0.3;
+            const nsy = npc.y * ts + ts * 0.92;
+            ctx.fillStyle = `rgba(0,0,20,${shadowAlpha * 0.5})`;
             ctx.beginPath();
-            ctx.ellipse(
-                npc.x * ts + ts * 0.55,
-                npc.y * ts + ts * 0.9,
-                ts * 0.2, ts * 0.07, 0, 0, Math.PI * 2
-            );
+            ctx.ellipse(nsx, nsy, ts * 0.24, ts * 0.07, shadowAngle * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(0,0,20,${shadowAlpha})`;
+            ctx.beginPath();
+            ctx.ellipse(nsx, nsy, ts * 0.16, ts * 0.05, shadowAngle * 0.2, 0, Math.PI * 2);
             ctx.fill();
         }
     }
@@ -3219,64 +3484,51 @@ class Village {
     _renderLighting(ctx, cw, ch, scrollX, scrollY, ts) {
         const t = this.dayTime;
 
-        // Skip lighting during bright midday (0.3-0.65) for performance
-        if (t > 0.3 && t < 0.65) return;
+        // --- FF7-STYLE ATMOSPHERIC LIGHTING ---
+        // Always apply atmospheric tinting (even during day for that FF7 painted look)
 
-        // Determine colored ambient tint based on time of day
         let tintR, tintG, tintB, tintStrength;
 
         if (t <= 0.2 || t >= 0.85) {
-            // Night: deep blue-purple tint
-            tintR = 60; tintG = 55; tintB = 100;
-            if (t <= 0.2) {
-                tintStrength = 1.0;
-            } else if (t >= 0.9) {
-                tintStrength = 1.0;
-            } else {
-                // 0.85-0.9: transition from dusk to full night
-                tintStrength = (t - 0.85) / 0.05;
-            }
+            // Night: deep mako-infused blue-purple (FF7 signature)
+            tintR = 40; tintG = 45; tintB = 90;
+            tintStrength = t <= 0.2 ? 1.0 : (t >= 0.9 ? 1.0 : (t - 0.85) / 0.05);
         } else if (t > 0.2 && t <= 0.3) {
-            // Dawn: warm lavender transitioning to daylight
-            // At 0.2 we are full night tint, at 0.3 we are no tint (daylight)
-            const f = (t - 0.2) / 0.1; // 0 at dawn start, 1 at dawn end
-            // Blend from night blue-purple to warm lavender, then fade out
+            // Dawn: warm lavender with mako green undertone
+            const f = (t - 0.2) / 0.1;
             if (f < 0.5) {
-                // First half: night -> lavender
                 const subF = f / 0.5;
-                tintR = Math.round(60 + (200 - 60) * subF);
-                tintG = Math.round(55 + (180 - 55) * subF);
-                tintB = Math.round(100 + (220 - 100) * subF);
-                tintStrength = 1.0 - f * 0.3; // slight fade during transition
+                tintR = Math.round(40 + (180 - 40) * subF);
+                tintG = Math.round(45 + (160 - 45) * subF);
+                tintB = Math.round(90 + (200 - 90) * subF);
+                tintStrength = 1.0 - f * 0.2;
             } else {
-                // Second half: lavender -> daylight (fade out)
                 const subF = (f - 0.5) / 0.5;
-                tintR = 200; tintG = 180; tintB = 220;
-                tintStrength = (1.0 - 0.3) * (1.0 - subF); // fade to zero
+                tintR = 180; tintG = 160; tintB = 200;
+                tintStrength = 0.8 * (1.0 - subF) + 0.15 * subF; // fade to subtle day tint
             }
+        } else if (t > 0.3 && t < 0.65) {
+            // Day: subtle warm golden atmospheric haze (FF7 pre-rendered background feel)
+            tintR = 240; tintG = 225; tintB = 200;
+            tintStrength = 0.18; // always-on subtle warmth
         } else if (t >= 0.65 && t < 0.75) {
-            // Dusk: warm amber tint
-            const f = (t - 0.65) / 0.1; // 0 at dusk start, 1 at dusk end
-            tintR = 200; tintG = 150; tintB = 120;
-            tintStrength = f; // ramp up from daylight
+            // Dusk: rich amber/orange (FF7 Cosmo Canyon vibes)
+            const f = (t - 0.65) / 0.1;
+            tintR = 220; tintG = 140; tintB = 80;
+            tintStrength = 0.18 + f * 0.82; // ramp up from day tint
         } else if (t >= 0.75 && t < 0.85) {
-            // Deep dusk: orange-red transitioning to night purple
-            const f = (t - 0.75) / 0.1; // 0 at deep dusk start, 1 at deep dusk end
-            tintR = Math.round(200 + (60 - 200) * f);
-            tintG = Math.round(150 + (55 - 150) * f);
-            tintB = Math.round(120 + (100 - 120) * f);
+            // Deep dusk: orange-crimson transitioning to mako purple
+            const f = (t - 0.75) / 0.1;
+            tintR = Math.round(220 + (40 - 220) * f);
+            tintG = Math.round(140 + (45 - 140) * f);
+            tintB = Math.round(80 + (90 - 80) * f);
             tintStrength = 1.0;
         } else {
-            // Fallback (should not reach here)
-            tintR = 255; tintG = 255; tintB = 255;
-            tintStrength = 0;
+            tintR = 240; tintG = 225; tintB = 200;
+            tintStrength = 0.15;
         }
 
-        // Skip if no tint to apply
-        if (tintStrength < 0.01) return;
-
-        // Compute the multiply color: blend between white (no effect) and the tint color
-        // For multiply compositing, rgb(255,255,255) = no change, lower values = darker/tinted
+        // Compute multiply color
         const mulR = Math.round(255 - (255 - tintR) * tintStrength);
         const mulG = Math.round(255 - (255 - tintG) * tintStrength);
         const mulB = Math.round(255 - (255 - tintB) * tintStrength);
@@ -3285,179 +3537,269 @@ class Village {
         ctx.save();
         ctx.globalCompositeOperation = 'multiply';
 
-        // Soft radial gradient: lighter in center (near player), deeper tint at edges
-        const darkGrad = ctx.createRadialGradient(cw / 2, ch / 2, 0, cw / 2, ch / 2, cw * 0.7);
-        const edgeR = Math.max(0, mulR - Math.round(tintStrength * 20));
-        const edgeG = Math.max(0, mulG - Math.round(tintStrength * 25));
-        const edgeB = Math.max(0, mulB - Math.round(tintStrength * 15));
+        // Radial gradient: lighter near player, deeper tint at edges (FF7 spotlight feel)
+        const darkGrad = ctx.createRadialGradient(cw / 2, ch / 2, 0, cw / 2, ch / 2, cw * 0.65);
+        const edgeMul = tintStrength > 0.5 ? 30 : 15;
+        const edgeR = Math.max(0, mulR - Math.round(tintStrength * edgeMul));
+        const edgeG = Math.max(0, mulG - Math.round(tintStrength * edgeMul * 1.2));
+        const edgeB = Math.max(0, mulB - Math.round(tintStrength * edgeMul * 0.8));
         darkGrad.addColorStop(0, `rgb(${mulR},${mulG},${mulB})`);
-        darkGrad.addColorStop(0.6, `rgb(${Math.round((mulR + edgeR) / 2)},${Math.round((mulG + edgeG) / 2)},${Math.round((mulB + edgeB) / 2)})`);
+        darkGrad.addColorStop(0.5, `rgb(${Math.round((mulR + edgeR) / 2)},${Math.round((mulG + edgeG) / 2)},${Math.round((mulB + edgeB) / 2)})`);
         darkGrad.addColorStop(1, `rgb(${edgeR},${edgeG},${edgeB})`);
         ctx.fillStyle = darkGrad;
         ctx.fillRect(0, 0, cw, ch);
-
         ctx.restore();
 
-        // Calculate darkness level for light source intensity (reused below)
+        // --- DEPTH HAZE (atmospheric perspective - distant areas are hazier) ---
+        ctx.save();
+        const hazeStrength = t > 0.3 && t < 0.65 ? 0.06 : (t > 0.2 && t < 0.8 ? 0.1 : 0.15);
+        const hazeGrad = ctx.createLinearGradient(0, 0, 0, ch);
+        const isNightTime = t < 0.2 || t > 0.85;
+        const hazeR = isNightTime ? 20 : 140;
+        const hazeG = isNightTime ? 30 : 150;
+        const hazeB = isNightTime ? 60 : 180;
+        hazeGrad.addColorStop(0, `rgba(${hazeR},${hazeG},${hazeB},${hazeStrength})`);
+        hazeGrad.addColorStop(0.4, `rgba(${hazeR},${hazeG},${hazeB},${hazeStrength * 0.3})`);
+        hazeGrad.addColorStop(0.7, `rgba(${hazeR},${hazeG},${hazeB},0)`);
+        hazeGrad.addColorStop(1, `rgba(${hazeR},${hazeG},${hazeB},0)`);
+        ctx.fillStyle = hazeGrad;
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.restore();
+
+        // --- DARKNESS LEVEL for light sources ---
         let darkness;
         if (t < 0.15 || t > 0.9) {
-            darkness = 0.65;
+            darkness = 0.75;
         } else if (t < 0.2) {
-            darkness = 0.65 - (t - 0.15) / 0.05 * 0.1;
+            darkness = 0.75 - (t - 0.15) / 0.05 * 0.15;
         } else if (t < 0.3) {
-            darkness = 0.55 * (1 - (t - 0.2) / 0.1);
+            darkness = 0.6 * (1 - (t - 0.2) / 0.1);
         } else if (t < 0.65) {
-            darkness = 0;
+            darkness = 0.05; // subtle glow even during day (FF7 always has light sources visible)
         } else if (t < 0.75) {
-            darkness = 0.55 * ((t - 0.65) / 0.1);
+            darkness = 0.05 + 0.55 * ((t - 0.65) / 0.1);
         } else if (t < 0.9) {
-            darkness = 0.55 + (t - 0.75) / 0.15 * 0.1;
+            darkness = 0.6 + (t - 0.75) / 0.15 * 0.15;
         } else {
-            darkness = 0.65;
+            darkness = 0.75;
         }
 
-        // Light sources (additive) - softer transitions
-        if (darkness > 0.08) {
+        // --- LIGHT SOURCES (additive/screen blend) ---
+        if (darkness > 0.02) {
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
 
-            const flicker = Math.sin(this.time * 8) * 0.02 + Math.sin(this.time * 13) * 0.01;
+            const flicker = Math.sin(this.time * 8) * 0.025 + Math.sin(this.time * 13) * 0.015
+                          + Math.sin(this.time * 21) * 0.008;
 
-            // Lamp lights - more color stops for smoother falloff
+            // Lamp lights with warm FF7 glow
             for (let r = 0; r < this.mapH; r++) {
                 for (let c = 0; c < this.mapW; c++) {
                     if (this.objects[r * this.mapW + c] === OBJ.LAMP) {
                         const lx = c * ts + ts * 0.5 - scrollX;
                         const ly = r * ts + ts * 0.3 - scrollY;
-                        if (lx < -120 || lx > cw + 120 || ly < -120 || ly > ch + 120) continue;
+                        if (lx < -150 || lx > cw + 150 || ly < -150 || ly > ch + 150) continue;
 
-                        const intensity = darkness * (0.55 + flicker);
-                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 3.5);
-                        grad.addColorStop(0, `rgba(255,225,110,${intensity})`);
-                        grad.addColorStop(0.15, `rgba(255,210,90,${intensity * 0.7})`);
-                        grad.addColorStop(0.35, `rgba(255,190,65,${intensity * 0.35})`);
-                        grad.addColorStop(0.6, `rgba(255,170,50,${intensity * 0.12})`);
-                        grad.addColorStop(1, 'rgba(255,170,50,0)');
+                        const intensity = darkness * (0.65 + flicker);
+                        const radius = ts * 4.5;
+                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, radius);
+                        // Warm core fading to amber edges
+                        grad.addColorStop(0, `rgba(255,230,140,${intensity})`);
+                        grad.addColorStop(0.1, `rgba(255,215,100,${intensity * 0.85})`);
+                        grad.addColorStop(0.25, `rgba(255,195,70,${intensity * 0.5})`);
+                        grad.addColorStop(0.5, `rgba(255,170,50,${intensity * 0.2})`);
+                        grad.addColorStop(0.75, `rgba(255,150,40,${intensity * 0.06})`);
+                        grad.addColorStop(1, 'rgba(255,140,30,0)');
                         ctx.fillStyle = grad;
-                        ctx.fillRect(lx - ts * 3.5, ly - ts * 3.5, ts * 7, ts * 7);
+                        ctx.fillRect(lx - radius, ly - radius, radius * 2, radius * 2);
+
+                        // Secondary green-tinted ground glow (mako reflection)
+                        if (darkness > 0.3) {
+                            const gGrad = ctx.createRadialGradient(lx, ly + ts * 0.5, 0, lx, ly + ts * 0.5, ts * 2);
+                            gGrad.addColorStop(0, `rgba(100,255,150,${darkness * 0.04})`);
+                            gGrad.addColorStop(1, 'rgba(100,255,150,0)');
+                            ctx.fillStyle = gGrad;
+                            ctx.fillRect(lx - ts * 2, ly - ts * 1.5, ts * 4, ts * 4);
+                        }
                     }
                 }
             }
 
-            // Custom light sources with smoother gradients
+            // Custom light sources with FF7-style smoother gradients
             for (const light of this.lights) {
                 const lx = light.x * ts - scrollX;
                 const ly = light.y * ts - scrollY;
-                if (lx < -150 || lx > cw + 150 || ly < -150 || ly > ch + 150) continue;
+                if (lx < -200 || lx > cw + 200 || ly < -200 || ly > ch + 200) continue;
 
                 const radius = (light.radius || 4) * ts;
                 const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, radius);
                 const lc = light.color || '255,200,100';
-                const li = darkness * 0.5;
+                const li = darkness * 0.6;
                 grad.addColorStop(0, `rgba(${lc},${li})`);
-                grad.addColorStop(0.3, `rgba(${lc},${li * 0.5})`);
-                grad.addColorStop(0.7, `rgba(${lc},${li * 0.15})`);
+                grad.addColorStop(0.2, `rgba(${lc},${li * 0.65})`);
+                grad.addColorStop(0.45, `rgba(${lc},${li * 0.3})`);
+                grad.addColorStop(0.7, `rgba(${lc},${li * 0.1})`);
                 grad.addColorStop(1, `rgba(${lc},0)`);
                 ctx.fillStyle = grad;
                 ctx.fillRect(lx - radius, ly - radius, radius * 2, radius * 2);
             }
 
-            // Window glow - warmer, softer
+            // Window glow - warmer, with light spill
             for (let r = 0; r < this.mapH; r++) {
                 for (let c = 0; c < this.mapW; c++) {
                     if (this.objects[r * this.mapW + c] === OBJ.WINDOW) {
                         const lx = c * ts + ts * 0.5 - scrollX;
                         const ly = r * ts + ts * 0.4 - scrollY;
-                        if (lx < -60 || lx > cw + 60 || ly < -60 || ly > ch + 60) continue;
+                        if (lx < -80 || lx > cw + 80 || ly < -80 || ly > ch + 80) continue;
 
-                        const winFlicker = Math.sin(this.time * 3 + c * 2) * 0.03;
-                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 2);
-                        grad.addColorStop(0, `rgba(255,210,110,${darkness * (0.35 + winFlicker)})`);
-                        grad.addColorStop(0.3, `rgba(255,195,90,${darkness * (0.2 + winFlicker)})`);
-                        grad.addColorStop(0.7, `rgba(255,180,70,${darkness * 0.06})`);
-                        grad.addColorStop(1, 'rgba(255,180,70,0)');
+                        const winFlicker = Math.sin(this.time * 3 + c * 2) * 0.04
+                                         + Math.sin(this.time * 7 + c * 5) * 0.02;
+                        // Main warm glow
+                        const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, ts * 2.5);
+                        grad.addColorStop(0, `rgba(255,215,120,${darkness * (0.45 + winFlicker)})`);
+                        grad.addColorStop(0.2, `rgba(255,200,100,${darkness * (0.3 + winFlicker)})`);
+                        grad.addColorStop(0.5, `rgba(255,180,70,${darkness * 0.1})`);
+                        grad.addColorStop(1, 'rgba(255,170,60,0)');
                         ctx.fillStyle = grad;
-                        ctx.fillRect(lx - ts * 2, ly - ts * 2, ts * 4, ts * 4);
+                        ctx.fillRect(lx - ts * 2.5, ly - ts * 2.5, ts * 5, ts * 5);
+
+                        // Light spill downward (light pouring from window)
+                        if (darkness > 0.3) {
+                            const spillGrad = ctx.createRadialGradient(lx, ly + ts, 0, lx, ly + ts * 2, ts * 1.5);
+                            spillGrad.addColorStop(0, `rgba(255,210,100,${darkness * 0.12})`);
+                            spillGrad.addColorStop(1, 'rgba(255,200,80,0)');
+                            ctx.fillStyle = spillGrad;
+                            ctx.fillRect(lx - ts * 1.5, ly, ts * 3, ts * 3);
+                        }
                     }
                 }
             }
 
-            // Subtle player glow (the hero emits a tiny light aura)
-            if (darkness > 0.2) {
-                const plx = this.playerX * ts + ts * 0.5 - scrollX;
-                const ply = this.playerY * ts + ts * 0.5 - scrollY;
-                const pGrad = ctx.createRadialGradient(plx, ply, 0, plx, ply, ts * 1.5);
-                pGrad.addColorStop(0, `rgba(255,240,200,${darkness * 0.12})`);
-                pGrad.addColorStop(0.5, `rgba(255,220,160,${darkness * 0.04})`);
-                pGrad.addColorStop(1, 'rgba(255,220,160,0)');
-                ctx.fillStyle = pGrad;
-                ctx.fillRect(plx - ts * 1.5, ply - ts * 1.5, ts * 3, ts * 3);
-            }
+            // Player glow aura (always visible, stronger at night)
+            const playerGlowIntensity = Math.max(darkness * 0.18, 0.03);
+            const plx = this.playerX * ts + ts * 0.5 - scrollX;
+            const ply = this.playerY * ts + ts * 0.5 - scrollY;
+            const pGrad = ctx.createRadialGradient(plx, ply, 0, plx, ply, ts * 2);
+            pGrad.addColorStop(0, `rgba(255,240,200,${playerGlowIntensity})`);
+            pGrad.addColorStop(0.3, `rgba(255,225,170,${playerGlowIntensity * 0.5})`);
+            pGrad.addColorStop(0.7, `rgba(255,210,140,${playerGlowIntensity * 0.15})`);
+            pGrad.addColorStop(1, 'rgba(255,200,120,0)');
+            ctx.fillStyle = pGrad;
+            ctx.fillRect(plx - ts * 2, ply - ts * 2, ts * 4, ts * 4);
 
             ctx.restore();
         }
+
+        // --- FF7 MAKO COLOR GRADING (subtle green/cyan shift) ---
+        ctx.save();
+        ctx.globalCompositeOperation = 'overlay';
+        const makoStrength = isNightTime ? 0.06 : 0.025;
+        ctx.fillStyle = `rgba(0,255,136,${makoStrength})`;
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.restore();
     }
 
     // === VIGNETTE ===
 
     _renderVignette(ctx, cw, ch) {
-        // Warm-tinted vignette with soft gradient transitions
         const t = this.dayTime;
 
-        // Determine warm tint based on time of day
-        let tintR, tintG, tintB;
+        // Stronger FF7-style vignette (heavy dark edges, like a camera lens)
+        let tintR, tintG, tintB, vignetteStrength;
         if (t < 0.25 || t > 0.85) {
-            // Night - cool blue tint
-            tintR = 10; tintG = 15; tintB = 40;
+            // Night - deep blue-black vignette
+            tintR = 5; tintG = 8; tintB = 25;
+            vignetteStrength = 0.55;
         } else if (t < 0.35) {
-            // Dawn - warm golden tint
-            tintR = 40; tintG = 25; tintB = 10;
+            // Dawn - warm amber vignette
+            tintR = 30; tintG = 15; tintB = 5;
+            vignetteStrength = 0.4;
         } else if (t < 0.7) {
-            // Day - very subtle warm tint
-            tintR = 15; tintG = 10; tintB = 5;
+            // Day - subtle warm vignette
+            tintR = 10; tintG = 8; tintB = 5;
+            vignetteStrength = 0.3;
         } else {
-            // Dusk - amber/orange tint
-            tintR = 45; tintG = 20; tintB = 10;
+            // Dusk - deep amber/crimson vignette
+            tintR = 35; tintG = 12; tintB = 5;
+            vignetteStrength = 0.5;
         }
 
-        // Main vignette (dark edges)
-        const grad = ctx.createRadialGradient(cw / 2, ch / 2, cw * 0.25, cw / 2, ch / 2, cw * 0.75);
+        // Main vignette - tighter center, darker edges (FF7 camera feel)
+        const grad = ctx.createRadialGradient(cw / 2, ch / 2, cw * 0.15, cw / 2, ch / 2, cw * 0.65);
         grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(0.6, `rgba(${tintR},${tintG},${tintB},0.05)`);
-        grad.addColorStop(0.85, `rgba(${tintR},${tintG},${tintB},0.15)`);
-        grad.addColorStop(1, `rgba(${tintR},${tintG},${tintB},0.35)`);
+        grad.addColorStop(0.4, `rgba(${tintR},${tintG},${tintB},0)`);
+        grad.addColorStop(0.7, `rgba(${tintR},${tintG},${tintB},${vignetteStrength * 0.3})`);
+        grad.addColorStop(0.9, `rgba(${tintR},${tintG},${tintB},${vignetteStrength * 0.6})`);
+        grad.addColorStop(1, `rgba(${tintR},${tintG},${tintB},${vignetteStrength})`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, cw, ch);
 
-        // Additional subtle warm wash over the whole scene
-        ctx.fillStyle = `rgba(${tintR},${tintG},${tintB},0.04)`;
+        // Warm color wash
+        ctx.fillStyle = `rgba(${tintR},${tintG},${tintB},0.05)`;
         ctx.fillRect(0, 0, cw, ch);
+    }
+
+    // === SCREEN TRANSITIONS (FF7-style fade to black) ===
+
+    _renderTransition(ctx, cw, ch) {
+        if (!this._transitionAlpha || this._transitionAlpha <= 0) return;
+        ctx.save();
+        ctx.fillStyle = `rgba(0,0,0,${this._transitionAlpha})`;
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.restore();
+    }
+
+    fadeOut(duration, callback) {
+        this._transitionAlpha = 0;
+        this._transitionDir = 1; // fading out (to black)
+        this._transitionSpeed = 1 / (duration || 0.5);
+        this._transitionCallback = callback;
+    }
+
+    fadeIn(duration) {
+        this._transitionAlpha = 1;
+        this._transitionDir = -1; // fading in (from black)
+        this._transitionSpeed = 1 / (duration || 0.5);
+        this._transitionCallback = null;
     }
 
     // === PARTICLES ===
 
     _initParticles() {
         this.particles = [];
-        // Ambient floating motes
-        for (let i = 0; i < 15; i++) {
+        // FF7-style rich particle atmosphere
+        // Mako motes (signature FF7 green-tinted floating lights)
+        for (let i = 0; i < 25; i++) {
             this.particles.push(this._createParticle('mote'));
         }
-        // Sparkle particles
-        for (let i = 0; i < 10; i++) {
+        // Sparkle particles (more for magical feel)
+        for (let i = 0; i < 18; i++) {
             this.particles.push(this._createParticle('sparkle'));
         }
-        // Dust motes (slow drifting)
-        for (let i = 0; i < 8; i++) {
+        // Dust motes (atmospheric depth)
+        for (let i = 0; i < 15; i++) {
             this.particles.push(this._createParticle('dust'));
+        }
+        // Fog wisps (FF7 signature - slow drifting haze)
+        for (let i = 0; i < 12; i++) {
+            this.particles.push(this._createParticle('fog'));
+        }
+        // Fireflies (warm tiny lights, especially at dusk/night)
+        for (let i = 0; i < 10; i++) {
+            this.particles.push(this._createParticle('firefly'));
+        }
+        // Embers (tiny rising sparks near buildings)
+        for (let i = 0; i < 8; i++) {
+            this.particles.push(this._createParticle('ember'));
         }
     }
 
     _createParticle(type) {
         const base = {
-            x: this.playerX + (Math.random() - 0.5) * 20,
-            y: this.playerY + (Math.random() - 0.5) * 15,
-            life: Math.random() * 5 + 3,
-            maxLife: 8,
+            x: this.playerX + (Math.random() - 0.5) * 24,
+            y: this.playerY + (Math.random() - 0.5) * 18,
+            life: Math.random() * 6 + 3,
+            maxLife: 9,
             type: type || 'mote',
         };
 
@@ -3466,9 +3808,9 @@ class Village {
                 ...base,
                 vx: (Math.random() - 0.5) * 0.15,
                 vy: -Math.random() * 0.1 - 0.02,
-                size: Math.random() * 1.5 + 0.5,
-                alpha: Math.random() * 0.4 + 0.2,
-                color: '#fffde0',
+                size: Math.random() * 1.8 + 0.5,
+                alpha: Math.random() * 0.45 + 0.2,
+                color: Math.random() > 0.3 ? '#fffde0' : '#c0ffd0', // some mako-green sparkles
                 sparklePhase: Math.random() * Math.PI * 2,
                 sparkleSpeed: 3 + Math.random() * 4,
             };
@@ -3477,31 +3819,79 @@ class Village {
                 ...base,
                 vx: (Math.random() - 0.5) * 0.08,
                 vy: Math.random() * 0.05 - 0.02,
-                size: Math.random() * 1.5 + 1,
-                alpha: Math.random() * 0.12 + 0.05,
+                size: Math.random() * 1.8 + 1,
+                alpha: Math.random() * 0.14 + 0.05,
                 color: Math.random() > 0.5 ? '#e8dcc8' : '#d4c8b0',
                 driftPhase: Math.random() * Math.PI * 2,
             };
+        } else if (type === 'fog') {
+            // FF7-style fog wisps - large, soft, slow-moving
+            return {
+                ...base,
+                x: this.playerX + (Math.random() - 0.5) * 30,
+                y: this.playerY + (Math.random() - 0.5) * 22,
+                vx: (Math.random() - 0.5) * 0.04,
+                vy: (Math.random() - 0.5) * 0.02,
+                size: Math.random() * 12 + 6, // large and diffuse
+                alpha: Math.random() * 0.06 + 0.02,
+                color: Math.random() > 0.5 ? '#c8d8e8' : '#b8c8d8',
+                life: Math.random() * 10 + 6,
+                maxLife: 16,
+                driftPhase: Math.random() * Math.PI * 2,
+            };
+        } else if (type === 'firefly') {
+            // Warm blinking lights
+            return {
+                ...base,
+                vx: (Math.random() - 0.5) * 0.12,
+                vy: (Math.random() - 0.5) * 0.08,
+                size: Math.random() * 1.2 + 0.4,
+                alpha: Math.random() * 0.5 + 0.3,
+                color: Math.random() > 0.4 ? '#ffee88' : '#88ffaa', // warm yellow or mako green
+                sparklePhase: Math.random() * Math.PI * 2,
+                sparkleSpeed: 1.5 + Math.random() * 2.5,
+                life: Math.random() * 8 + 4,
+                maxLife: 12,
+            };
+        } else if (type === 'ember') {
+            // Tiny rising sparks
+            return {
+                ...base,
+                vx: (Math.random() - 0.5) * 0.2,
+                vy: -Math.random() * 0.3 - 0.1,
+                size: Math.random() * 0.8 + 0.3,
+                alpha: Math.random() * 0.6 + 0.3,
+                color: Math.random() > 0.5 ? '#ff8844' : '#ffaa33',
+                life: Math.random() * 3 + 1.5,
+                maxLife: 4.5,
+            };
         } else {
-            // Default mote
+            // Default mote (now with mako green tint chance)
+            const isMako = Math.random() > 0.5;
             return {
                 ...base,
                 vx: (Math.random() - 0.5) * 0.3,
                 vy: -Math.random() * 0.2 - 0.05,
-                size: Math.random() * 2 + 0.5,
-                alpha: Math.random() * 0.3 + 0.1,
-                color: Math.random() > 0.5 ? '#ffe' : '#dfd',
+                size: Math.random() * 2.5 + 0.5,
+                alpha: Math.random() * 0.35 + 0.1,
+                color: isMako ? '#88ffbb' : (Math.random() > 0.5 ? '#ffe' : '#dfd'),
             };
         }
     }
 
     _resetParticle(p) {
-        p.x = this.playerX + (Math.random() - 0.5) * 20;
-        p.y = this.playerY + (Math.random() - 0.5) * 15;
-        p.life = Math.random() * 5 + 3;
-        p.alpha = p.type === 'dust' ? Math.random() * 0.12 + 0.05 :
-                  p.type === 'sparkle' ? Math.random() * 0.4 + 0.2 :
-                  Math.random() * 0.3 + 0.1;
+        p.x = this.playerX + (Math.random() - 0.5) * (p.type === 'fog' ? 30 : 22);
+        p.y = this.playerY + (Math.random() - 0.5) * (p.type === 'fog' ? 22 : 16);
+        p.life = p.type === 'fog' ? Math.random() * 10 + 6 :
+                 p.type === 'firefly' ? Math.random() * 8 + 4 :
+                 p.type === 'ember' ? Math.random() * 3 + 1.5 :
+                 Math.random() * 6 + 3;
+        p.alpha = p.type === 'dust' ? Math.random() * 0.14 + 0.05 :
+                  p.type === 'sparkle' ? Math.random() * 0.45 + 0.2 :
+                  p.type === 'fog' ? Math.random() * 0.06 + 0.02 :
+                  p.type === 'firefly' ? Math.random() * 0.5 + 0.3 :
+                  p.type === 'ember' ? Math.random() * 0.6 + 0.3 :
+                  Math.random() * 0.35 + 0.1;
 
         if (p.type === 'sparkle') {
             p.vx = (Math.random() - 0.5) * 0.15;
@@ -3511,6 +3901,17 @@ class Village {
             p.vx = (Math.random() - 0.5) * 0.08;
             p.vy = Math.random() * 0.05 - 0.02;
             p.driftPhase = Math.random() * Math.PI * 2;
+        } else if (p.type === 'fog') {
+            p.vx = (Math.random() - 0.5) * 0.04;
+            p.vy = (Math.random() - 0.5) * 0.02;
+            p.driftPhase = Math.random() * Math.PI * 2;
+        } else if (p.type === 'firefly') {
+            p.vx = (Math.random() - 0.5) * 0.12;
+            p.vy = (Math.random() - 0.5) * 0.08;
+            p.sparklePhase = Math.random() * Math.PI * 2;
+        } else if (p.type === 'ember') {
+            p.vx = (Math.random() - 0.5) * 0.2;
+            p.vy = -Math.random() * 0.3 - 0.1;
         } else {
             p.vx = (Math.random() - 0.5) * 0.3;
             p.vy = -Math.random() * 0.2 - 0.05;
