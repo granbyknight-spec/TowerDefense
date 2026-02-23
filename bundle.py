@@ -34,6 +34,7 @@ JS_FILES = [
     "js/hub.js",
     "js/tacticsSprites.js",
     "js/tacticsEngine.js",
+    "js/cutscene.js",
     "js/tactics.js",
     "js/game.js",
 ]
