@@ -18492,6 +18492,7 @@ class TacticalBattle {
         this.zoomMin = 0.4; this.zoomMax = 2.5; this.zoomSpeed = 4;
         this.time = 0;
         this.damageNumbers = [];
+        this.deathAnims = [];
         this.shakeTimer = 0; this.shakeIntensity = 0;
         this.actionButtons = [];
         this._ptrH = null; this._wheelH = null; this._keyH = null;
@@ -18597,6 +18598,28 @@ class TacticalBattle {
                 color:data.critical?TPAL.YELLOW:TPAL.WHITE, timer:0, max:1.2});
             this.shakeTimer=data.critical?0.3:0.15;
             this.shakeIntensity=data.critical?4:2;
+            // Hit flash on the defender
+            data.defender._flashTimer = data.critical ? 0.35 : 0.2;
+            // Death animation if killed
+            if (data.killed && data.defender) {
+                this.deathAnims.push({
+                    x:data.defender.x, y:data.defender.y,
+                    spriteKey:data.defender.spriteKey, dir:data.defender.dir||0,
+                    team:data.defender.team, name:data.defender.name,
+                    timer:0, max:0.6
+                });
+            }
+        } else if (name==='unit_died' && data.unit) {
+            // Also catch ability kills
+            const already = this.deathAnims.find(d=>d.x===data.unit.x&&d.y===data.unit.y);
+            if (!already) {
+                this.deathAnims.push({
+                    x:data.unit.x, y:data.unit.y,
+                    spriteKey:data.unit.spriteKey, dir:data.unit.dir||0,
+                    team:data.unit.team, name:data.unit.name,
+                    timer:0, max:0.6
+                });
+            }
         } else if (name==='unit_healed' && data.target) {
             this.damageNumbers.push({
                 x:(data.target.x+0.5)*this.ts, y:data.target.y*this.ts-8,
@@ -18633,6 +18656,15 @@ class TacticalBattle {
             const d=this.damageNumbers[i]; d.timer+=dt; d.y-=30*dt;
             if (d.timer>=d.max) this.damageNumbers.splice(i,1);
         }
+        // Tick hit flash timers on units
+        for (const u of this.engine.units) {
+            if (u._flashTimer && u._flashTimer > 0) u._flashTimer -= dt;
+        }
+        // Tick death animations
+        for (let i=this.deathAnims.length-1;i>=0;i--) {
+            this.deathAnims[i].timer+=dt;
+            if (this.deathAnims[i].timer>=this.deathAnims[i].max) this.deathAnims.splice(i,1);
+        }
         const act=this.engine.selectedUnit;
         if (act&&act.alive){this.camTargetX=(act.x+0.5)*this.ts;this.camTargetY=(act.y+0.5)*this.ts;}
         this.engine.checkStoryTriggers();
@@ -18656,6 +18688,7 @@ class TacticalBattle {
         this._rHL(ctx,ts);
         this._rUnits(ctx,ts);
         this._rCursor(ctx,ts);
+        this._rDeathAnims(ctx,ts);
         this._rDmg(ctx);
         ctx.restore();
         this._rBanner(ctx,cw,ch);
@@ -18715,6 +18748,9 @@ class TacticalBattle {
             let sp=getTacticsSprite(this.spriteCache,u.spriteKey+'_'+dir,fi);
             if(!sp)sp=getTacticsSprite(this.spriteCache,u.spriteKey+'_down',fi);
             if(u.acted)ctx.globalAlpha=0.45;
+            // Hit flash: alternate white overlay
+            const flashing = u._flashTimer && u._flashTimer > 0;
+            const flashWhite = flashing && Math.floor(u._flashTimer * 12) % 2 === 0;
             if(sp)ctx.drawImage(sp,px,py+by-4,ts,ts);
             else{
                 ctx.fillStyle=u.team==='player'?'#4488ff':'#ff4444';
@@ -18722,6 +18758,7 @@ class TacticalBattle {
                 ctx.fillStyle=TPAL.WHITE;ctx.font='bold 11px monospace';ctx.textAlign='center';
                 ctx.fillText(u.name[0],px+ts/2,py+ts/2+by+4);
             }
+            if(flashWhite){ctx.fillStyle='rgba(255,255,255,0.6)';ctx.fillRect(px,py+by-4,ts,ts);}
             ctx.globalAlpha=1;
             this._hp(ctx,px+4,py+ts-6+by,ts-8,4,u.hp,u.maxHp);
             ctx.fillStyle=u.team==='player'?'#4488ff':'#ff4444';
@@ -18751,6 +18788,30 @@ class TacticalBattle {
         ctx.beginPath();ctx.moveTo(px+ts-cl,py);ctx.lineTo(px+ts,py);ctx.lineTo(px+ts,py+cl);ctx.stroke();
         ctx.beginPath();ctx.moveTo(px,py+ts-cl);ctx.lineTo(px,py+ts);ctx.lineTo(px+cl,py+ts);ctx.stroke();
         ctx.beginPath();ctx.moveTo(px+ts-cl,py+ts);ctx.lineTo(px+ts,py+ts);ctx.lineTo(px+ts,py+ts-cl);ctx.stroke();
+    }
+    _rDeathAnims(ctx,ts){
+        for(const d of this.deathAnims){
+            const p=d.timer/d.max; // 0→1
+            const alpha=1-p;
+            const scale=1-p*0.6;
+            const px=d.x*ts,py=d.y*ts;
+            const cx=px+ts/2,cy=py+ts/2;
+            ctx.save();
+            ctx.globalAlpha=alpha;
+            ctx.translate(cx,cy);ctx.scale(scale,scale);ctx.translate(-cx,-cy);
+            // Draw the sprite or fallback circle
+            const dir=['down','left','right','up'][d.dir||0];
+            let sp=getTacticsSprite(this.spriteCache,d.spriteKey+'_'+dir,0);
+            if(!sp)sp=getTacticsSprite(this.spriteCache,d.spriteKey+'_down',0);
+            if(sp)ctx.drawImage(sp,px,py-4,ts,ts);
+            else{
+                ctx.fillStyle=d.team==='player'?'#4488ff':'#ff4444';
+                ctx.beginPath();ctx.arc(cx,cy,ts*0.32,0,Math.PI*2);ctx.fill();
+            }
+            // Red tint over the dying unit
+            ctx.fillStyle=`rgba(255,0,0,${0.3*alpha})`;ctx.fillRect(px,py-4,ts,ts);
+            ctx.restore();
+        }
     }
     _rDmg(ctx){
         for(const d of this.damageNumbers){
@@ -18800,7 +18861,7 @@ class TacticalBattle {
         for(const ab of(u.abilities||[])){if(ab==='attack')continue;const d=ABILITY_DEFS[ab];if(d&&u.mp>=d.mpCost)items.push(d.name);}
         items.push('Wait');
         const bw=120,bh=28,gap=4;
-        const mH=items.length*(bh+gap)+gap,mx=cw/2-bw/2,my=ch/2-mH/2;
+        const mH=items.length*(bh+gap)+gap,mx=cw-bw-16,my=ch-mH-96;
         this._dq(ctx,mx-8,my-8,bw+16,mH+16);
         this.actionButtons=[];
         ctx.save();
@@ -18853,6 +18914,7 @@ class TacticalBattle {
 
     // ── Input ─────────────────────────────────────────────────────────
     _bindInput(){
+        this.canvas.style.touchAction='none'; // prevent browser gestures from eating taps
         this._ptrH=e=>{e.preventDefault();e.stopPropagation();this._onPtr(e);};
         this.canvas.addEventListener('pointerdown',this._ptrH);
         this._wheelH=e=>{e.preventDefault();this.zoomTarget=Math.max(this.zoomMin,Math.min(this.zoomMax,this.zoomTarget+(e.deltaY>0?-0.12:0.12)));};
@@ -18873,6 +18935,7 @@ class TacticalBattle {
         this.canvas.addEventListener('touchend',()=>{this._pinch=null;},{passive:true});
     }
     _unbindInput(){
+        this.canvas.style.touchAction='';
         if(this._ptrH)this.canvas.removeEventListener('pointerdown',this._ptrH);
         if(this._wheelH)this.canvas.removeEventListener('wheel',this._wheelH);
         if(this._keyH)document.removeEventListener('keydown',this._keyH);
@@ -18881,6 +18944,8 @@ class TacticalBattle {
         const rect=this.canvas.getBoundingClientRect();
         const sx=(e.clientX-rect.left)*(this.canvas.width/rect.width);
         const sy=(e.clientY-rect.top)*(this.canvas.height/rect.height);
+        // Dialogue / intro: any tap advances — no coordinate conversion needed
+        if(this.engine.state==='dialogue'||this.engine.state==='intro'){this.engine.advanceDialogue();return;}
         for(const b of this.actionButtons){if(sx>=b.x&&sx<=b.x+b.w&&sy>=b.y&&sy<=b.y+b.h){this._doAct(b.label);return;}}
         if((this.engine.state==='victory'||this.engine.state==='defeat')&&!this.engine.currentDialogue){if(this.onComplete)this.onComplete();return;}
         const scrollX=this.camX*this.zoom-this.canvas.width/2;
