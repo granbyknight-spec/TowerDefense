@@ -1392,16 +1392,121 @@ class Village {
     }
 
     _drawLamp(ctx, x, y, ts) {
-        // Pole
-        ctx.fillStyle = '#444';
-        ctx.fillRect(x + ts * 0.45, y + ts * 0.25, ts * 0.1, ts * 0.75);
-        // Lamp head
-        ctx.fillStyle = '#666';
-        ctx.fillRect(x + ts * 0.3, y + ts * 0.15, ts * 0.4, ts * 0.15);
-        // Glow
-        ctx.fillStyle = 'rgba(255,220,100,0.5)';
+        const cx = x + ts * 0.5;
+        const flicker = Math.sin(this.time * 8) * 0.03 + Math.sin(this.time * 13) * 0.02;
+
+        // Base pedestal (ornate)
+        ctx.fillStyle = '#3a3a3a';
         ctx.beginPath();
-        ctx.arc(x + ts * 0.5, y + ts * 0.22, ts * 0.2, 0, Math.PI * 2);
+        ctx.roundRect(cx - ts * 0.14, y + ts * 0.88, ts * 0.28, ts * 0.1, 2);
+        ctx.fill();
+        // Base highlight
+        ctx.fillStyle = 'rgba(120,120,120,0.3)';
+        ctx.fillRect(cx - ts * 0.12, y + ts * 0.88, ts * 0.08, ts * 0.04);
+
+        // Ornate pole - tapers slightly
+        ctx.fillStyle = '#4a4a4a';
+        ctx.beginPath();
+        ctx.moveTo(cx - ts * 0.05, y + ts * 0.88);
+        ctx.lineTo(cx - ts * 0.04, y + ts * 0.3);
+        ctx.lineTo(cx + ts * 0.04, y + ts * 0.3);
+        ctx.lineTo(cx + ts * 0.05, y + ts * 0.88);
+        ctx.closePath();
+        ctx.fill();
+
+        // Pole decorative rings
+        ctx.strokeStyle = '#5a5a5a';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.5, ts * 0.055, ts * 0.015, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.7, ts * 0.055, ts * 0.015, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Pole highlight (metallic)
+        ctx.fillStyle = 'rgba(150,150,150,0.2)';
+        ctx.fillRect(cx - ts * 0.04, y + ts * 0.3, ts * 0.025, ts * 0.58);
+
+        // Lamp arm (curved bracket)
+        ctx.strokeStyle = '#4a4a4a';
+        ctx.lineWidth = ts * 0.04;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx, y + ts * 0.3);
+        ctx.quadraticCurveTo(cx + ts * 0.12, y + ts * 0.22, cx, y + ts * 0.16);
+        ctx.stroke();
+        // Mirror bracket
+        ctx.beginPath();
+        ctx.moveTo(cx, y + ts * 0.3);
+        ctx.quadraticCurveTo(cx - ts * 0.12, y + ts * 0.22, cx, y + ts * 0.16);
+        ctx.stroke();
+
+        // Lamp housing (glass lantern shape)
+        // Lamp top cap
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.moveTo(cx, y + ts * 0.08);
+        ctx.lineTo(cx - ts * 0.1, y + ts * 0.14);
+        ctx.lineTo(cx + ts * 0.1, y + ts * 0.14);
+        ctx.closePath();
+        ctx.fill();
+
+        // Glass panels (warm glow from inside)
+        ctx.fillStyle = `rgba(255,220,100,${0.55 + flicker})`;
+        ctx.beginPath();
+        ctx.moveTo(cx - ts * 0.09, y + ts * 0.14);
+        ctx.lineTo(cx - ts * 0.07, y + ts * 0.28);
+        ctx.lineTo(cx + ts * 0.07, y + ts * 0.28);
+        ctx.lineTo(cx + ts * 0.09, y + ts * 0.14);
+        ctx.closePath();
+        ctx.fill();
+
+        // Glass panel frame lines
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(cx - ts * 0.09, y + ts * 0.14);
+        ctx.lineTo(cx - ts * 0.07, y + ts * 0.28);
+        ctx.lineTo(cx + ts * 0.07, y + ts * 0.28);
+        ctx.lineTo(cx + ts * 0.09, y + ts * 0.14);
+        ctx.closePath();
+        ctx.stroke();
+        // Vertical divider
+        ctx.beginPath();
+        ctx.moveTo(cx, y + ts * 0.14);
+        ctx.lineTo(cx, y + ts * 0.28);
+        ctx.stroke();
+
+        // Bottom cap of lamp
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.roundRect(cx - ts * 0.08, y + ts * 0.27, ts * 0.16, ts * 0.03, 1);
+        ctx.fill();
+
+        // Warm glow radius (light cone downward)
+        const glowGrad = ctx.createRadialGradient(cx, y + ts * 0.3, 0, cx, y + ts * 0.3, ts * 0.6);
+        glowGrad.addColorStop(0, `rgba(255,210,80,${0.25 + flicker})`);
+        glowGrad.addColorStop(0.4, `rgba(255,180,50,${0.1 + flicker * 0.5})`);
+        glowGrad.addColorStop(1, 'rgba(255,180,50,0)');
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(cx, y + ts * 0.3, ts * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Upward glow (smaller, around lantern)
+        const upGrad = ctx.createRadialGradient(cx, y + ts * 0.18, 0, cx, y + ts * 0.18, ts * 0.2);
+        upGrad.addColorStop(0, `rgba(255,230,130,${0.15 + flicker})`);
+        upGrad.addColorStop(1, 'rgba(255,230,130,0)');
+        ctx.fillStyle = upGrad;
+        ctx.beginPath();
+        ctx.arc(cx, y + ts * 0.18, ts * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Finial on top
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.arc(cx, y + ts * 0.07, ts * 0.025, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -1458,58 +1563,285 @@ class Village {
     }
 
     _drawDogHouse(ctx, x, y, ts) {
-        // Base
-        ctx.fillStyle = '#c0825a';
-        ctx.fillRect(x + ts * 0.1, y + ts * 0.4, ts * 0.8, ts * 0.55);
-        // Door hole
-        ctx.fillStyle = '#3a2010';
+        const cx = x + ts * 0.5;
+
+        // Base/walls with wood grain
+        ctx.fillStyle = '#b87545';
+        ctx.fillRect(x + ts * 0.08, y + ts * 0.42, ts * 0.84, ts * 0.53);
+
+        // Horizontal plank lines on walls
+        ctx.strokeStyle = 'rgba(80,45,15,0.25)';
+        ctx.lineWidth = 0.6;
+        for (let i = 0; i < 5; i++) {
+            const py = y + ts * (0.46 + i * 0.1);
+            ctx.beginPath();
+            ctx.moveTo(x + ts * 0.08, py);
+            ctx.lineTo(x + ts * 0.92, py);
+            ctx.stroke();
+        }
+
+        // Wall highlight (left side, light source)
+        ctx.fillStyle = 'rgba(210,170,120,0.2)';
+        ctx.fillRect(x + ts * 0.08, y + ts * 0.42, ts * 0.3, ts * 0.53);
+
+        // Wall shadow (right side)
+        ctx.fillStyle = 'rgba(60,30,10,0.12)';
+        ctx.fillRect(x + ts * 0.62, y + ts * 0.42, ts * 0.3, ts * 0.53);
+
+        // Door hole (arched entrance)
+        ctx.fillStyle = '#2a1508';
         ctx.beginPath();
-        ctx.arc(x + ts * 0.5, y + ts * 0.7, ts * 0.18, Math.PI, 0, true);
-        ctx.fillRect(x + ts * 0.32, y + ts * 0.7, ts * 0.36, ts * 0.25);
+        ctx.arc(cx, y + ts * 0.68, ts * 0.16, Math.PI, 0, true);
         ctx.fill();
-        // Roof
-        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(cx - ts * 0.16, y + ts * 0.68, ts * 0.32, ts * 0.27);
+
+        // Door hole inner highlight
+        ctx.fillStyle = 'rgba(60,35,15,0.5)';
         ctx.beginPath();
-        ctx.moveTo(x + ts * 0.5, y + ts * 0.2);
-        ctx.lineTo(x + ts * 0.02, y + ts * 0.45);
-        ctx.lineTo(x + ts * 0.98, y + ts * 0.45);
+        ctx.arc(cx, y + ts * 0.68, ts * 0.13, Math.PI, 0, true);
+        ctx.fill();
+
+        // Bone decoration above door
+        ctx.fillStyle = '#e8ddd0';
+        const boneY = y + ts * 0.56;
+        // Bone shaft
+        ctx.fillRect(cx - ts * 0.09, boneY, ts * 0.18, ts * 0.035);
+        // Bone knobs
+        ctx.beginPath();
+        ctx.arc(cx - ts * 0.1, boneY + ts * 0.017, ts * 0.03, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + ts * 0.1, boneY + ts * 0.017, ts * 0.03, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Roof with shingle texture
+        ctx.fillStyle = '#7a3810';
+        ctx.beginPath();
+        ctx.moveTo(cx, y + ts * 0.18);
+        ctx.lineTo(x, y + ts * 0.44);
+        ctx.lineTo(x + ts, y + ts * 0.44);
         ctx.closePath();
         ctx.fill();
-        // Name plate
-        ctx.fillStyle = '#d4a56a';
-        ctx.fillRect(x + ts * 0.3, y + ts * 0.45, ts * 0.4, ts * 0.08);
+
+        // Shingle rows on roof
+        const shingleRows = 3;
+        for (let sr = 0; sr < shingleRows; sr++) {
+            const rowY = y + ts * (0.24 + sr * 0.07);
+            const rowLeft = cx - ts * (0.08 + sr * 0.14);
+            const rowRight = cx + ts * (0.08 + sr * 0.14);
+            const rowWidth = rowRight - rowLeft;
+            const shingleCount = 3 + sr * 2;
+            const sw = rowWidth / shingleCount;
+
+            for (let si = 0; si < shingleCount; si++) {
+                const shadeOff = ((sr + si) % 3) * 8;
+                ctx.fillStyle = `rgb(${110 + shadeOff},${48 + shadeOff},${14 + shadeOff})`;
+                const sx2 = rowLeft + si * sw;
+                ctx.beginPath();
+                ctx.moveTo(sx2, rowY);
+                ctx.lineTo(sx2 + sw * 0.5, rowY + ts * 0.065);
+                ctx.lineTo(sx2 + sw, rowY);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        // Roof ridge highlight
+        ctx.strokeStyle = 'rgba(180,100,40,0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx, y + ts * 0.18);
+        ctx.lineTo(x + ts * 0.15, y + ts * 0.42);
+        ctx.stroke();
+
+        // Roof shadow on right side
+        ctx.fillStyle = 'rgba(40,15,5,0.2)';
+        ctx.beginPath();
+        ctx.moveTo(cx, y + ts * 0.18);
+        ctx.lineTo(cx, y + ts * 0.44);
+        ctx.lineTo(x + ts, y + ts * 0.44);
+        ctx.closePath();
+        ctx.fill();
+
+        // "HERO" nameplate
+        ctx.fillStyle = '#c4944a';
+        ctx.beginPath();
+        ctx.roundRect(cx - ts * 0.16, y + ts * 0.44, ts * 0.32, ts * 0.075, 1);
+        ctx.fill();
+        // Nameplate border
+        ctx.strokeStyle = '#8a6530';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.roundRect(cx - ts * 0.16, y + ts * 0.44, ts * 0.32, ts * 0.075, 1);
+        ctx.stroke();
+        // "HERO" text
+        ctx.fillStyle = '#4a2a10';
+        ctx.font = `bold ${Math.max(5, ts * 0.12)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('HERO', cx, y + ts * 0.478);
+
+        // Front step
+        ctx.fillStyle = '#a0785a';
+        ctx.fillRect(cx - ts * 0.2, y + ts * 0.92, ts * 0.4, ts * 0.06);
+        ctx.fillStyle = 'rgba(180,140,100,0.3)';
+        ctx.fillRect(cx - ts * 0.2, y + ts * 0.92, ts * 0.4, ts * 0.02);
+
+        // Paw prints on step (tiny detail)
+        ctx.fillStyle = 'rgba(80,50,25,0.2)';
+        ctx.beginPath();
+        ctx.arc(cx - ts * 0.05, y + ts * 0.94, ts * 0.015, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + ts * 0.06, y + ts * 0.95, ts * 0.012, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     _drawFountain(ctx, x, y, ts) {
-        // Base
+        const cx = x + ts * 0.5;
+
+        // Outer base rim - ornate stone
+        ctx.fillStyle = '#808080';
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.72, ts * 0.48, ts * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Base rim highlight
+        ctx.fillStyle = 'rgba(180,180,180,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.7, ts * 0.47, ts * 0.2, 0, Math.PI * 1.1, Math.PI * 1.9);
+        ctx.fill();
+        // Base rim shadow
+        ctx.fillStyle = 'rgba(40,40,40,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.74, ts * 0.47, ts * 0.2, 0, 0, Math.PI);
+        ctx.fill();
+
+        // Inner basin wall
+        ctx.fillStyle = '#757575';
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.68, ts * 0.42, ts * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Water in lower basin
+        const wave = Math.sin(this.time * 2.5);
+        ctx.fillStyle = '#4db8e8';
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.65, ts * 0.36, ts * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Water shimmer
+        ctx.fillStyle = `rgba(150,220,255,${0.25 + wave * 0.1})`;
+        ctx.beginPath();
+        ctx.ellipse(cx - ts * 0.08, y + ts * 0.63, ts * 0.12, ts * 0.05, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Middle tier (second bowl)
+        ctx.fillStyle = '#8a8a8a';
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.48, ts * 0.22, ts * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Middle tier wall
+        ctx.fillStyle = '#7a7a7a';
+        ctx.fillRect(cx - ts * 0.18, y + ts * 0.38, ts * 0.36, ts * 0.12);
+        // Water in middle tier
+        ctx.fillStyle = '#5cc8f0';
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.44, ts * 0.16, ts * 0.06, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Center pillar (ornate)
         ctx.fillStyle = '#909090';
+        ctx.fillRect(cx - ts * 0.06, y + ts * 0.15, ts * 0.12, ts * 0.3);
+        // Pillar detail lines
+        ctx.strokeStyle = 'rgba(60,60,60,0.3)';
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
-        ctx.ellipse(x + ts * 0.5, y + ts * 0.65, ts * 0.45, ts * 0.25, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Water
-        ctx.fillStyle = '#4fc3f7';
-        ctx.beginPath();
-        ctx.ellipse(x + ts * 0.5, y + ts * 0.62, ts * 0.35, ts * 0.18, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Center pillar
+        ctx.moveTo(cx - ts * 0.06, y + ts * 0.22);
+        ctx.lineTo(cx + ts * 0.06, y + ts * 0.22);
+        ctx.moveTo(cx - ts * 0.06, y + ts * 0.32);
+        ctx.lineTo(cx + ts * 0.06, y + ts * 0.32);
+        ctx.stroke();
+        // Pillar highlight
+        ctx.fillStyle = 'rgba(200,200,200,0.2)';
+        ctx.fillRect(cx - ts * 0.05, y + ts * 0.16, ts * 0.04, ts * 0.28);
+
+        // Dog statue on top!
         ctx.fillStyle = '#a0a0a0';
-        ctx.fillRect(x + ts * 0.42, y + ts * 0.2, ts * 0.16, ts * 0.45);
-        // Water spray
-        const spray = Math.sin(this.time * 4) * 0.03;
-        ctx.fillStyle = `rgba(100,200,255,${0.5 + spray})`;
+        // Dog body (sitting pose)
         ctx.beginPath();
-        ctx.arc(x + ts * 0.5, y + ts * 0.18, ts * 0.08, 0, Math.PI * 2);
+        ctx.ellipse(cx, y + ts * 0.11, ts * 0.07, ts * 0.05, 0, 0, Math.PI * 2);
         ctx.fill();
-        // Droplets
-        for (let i = 0; i < 3; i++) {
-            const angle = this.time * 3 + i * 2.1;
-            const dx = Math.cos(angle) * ts * 0.15;
-            const dy = Math.sin(angle) * ts * 0.08 + ts * 0.35;
-            ctx.fillStyle = 'rgba(100,200,255,0.6)';
+        // Dog head
+        ctx.beginPath();
+        ctx.arc(cx, y + ts * 0.04, ts * 0.045, 0, Math.PI * 2);
+        ctx.fill();
+        // Dog ears
+        ctx.fillStyle = '#959595';
+        ctx.beginPath();
+        ctx.ellipse(cx - ts * 0.04, y + ts * 0.02, ts * 0.02, ts * 0.03, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + ts * 0.04, y + ts * 0.02, ts * 0.02, ts * 0.03, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        // Dog snout
+        ctx.fillStyle = '#8a8a8a';
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.055, ts * 0.02, ts * 0.012, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Statue highlight
+        ctx.fillStyle = 'rgba(200,200,210,0.3)';
+        ctx.beginPath();
+        ctx.arc(cx - ts * 0.015, y + ts * 0.03, ts * 0.02, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cascading water from top
+        const spray = Math.sin(this.time * 4) * 0.04;
+        // Water arcing from statue down to middle tier
+        ctx.strokeStyle = `rgba(100,200,255,${0.45 + spray})`;
+        ctx.lineWidth = 1.2;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 4; i++) {
+            const angle = this.time * 2.5 + i * Math.PI * 0.5;
+            const dropX = Math.cos(angle) * ts * 0.12;
             ctx.beginPath();
-            ctx.arc(x + ts * 0.5 + dx, y + dy, 1.5, 0, Math.PI * 2);
+            ctx.moveTo(cx, y + ts * 0.14);
+            ctx.quadraticCurveTo(cx + dropX, y + ts * 0.25, cx + dropX * 0.8, y + ts * 0.42);
+            ctx.stroke();
+        }
+
+        // Water cascading from middle tier to lower basin
+        ctx.strokeStyle = `rgba(100,200,255,${0.35 + spray})`;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 6; i++) {
+            const angle = this.time * 2 + i * Math.PI / 3;
+            const dropX = Math.cos(angle) * ts * 0.2;
+            const dropY = Math.sin(angle) * ts * 0.04;
+            ctx.beginPath();
+            ctx.moveTo(cx + dropX * 0.6, y + ts * 0.47);
+            ctx.quadraticCurveTo(cx + dropX, y + ts * 0.55 + dropY, cx + dropX * 0.9, y + ts * 0.62);
+            ctx.stroke();
+        }
+
+        // Splash droplets around basin
+        ctx.fillStyle = 'rgba(120,210,255,0.5)';
+        for (let i = 0; i < 5; i++) {
+            const angle = this.time * 3 + i * 1.26;
+            const dr = ts * (0.3 + Math.sin(angle * 0.7) * 0.05);
+            const dx = Math.cos(angle) * dr;
+            const dy = Math.sin(angle) * dr * 0.4;
+            const dropSize = 1 + Math.sin(angle + this.time) * 0.5;
+            ctx.beginPath();
+            ctx.arc(cx + dx, y + ts * 0.62 + dy, dropSize, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // Ripple rings on water surface
+        const rippleT = (this.time * 1.5) % (Math.PI * 2);
+        const rippleAlpha = 0.2 * (1 - rippleT / (Math.PI * 2));
+        ctx.strokeStyle = `rgba(200,240,255,${rippleAlpha})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.ellipse(cx, y + ts * 0.64, ts * 0.1 + rippleT * ts * 0.04, ts * 0.04 + rippleT * ts * 0.015, 0, 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     _drawBarrel(ctx, x, y, ts) {
