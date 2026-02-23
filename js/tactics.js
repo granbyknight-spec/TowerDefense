@@ -527,7 +527,7 @@ class TacticalBattle {
         for(const ab of(u.abilities||[])){if(ab==='attack')continue;const d=ABILITY_DEFS[ab];if(d&&u.mp>=d.mpCost)items.push(d.name);}
         items.push('Wait');
         const bw=120,bh=28,gap=4;
-        const mH=items.length*(bh+gap)+gap,mx=16,my=ch-mH-96;
+        const mH=items.length*(bh+gap)+gap,mx=cw-bw-16,my=ch-mH-96;
         this._dq(ctx,mx-8,my-8,bw+16,mH+16);
         this.actionButtons=[];
         ctx.save();
