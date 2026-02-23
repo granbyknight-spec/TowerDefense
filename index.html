@@ -14,27 +14,40 @@
         <div id="title-screen" class="overlay-screen">
             <div class="title-dogs">🐶🐕🐩</div>
             <div class="game-title">PUPPY ACADEMY</div>
+            <div class="title-divider"></div>
             <div class="game-subtitle">Raise dogs. Learn breeds. Defend the yard!</div>
-            <input id="player-name" type="text" class="name-input" placeholder="Enter your name..." maxlength="16" autocomplete="off">
-            <div class="game-subtitle" style="font-size:13px; margin-top:6px; color:#FFD700;">Choose your starter dog:</div>
-            <div id="starter-select" style="display:flex;gap:8px;margin-top:2px;justify-content:center;flex-wrap:wrap;">
-                <button class="starter-btn selected" data-breed="barker">🐕<br><span style="font-size:10px">Beagle</span></button>
-                <button class="starter-btn" data-breed="poodle">🐩<br><span style="font-size:10px">Poodle</span></button>
-                <button class="starter-btn" data-breed="husky">🐺<br><span style="font-size:10px">Husky</span></button>
+            <input id="player-name" type="text" class="name-input" placeholder="Enter your trainer name..." maxlength="16" autocomplete="off">
+            <div class="starter-label">Choose your starter dog:</div>
+            <div id="starter-select">
+                <button class="starter-btn selected" data-breed="barker">
+                    🐕
+                    <span class="starter-breed-name">Beagle</span>
+                    <span class="starter-trait">Curious</span>
+                </button>
+                <button class="starter-btn" data-breed="poodle">
+                    🐩
+                    <span class="starter-breed-name">Poodle</span>
+                    <span class="starter-trait">Clever</span>
+                </button>
+                <button class="starter-btn" data-breed="husky">
+                    🐺
+                    <span class="starter-breed-name">Husky</span>
+                    <span class="starter-trait">Tough</span>
+                </button>
             </div>
             <button id="start-btn" class="screen-btn">START ADVENTURE</button>
-            <button id="load-save-title-btn" class="screen-btn" style="background:linear-gradient(180deg,#FF9800 0%,#E65100 100%);padding:8px 24px;font-size:13px;">📂 Load Save Code</button>
-            <button id="highscores-btn" class="screen-btn" style="background:linear-gradient(180deg,#607D8B 0%,#455A64 100%);padding:8px 24px;font-size:13px;">HIGH SCORES</button>
+            <button id="load-save-title-btn" class="screen-btn">Load Save</button>
+            <button id="highscores-btn" class="screen-btn">High Scores</button>
             <div class="sound-hint">Sound enabled on tap</div>
             <div id="version-tag" class="version-tag"></div>
         </div>
 
         <!-- Load Save Code Screen (from title) -->
         <div id="load-save-screen" class="overlay-screen" style="display:none;">
-            <div class="end-title" style="color:#FF9800;">Load Save Code</div>
+            <div class="end-title" style="color:#FFD700;">Load Save Code</div>
             <textarea id="title-load-input" class="hub-save-code" rows="4" placeholder="Paste your save code here..." style="width:90%;max-width:340px;margin:8px auto;font-size:12px;"></textarea>
             <button id="title-load-apply-btn" class="screen-btn">Load Game</button>
-            <button id="title-load-back-btn" class="screen-btn" style="background:linear-gradient(180deg,#607D8B 0%,#455A64 100%);padding:8px 24px;font-size:13px;">Back</button>
+            <button id="title-load-back-btn" class="screen-btn" style="background:linear-gradient(180deg,#37474F 0%,#263238 100%);border-color:rgba(100,140,200,0.2);padding:10px 28px;font-size:13px;">Back</button>
         </div>
 
         <!-- Hub/Academy Screen -->
@@ -48,10 +61,10 @@
                     <tr><th>#</th><th>Name</th><th>Score</th><th>Kills</th><th>Level</th></tr>
                 </thead>
                 <tbody id="leaderboard-body">
-                    <tr><td colspan="5" style="text-align:center;color:#8d6e63;">No scores yet!</td></tr>
+                    <tr><td colspan="5" style="text-align:center;color:#5a7aaa;">No scores yet!</td></tr>
                 </tbody>
             </table>
-            <button id="close-leaderboard-btn" class="screen-btn" style="padding:10px 30px;font-size:14px;">BACK</button>
+            <button id="close-leaderboard-btn" class="screen-btn" style="padding:12px 36px;font-size:14px;background:linear-gradient(180deg,#37474F 0%,#263238 100%);border-color:rgba(100,140,200,0.2);">BACK</button>
         </div>
 
         <!-- HUD -->
@@ -113,11 +126,11 @@
         <!-- Level Complete Screen -->
         <div id="level-complete-screen" class="overlay-screen">
             <div style="font-size:48px;">🎉🐕🎉</div>
-            <div class="end-title" style="color:#4CAF50;">LEVEL <span id="lc-level">1</span> COMPLETE!</div>
+            <div class="end-title" style="color:#4CAF50; text-shadow: 0 0 20px rgba(76,175,80,0.3);">LEVEL <span id="lc-level">1</span> COMPLETE!</div>
             <div id="lc-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
             <div class="end-subtitle">Next up: <span id="lc-next"></span></div>
             <button id="next-level-btn" class="screen-btn">NEXT LEVEL</button>
-            <button class="screen-btn restart-btn" style="background:linear-gradient(180deg,#FF9800 0%,#E65100 100%);padding:10px 24px;font-size:14px;">Back to Academy</button>
+            <button class="screen-btn restart-btn" style="background:linear-gradient(180deg,#1565C0 0%,#0D47A1 100%);border-color:rgba(100,160,255,0.3);padding:12px 28px;font-size:14px;">Back to Academy</button>
         </div>
 
         <!-- Game Over Screen -->
@@ -129,7 +142,7 @@
             <div class="end-stat">Score: <span id="go-score" style="color:#FFD700;">0</span></div>
             <div id="go-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
             <div style="font-size:48px;">😿🐱🐈</div>
-            <button class="screen-btn restart-btn">Back to Academy</button>
+            <button class="screen-btn restart-btn" style="background:linear-gradient(180deg,#1565C0 0%,#0D47A1 100%);border-color:rgba(100,160,255,0.3);">Back to Academy</button>
         </div>
 
         <!-- Victory Screen -->
@@ -141,7 +154,7 @@
             <div class="end-stat">Score: <span id="vic-score" style="color:#FFD700;">0</span></div>
             <div id="vic-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
             <div style="font-size:48px;">🎉🐶🏆</div>
-            <button class="screen-btn restart-btn">Back to Academy</button>
+            <button class="screen-btn restart-btn" style="background:linear-gradient(180deg,#1565C0 0%,#0D47A1 100%);border-color:rgba(100,160,255,0.3);">Back to Academy</button>
         </div>
     </div>
 

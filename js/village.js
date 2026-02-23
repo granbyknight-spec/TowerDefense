@@ -354,10 +354,21 @@ class Village {
             }
         }
 
-        // Particles
+        // Particles (type-specific movement)
         for (const p of this.particles) {
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
+            if (p.type === 'dust') {
+                // Dust drifts with gentle sinusoidal sway
+                const driftPhase = p.driftPhase || 0;
+                p.x += (p.vx + Math.sin(this.time * 0.5 + driftPhase) * 0.02) * dt;
+                p.y += (p.vy + Math.cos(this.time * 0.3 + driftPhase) * 0.01) * dt;
+            } else if (p.type === 'sparkle') {
+                // Sparkles drift very slowly, mostly stationary
+                p.x += p.vx * dt * 0.5;
+                p.y += p.vy * dt * 0.5;
+            } else {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+            }
             p.life -= dt;
             if (p.life <= 0) {
                 this._resetParticle(p);
@@ -460,13 +471,49 @@ class Village {
             }
         }
 
-        // === PARTICLES ===
+        // === PARTICLES (with type-specific rendering) ===
         for (const p of this.particles) {
-            ctx.globalAlpha = Math.max(0, p.alpha * (p.life / p.maxLife));
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x * ts, p.y * ts, p.size, 0, Math.PI * 2);
-            ctx.fill();
+            const lifeRatio = Math.max(0, p.life / p.maxLife);
+            const px2 = p.x * ts;
+            const py2 = p.y * ts;
+
+            if (p.type === 'sparkle') {
+                // Sparkle: pulsing star-like twinkle
+                const sparkle = Math.sin((p.sparklePhase || 0) + this.time * (p.sparkleSpeed || 4));
+                const sparkleAlpha = p.alpha * lifeRatio * (0.3 + sparkle * 0.7);
+                if (sparkleAlpha <= 0) continue;
+                ctx.globalAlpha = sparkleAlpha;
+                ctx.fillStyle = p.color;
+                // Cross-shaped sparkle
+                const sz = p.size * (0.8 + sparkle * 0.5);
+                ctx.fillRect(px2 - sz * 0.15, py2 - sz, sz * 0.3, sz * 2);
+                ctx.fillRect(px2 - sz, py2 - sz * 0.15, sz * 2, sz * 0.3);
+                // Center glow dot
+                ctx.beginPath();
+                ctx.arc(px2, py2, sz * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (p.type === 'dust') {
+                // Dust: soft, slow, slightly transparent circle
+                ctx.globalAlpha = p.alpha * lifeRatio;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(px2, py2, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Default mote: simple glowing dot
+                ctx.globalAlpha = p.alpha * lifeRatio;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(px2, py2, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                // Soft glow around mote
+                if (p.size > 1) {
+                    ctx.globalAlpha = p.alpha * lifeRatio * 0.3;
+                    ctx.beginPath();
+                    ctx.arc(px2, py2, p.size * 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
         }
         ctx.globalAlpha = 1;
 
@@ -2385,35 +2432,375 @@ class Village {
     _renderNPC(ctx, npc, ts) {
         const x = npc.x * ts;
         const y = npc.y * ts;
-
-        // Simple animal body (use color)
         const color = npc.color || '#888';
         const cx = x + ts * 0.5;
-        const cy = y + ts * 0.55;
+        const breathe = Math.sin(npc.animTimer * 2.5) * ts * 0.006;
+        const cy = y + ts * 0.55 + breathe;
+        const type = (npc.type || 'dog').toLowerCase();
 
-        // Body
-        ctx.fillStyle = color;
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.beginPath();
-        ctx.ellipse(cx, cy, ts * 0.22, ts * 0.16, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, y + ts * 0.92, ts * 0.18, ts * 0.05, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Head
-        ctx.beginPath();
-        ctx.arc(cx, cy - ts * 0.12, ts * 0.13, 0, Math.PI * 2);
-        ctx.fill();
+        // ---- Draw body based on NPC type ----
+        if (type === 'cat') {
+            // Cat NPC - sleek body, pointed ears, long tail
+            // Tail
+            const tailSway = Math.sin(this.time * 2 + npc.origX) * 0.5;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = ts * 0.04;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + ts * 0.05);
+            ctx.quadraticCurveTo(
+                cx + ts * 0.25, cy - ts * 0.1,
+                cx + ts * 0.2 + Math.sin(tailSway) * ts * 0.1, cy - ts * 0.25
+            );
+            ctx.stroke();
 
-        // Eyes
-        ctx.fillStyle = '#222';
-        ctx.beginPath();
-        ctx.arc(cx - ts * 0.05, cy - ts * 0.14, ts * 0.02, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx + ts * 0.05, cy - ts * 0.14, ts * 0.02, 0, Math.PI * 2);
-        ctx.fill();
+            // Body (sleek, smaller)
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, ts * 0.18, ts * 0.13, 0, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Emoji overlay if specified
+            // Belly
+            const colArr = this._parseColor(color);
+            ctx.fillStyle = `rgba(${Math.min(255, colArr[0] + 40)},${Math.min(255, colArr[1] + 40)},${Math.min(255, colArr[2] + 40)},0.5)`;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + ts * 0.03, ts * 0.1, ts * 0.06, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Legs (thin)
+            ctx.fillStyle = color;
+            ctx.fillRect(cx - ts * 0.12, cy + ts * 0.08, ts * 0.05, ts * 0.14);
+            ctx.fillRect(cx + ts * 0.07, cy + ts * 0.08, ts * 0.05, ts * 0.14);
+
+            // Head
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx, cy - ts * 0.14, ts * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pointed ears
+            ctx.beginPath();
+            ctx.moveTo(cx - ts * 0.1, cy - ts * 0.2);
+            ctx.lineTo(cx - ts * 0.14, cy - ts * 0.34);
+            ctx.lineTo(cx - ts * 0.03, cy - ts * 0.22);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx + ts * 0.1, cy - ts * 0.2);
+            ctx.lineTo(cx + ts * 0.14, cy - ts * 0.34);
+            ctx.lineTo(cx + ts * 0.03, cy - ts * 0.22);
+            ctx.closePath();
+            ctx.fill();
+            // Inner ear
+            ctx.fillStyle = '#e8a0a0';
+            ctx.beginPath();
+            ctx.moveTo(cx - ts * 0.08, cy - ts * 0.21);
+            ctx.lineTo(cx - ts * 0.12, cy - ts * 0.3);
+            ctx.lineTo(cx - ts * 0.04, cy - ts * 0.22);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx + ts * 0.08, cy - ts * 0.21);
+            ctx.lineTo(cx + ts * 0.12, cy - ts * 0.3);
+            ctx.lineTo(cx + ts * 0.04, cy - ts * 0.22);
+            ctx.closePath();
+            ctx.fill();
+
+            // Cat eyes (slitted)
+            ctx.fillStyle = '#aade50';
+            ctx.beginPath();
+            ctx.ellipse(cx - ts * 0.05, cy - ts * 0.15, ts * 0.03, ts * 0.025, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx + ts * 0.05, cy - ts * 0.15, ts * 0.03, ts * 0.025, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Slit pupils
+            ctx.fillStyle = '#111';
+            ctx.fillRect(cx - ts * 0.053, cy - ts * 0.16, ts * 0.01, ts * 0.025);
+            ctx.fillRect(cx + ts * 0.047, cy - ts * 0.16, ts * 0.01, ts * 0.025);
+
+            // Nose + whiskers
+            ctx.fillStyle = '#e8a0a0';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - ts * 0.1, ts * 0.018, ts * 0.012, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            ctx.lineWidth = 0.4;
+            // Whiskers
+            ctx.beginPath();
+            ctx.moveTo(cx - ts * 0.02, cy - ts * 0.09);
+            ctx.lineTo(cx - ts * 0.14, cy - ts * 0.11);
+            ctx.moveTo(cx - ts * 0.02, cy - ts * 0.08);
+            ctx.lineTo(cx - ts * 0.13, cy - ts * 0.07);
+            ctx.moveTo(cx + ts * 0.02, cy - ts * 0.09);
+            ctx.lineTo(cx + ts * 0.14, cy - ts * 0.11);
+            ctx.moveTo(cx + ts * 0.02, cy - ts * 0.08);
+            ctx.lineTo(cx + ts * 0.13, cy - ts * 0.07);
+            ctx.stroke();
+
+        } else if (type === 'bird') {
+            // Bird NPC - round body, beak, wing, tail feathers
+            const wingFlap = Math.sin(this.time * 4 + npc.origX) * 0.15;
+
+            // Tail feathers
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(cx + ts * 0.12, cy + ts * 0.02);
+            ctx.lineTo(cx + ts * 0.28, cy - ts * 0.08);
+            ctx.lineTo(cx + ts * 0.25, cy + ts * 0.04);
+            ctx.lineTo(cx + ts * 0.3, cy + ts * 0.0);
+            ctx.lineTo(cx + ts * 0.2, cy + ts * 0.08);
+            ctx.closePath();
+            ctx.fill();
+
+            // Body (round, compact)
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, ts * 0.16, ts * 0.14, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Breast (lighter)
+            const colArr = this._parseColor(color);
+            ctx.fillStyle = `rgba(${Math.min(255, colArr[0] + 50)},${Math.min(255, colArr[1] + 50)},${Math.min(255, colArr[2] + 30)},0.6)`;
+            ctx.beginPath();
+            ctx.ellipse(cx - ts * 0.03, cy + ts * 0.03, ts * 0.09, ts * 0.08, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Wing
+            ctx.fillStyle = `rgba(${Math.max(0, colArr[0] - 20)},${Math.max(0, colArr[1] - 20)},${Math.max(0, colArr[2] - 10)},0.8)`;
+            ctx.beginPath();
+            ctx.ellipse(cx + ts * 0.06, cy - ts * 0.02 + wingFlap * ts, ts * 0.1, ts * 0.12, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Legs (thin, stick-like)
+            ctx.strokeStyle = '#8a6530';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx - ts * 0.05, cy + ts * 0.12);
+            ctx.lineTo(cx - ts * 0.06, cy + ts * 0.22);
+            ctx.moveTo(cx + ts * 0.05, cy + ts * 0.12);
+            ctx.lineTo(cx + ts * 0.06, cy + ts * 0.22);
+            ctx.stroke();
+
+            // Head
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx - ts * 0.08, cy - ts * 0.14, ts * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = '#111';
+            ctx.beginPath();
+            ctx.arc(cx - ts * 0.12, cy - ts * 0.16, ts * 0.02, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(cx - ts * 0.125, cy - ts * 0.165, ts * 0.007, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Beak
+            ctx.fillStyle = '#e8a030';
+            ctx.beginPath();
+            ctx.moveTo(cx - ts * 0.16, cy - ts * 0.13);
+            ctx.lineTo(cx - ts * 0.25, cy - ts * 0.11);
+            ctx.lineTo(cx - ts * 0.16, cy - ts * 0.09);
+            ctx.closePath();
+            ctx.fill();
+
+        } else {
+            // Dog NPC (default) - various breeds based on NPC properties
+            const breed = npc.breed || 'default';
+
+            // Legs
+            const walkAnim = npc.targetX !== undefined ? Math.sin(npc.animFrame) * ts * 0.04 : 0;
+            ctx.fillStyle = color;
+            ctx.fillRect(cx - ts * 0.14, cy + ts * 0.08 + walkAnim, ts * 0.07, ts * 0.16);
+            ctx.fillRect(cx + ts * 0.07, cy + ts * 0.08 - walkAnim, ts * 0.07, ts * 0.16);
+
+            // Body
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, ts * 0.2, ts * 0.14, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Belly highlight
+            const colArr = this._parseColor(color);
+            ctx.fillStyle = `rgba(${Math.min(255, colArr[0] + 35)},${Math.min(255, colArr[1] + 35)},${Math.min(255, colArr[2] + 35)},0.4)`;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + ts * 0.04, ts * 0.12, ts * 0.07, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tail
+            const tailWag = Math.sin(this.time * 5 + npc.origX * 2) * 0.5;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = ts * 0.04;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(cx + ts * 0.18, cy - ts * 0.02);
+            ctx.quadraticCurveTo(
+                cx + ts * 0.28, cy - ts * 0.1 + Math.sin(tailWag) * ts * 0.08,
+                cx + ts * 0.22, cy - ts * 0.2
+            );
+            ctx.stroke();
+
+            // Head
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx - ts * 0.05, cy - ts * 0.14, ts * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Breed-specific features
+            if (breed === 'poodle') {
+                // Curly fur puffs
+                ctx.fillStyle = color;
+                for (let p = 0; p < 5; p++) {
+                    const pa = p * Math.PI * 0.4;
+                    ctx.beginPath();
+                    ctx.arc(
+                        cx - ts * 0.05 + Math.cos(pa) * ts * 0.12,
+                        cy - ts * 0.14 + Math.sin(pa) * ts * 0.12,
+                        ts * 0.05, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+                // Poodle ear puffs
+                ctx.beginPath();
+                ctx.arc(cx - ts * 0.18, cy - ts * 0.1, ts * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(cx + ts * 0.08, cy - ts * 0.1, ts * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Default dog ears (floppy)
+                const earDark = `rgba(${Math.max(0, colArr[0] - 30)},${Math.max(0, colArr[1] - 30)},${Math.max(0, colArr[2] - 20)},1)`;
+                ctx.fillStyle = earDark;
+                ctx.beginPath();
+                ctx.ellipse(cx - ts * 0.16, cy - ts * 0.1, ts * 0.05, ts * 0.1, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(cx + ts * 0.06, cy - ts * 0.12, ts * 0.05, ts * 0.1, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Eyes
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.ellipse(cx - ts * 0.08, cy - ts * 0.16, ts * 0.025, ts * 0.022, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx - ts * 0.02, cy - ts * 0.16, ts * 0.025, ts * 0.022, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#111';
+            ctx.beginPath();
+            ctx.arc(cx - ts * 0.075, cy - ts * 0.155, ts * 0.015, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx - ts * 0.015, cy - ts * 0.155, ts * 0.015, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nose
+            ctx.fillStyle = '#111';
+            ctx.beginPath();
+            ctx.ellipse(cx - ts * 0.05, cy - ts * 0.06, ts * 0.025, ts * 0.015, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // === NPC outfit/accessory based on role ===
+        const role = npc.role || '';
+        if (role === 'shopkeeper') {
+            // Apron
+            ctx.fillStyle = 'rgba(220,220,220,0.6)';
+            ctx.fillRect(cx - ts * 0.12, cy - ts * 0.02, ts * 0.24, ts * 0.16);
+            ctx.strokeStyle = 'rgba(180,180,180,0.5)';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(cx - ts * 0.12, cy - ts * 0.02, ts * 0.24, ts * 0.16);
+        } else if (role === 'guard') {
+            // Helmet
+            ctx.fillStyle = '#808080';
+            const headCy = cy - ts * 0.14;
+            ctx.beginPath();
+            ctx.arc(type === 'bird' ? cx - ts * 0.08 : cx - ts * 0.05, headCy - ts * 0.02, ts * 0.14, Math.PI, 0);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(160,160,160,0.3)';
+            ctx.beginPath();
+            ctx.arc(type === 'bird' ? cx - ts * 0.08 : cx - ts * 0.05, headCy - ts * 0.02, ts * 0.13, Math.PI * 1.2, Math.PI * 1.7);
+            ctx.fill();
+        } else if (role === 'healer') {
+            // Red cross on body
+            ctx.fillStyle = 'rgba(220,50,50,0.7)';
+            ctx.fillRect(cx - ts * 0.02, cy - ts * 0.06, ts * 0.04, ts * 0.12);
+            ctx.fillRect(cx - ts * 0.06, cy - ts * 0.02, ts * 0.12, ts * 0.04);
+        } else if (role === 'elder') {
+            // Wise hat/robe collar
+            ctx.fillStyle = '#6a3a9a';
+            ctx.beginPath();
+            const headCy = cy - ts * 0.14;
+            ctx.moveTo(cx - ts * 0.05, headCy - ts * 0.12);
+            ctx.lineTo(cx - ts * 0.05, headCy - ts * 0.25);
+            ctx.lineTo(cx + ts * 0.05, headCy - ts * 0.12);
+            ctx.closePath();
+            ctx.fill();
+            // Star on hat
+            ctx.fillStyle = '#ffd700';
+            ctx.beginPath();
+            ctx.arc(cx - ts * 0.02, headCy - ts * 0.2, ts * 0.015, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // === 1px outline ===
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        if (type === 'bird') {
+            ctx.ellipse(cx, cy, ts * 0.17, ts * 0.15, 0, 0, Math.PI * 2);
+        } else {
+            ctx.ellipse(cx, cy, ts * 0.21, ts * 0.15, 0, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+
+        // === FF7-style speech/interaction indicator ===
+        const dist = Math.abs(this.playerX - npc.x) + Math.abs(this.playerY - npc.y);
+        if (dist <= 3 && npc.dialogue) {
+            const indicatorY = y + ts * 0.05 + Math.sin(this.time * 3) * ts * 0.04;
+            const bubbleText = dist <= 2 ? '!' : '...';
+
+            // Speech bubble background
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+            ctx.lineWidth = 0.8;
+
+            const textW = bubbleText === '!' ? ts * 0.14 : ts * 0.25;
+            ctx.beginPath();
+            ctx.roundRect(cx - textW * 0.5 - ts * 0.04, indicatorY - ts * 0.09, textW + ts * 0.08, ts * 0.15, 3);
+            ctx.fill();
+            ctx.stroke();
+
+            // Bubble tail (triangle pointing down)
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath();
+            ctx.moveTo(cx - ts * 0.03, indicatorY + ts * 0.055);
+            ctx.lineTo(cx, indicatorY + ts * 0.1);
+            ctx.lineTo(cx + ts * 0.03, indicatorY + ts * 0.055);
+            ctx.closePath();
+            ctx.fill();
+
+            // Bubble text
+            ctx.fillStyle = dist <= 2 ? '#d43030' : '#555';
+            ctx.font = `bold ${Math.max(7, ts * 0.22)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(bubbleText, cx, indicatorY);
+        }
+
+        // Emoji overlay if specified (after everything)
         if (npc.emoji) {
-            ctx.font = `${ts * 0.6}px Arial`;
+            ctx.font = `${ts * 0.5}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(npc.emoji, cx, cy);
@@ -2546,10 +2933,36 @@ class Village {
     // === VIGNETTE ===
 
     _renderVignette(ctx, cw, ch) {
-        const grad = ctx.createRadialGradient(cw / 2, ch / 2, cw * 0.3, cw / 2, ch / 2, cw * 0.75);
+        // Warm-tinted vignette with soft gradient transitions
+        const t = this.dayTime;
+
+        // Determine warm tint based on time of day
+        let tintR, tintG, tintB;
+        if (t < 0.25 || t > 0.85) {
+            // Night - cool blue tint
+            tintR = 10; tintG = 15; tintB = 40;
+        } else if (t < 0.35) {
+            // Dawn - warm golden tint
+            tintR = 40; tintG = 25; tintB = 10;
+        } else if (t < 0.7) {
+            // Day - very subtle warm tint
+            tintR = 15; tintG = 10; tintB = 5;
+        } else {
+            // Dusk - amber/orange tint
+            tintR = 45; tintG = 20; tintB = 10;
+        }
+
+        // Main vignette (dark edges)
+        const grad = ctx.createRadialGradient(cw / 2, ch / 2, cw * 0.25, cw / 2, ch / 2, cw * 0.75);
         grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.3)');
+        grad.addColorStop(0.6, `rgba(${tintR},${tintG},${tintB},0.05)`);
+        grad.addColorStop(0.85, `rgba(${tintR},${tintG},${tintB},0.15)`);
+        grad.addColorStop(1, `rgba(${tintR},${tintG},${tintB},0.35)`);
         ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, cw, ch);
+
+        // Additional subtle warm wash over the whole scene
+        ctx.fillStyle = `rgba(${tintR},${tintG},${tintB},0.04)`;
         ctx.fillRect(0, 0, cw, ch);
     }
 
@@ -2557,32 +2970,83 @@ class Village {
 
     _initParticles() {
         this.particles = [];
-        for (let i = 0; i < 20; i++) {
-            this.particles.push(this._createParticle());
+        // Ambient floating motes
+        for (let i = 0; i < 15; i++) {
+            this.particles.push(this._createParticle('mote'));
+        }
+        // Sparkle particles
+        for (let i = 0; i < 10; i++) {
+            this.particles.push(this._createParticle('sparkle'));
+        }
+        // Dust motes (slow drifting)
+        for (let i = 0; i < 8; i++) {
+            this.particles.push(this._createParticle('dust'));
         }
     }
 
-    _createParticle() {
-        return {
+    _createParticle(type) {
+        const base = {
             x: this.playerX + (Math.random() - 0.5) * 20,
             y: this.playerY + (Math.random() - 0.5) * 15,
-            vx: (Math.random() - 0.5) * 0.3,
-            vy: -Math.random() * 0.2 - 0.05,
-            size: Math.random() * 2 + 0.5,
             life: Math.random() * 5 + 3,
             maxLife: 8,
-            alpha: Math.random() * 0.3 + 0.1,
-            color: Math.random() > 0.5 ? '#ffe' : '#dfd',
+            type: type || 'mote',
         };
+
+        if (type === 'sparkle') {
+            return {
+                ...base,
+                vx: (Math.random() - 0.5) * 0.15,
+                vy: -Math.random() * 0.1 - 0.02,
+                size: Math.random() * 1.5 + 0.5,
+                alpha: Math.random() * 0.4 + 0.2,
+                color: '#fffde0',
+                sparklePhase: Math.random() * Math.PI * 2,
+                sparkleSpeed: 3 + Math.random() * 4,
+            };
+        } else if (type === 'dust') {
+            return {
+                ...base,
+                vx: (Math.random() - 0.5) * 0.08,
+                vy: Math.random() * 0.05 - 0.02,
+                size: Math.random() * 1.5 + 1,
+                alpha: Math.random() * 0.12 + 0.05,
+                color: Math.random() > 0.5 ? '#e8dcc8' : '#d4c8b0',
+                driftPhase: Math.random() * Math.PI * 2,
+            };
+        } else {
+            // Default mote
+            return {
+                ...base,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: -Math.random() * 0.2 - 0.05,
+                size: Math.random() * 2 + 0.5,
+                alpha: Math.random() * 0.3 + 0.1,
+                color: Math.random() > 0.5 ? '#ffe' : '#dfd',
+            };
+        }
     }
 
     _resetParticle(p) {
         p.x = this.playerX + (Math.random() - 0.5) * 20;
         p.y = this.playerY + (Math.random() - 0.5) * 15;
-        p.vx = (Math.random() - 0.5) * 0.3;
-        p.vy = -Math.random() * 0.2 - 0.05;
         p.life = Math.random() * 5 + 3;
-        p.alpha = Math.random() * 0.3 + 0.1;
+        p.alpha = p.type === 'dust' ? Math.random() * 0.12 + 0.05 :
+                  p.type === 'sparkle' ? Math.random() * 0.4 + 0.2 :
+                  Math.random() * 0.3 + 0.1;
+
+        if (p.type === 'sparkle') {
+            p.vx = (Math.random() - 0.5) * 0.15;
+            p.vy = -Math.random() * 0.1 - 0.02;
+            p.sparklePhase = Math.random() * Math.PI * 2;
+        } else if (p.type === 'dust') {
+            p.vx = (Math.random() - 0.5) * 0.08;
+            p.vy = Math.random() * 0.05 - 0.02;
+            p.driftPhase = Math.random() * Math.PI * 2;
+        } else {
+            p.vx = (Math.random() - 0.5) * 0.3;
+            p.vy = -Math.random() * 0.2 - 0.05;
+        }
     }
 
     // === UTILS ===
@@ -2598,5 +3062,26 @@ class Village {
         const rg = Math.round(ag + (bg - ag) * t);
         const rb = Math.round(ab + (bb - ab) * t);
         return `#${rr.toString(16).padStart(2, '0')}${rg.toString(16).padStart(2, '0')}${rb.toString(16).padStart(2, '0')}`;
+    }
+
+    _parseColor(color) {
+        // Parse hex color string to [r, g, b] array
+        if (color.startsWith('#')) {
+            let hex = color.slice(1);
+            if (hex.length === 3) {
+                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+            }
+            return [
+                parseInt(hex.slice(0, 2), 16),
+                parseInt(hex.slice(2, 4), 16),
+                parseInt(hex.slice(4, 6), 16)
+            ];
+        }
+        // Fallback for rgb() format
+        const match = color.match(/(\d+)/g);
+        if (match && match.length >= 3) {
+            return [parseInt(match[0]), parseInt(match[1]), parseInt(match[2])];
+        }
+        return [128, 128, 128]; // default gray
     }
 }
