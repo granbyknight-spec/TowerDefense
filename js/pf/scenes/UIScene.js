@@ -1,0 +1,455 @@
+'use strict';
+// =============================================================================
+// Puppy Force — UIScene.js
+// HUD overlay: runs simultaneously with BattleScene
+// Shows: bottom panel, unit info, action menu, turn banner, dialogue box
+// =============================================================================
+
+class UIScene extends Phaser.Scene {
+  constructor() { super({ key: 'UIScene' }); }
+
+  init(data) {
+    this._battle = data.battleScene;
+  }
+
+  reset(battleScene) {
+    this._battle = battleScene;
+    this._rebuildUI();
+  }
+
+  // --------------------------------------------------------------------------
+  create() {
+    this._buildPanel();
+    this._buildActionMenu();
+    this._buildTurnBanner();
+    this._buildDialogueBox();
+    this._buildEndTurnBtn();
+    this._buildMessage();
+    // Initialize display
+    this.clearUnitInfo();
+    this.hideActionMenu();
+  }
+
+  _rebuildUI() {
+    // Already created, just update references
+  }
+
+  // ==========================================================================
+  // BOTTOM PANEL
+  // ==========================================================================
+
+  _buildPanel() {
+    const W = GAME_W;
+
+    // Panel background
+    const pg = this.add.graphics();
+    pg.fillStyle(PAL.PANEL, 0.95);
+    pg.fillRect(0, UI_Y, W, UI_H);
+    pg.lineStyle(2, PAL.BORDER, 0.8);
+    pg.lineBetween(0, UI_Y, W, UI_Y);
+
+    // Turn indicator (left side)
+    this._turnLabel = this.add.text(10, UI_Y + 8, 'TURN 1', {
+      fontSize: '11px', color: '#8899aa',
+      fontFamily: 'Courier New, monospace',
+    });
+
+    // Phase indicator
+    this._phaseLabel = this.add.text(10, UI_Y + 22, 'YOUR TURN', {
+      fontSize: '12px', color: '#4488ff',
+      fontFamily: 'Courier New, monospace',
+      fontStyle: 'bold',
+    });
+
+    // Unit info area (center)
+    this._unitNameTxt = this.add.text(W / 2, UI_Y + 10, '', {
+      fontSize: '14px', color: '#ffffff',
+      fontFamily: 'Courier New, monospace',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0);
+
+    this._unitStatsTxt = this.add.text(W / 2, UI_Y + 28, '', {
+      fontSize: '11px', color: '#aabbcc',
+      fontFamily: 'Courier New, monospace',
+      align: 'center',
+    }).setOrigin(0.5, 0);
+
+    this._unitHpTxt = this.add.text(W / 2, UI_Y + 48, '', {
+      fontSize: '11px', color: '#88ddaa',
+      fontFamily: 'Courier New, monospace',
+    }).setOrigin(0.5, 0);
+
+    this._unitEmojiTxt = this.add.text(W / 2 - 80, UI_Y + 28, '', {
+      fontSize: '28px',
+    }).setOrigin(0.5, 0);
+
+    // Skills / items display
+    this._skillsTxt = this.add.text(W / 2, UI_Y + 68, '', {
+      fontSize: '10px', color: '#7788aa',
+      fontFamily: 'Courier New, monospace',
+    }).setOrigin(0.5, 0);
+  }
+
+  // ==========================================================================
+  // ACTION MENU
+  // ==========================================================================
+
+  _buildActionMenu() {
+    this._actionMenu = this.add.container(0, 0).setVisible(false);
+    const W = GAME_W;
+    const btnData = [
+      { key: 'atk',   label: '⚔ Attack',  color: 0x882222, hi: 0xcc4444 },
+      { key: 'mag',   label: '✨ Magic',   color: 0x224488, hi: 0x4488cc },
+      { key: 'item',  label: '🎒 Item',    color: 0x226622, hi: 0x44aa44 },
+      { key: 'wait',  label: '⏳ Wait',    color: 0x444422, hi: 0x888822 },
+    ];
+
+    const btnW = (W - 20) / 4 - 4;
+    const btnH = 36;
+    const startX = 10;
+    const y = UI_Y + 104;
+
+    this._actionBtns = {};
+    btnData.forEach((b, i) => {
+      const x = startX + i * (btnW + 4);
+      const bg = this.add.graphics();
+      bg.fillStyle(b.color, 1);
+      bg.fillRoundedRect(x, y, btnW, btnH, 6);
+      bg.lineStyle(1, b.hi, 0.8);
+      bg.strokeRoundedRect(x, y, btnW, btnH, 6);
+
+      const txt = this.add.text(x + btnW / 2, y + btnH / 2, b.label, {
+        fontSize: '12px', color: '#ffffff',
+        fontFamily: 'Courier New, monospace',
+        fontStyle: 'bold',
+        align: 'center',
+      }).setOrigin(0.5);
+
+      const zone = this.add.zone(x + btnW/2, y + btnH/2, btnW, btnH)
+        .setInteractive({ useHandCursor: true });
+
+      zone.on('pointerover', () => {
+        bg.clear();
+        bg.fillStyle(b.hi, 1);
+        bg.fillRoundedRect(x, y, btnW, btnH, 6);
+      });
+      zone.on('pointerout', () => {
+        bg.clear();
+        bg.fillStyle(b.color, 1);
+        bg.fillRoundedRect(x, y, btnW, btnH, 6);
+        bg.lineStyle(1, b.hi, 0.8);
+        bg.strokeRoundedRect(x, y, btnW, btnH, 6);
+      });
+      zone.on('pointerdown', () => {
+        this.tweens.add({ targets: txt, scaleX:0.9, scaleY:0.9, duration:80, yoyo:true });
+        this._onActionBtn(b.key);
+      });
+
+      this._actionMenu.add([bg, txt, zone]);
+      this._actionBtns[b.key] = { bg, txt, zone, bData: b, x, y, w: btnW, h: btnH };
+    });
+  }
+
+  _onActionBtn(key) {
+    const bs = this._battle;
+    if (!bs) return;
+    switch (key) {
+      case 'atk':  bs.onActionAttack(); break;
+      case 'mag':  bs.onActionMagic();  break;
+      case 'item': bs.onActionItem();   break;
+      case 'wait': bs.onActionWait();   break;
+    }
+    this.hideActionMenu();
+  }
+
+  // ==========================================================================
+  // END TURN BUTTON
+  // ==========================================================================
+
+  _buildEndTurnBtn() {
+    const W = GAME_W;
+    const x = W - 76, y = UI_Y + 12, w = 66, h = 52;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x113344, 1);
+    bg.fillRoundedRect(x, y, w, h, 8);
+    bg.lineStyle(1, 0x2266aa, 0.9);
+    bg.strokeRoundedRect(x, y, w, h, 8);
+
+    const txt = this.add.text(x + w/2, y + h/2, 'END\nTURN', {
+      fontSize: '12px', color: '#88ccff',
+      fontFamily: 'Courier New, monospace',
+      fontStyle: 'bold',
+      align: 'center',
+    }).setOrigin(0.5);
+
+    const zone = this.add.zone(x + w/2, y + h/2, w, h).setInteractive({ useHandCursor: true });
+    zone.on('pointerover', () => { bg.clear(); bg.fillStyle(0x2255aa, 1); bg.fillRoundedRect(x,y,w,h,8); });
+    zone.on('pointerout',  () => { bg.clear(); bg.fillStyle(0x113344, 1); bg.fillRoundedRect(x,y,w,h,8); bg.lineStyle(1,0x2266aa,0.9); bg.strokeRoundedRect(x,y,w,h,8); });
+    zone.on('pointerdown', () => {
+      this.tweens.add({ targets: [bg,txt], scaleX:0.9, scaleY:0.9, duration:80, yoyo:true });
+      this._battle?.onEndTurn();
+    });
+
+    this._endTurnBtn = { bg, txt, zone };
+  }
+
+  // ==========================================================================
+  // TURN BANNER
+  // ==========================================================================
+
+  _buildTurnBanner() {
+    const W = GAME_W;
+    this._bannerBg = this.add.graphics().setVisible(false);
+    this._bannerTxt = this.add.text(W / 2, GAME_H / 2 - 30, '', {
+      fontFamily: 'Georgia, serif',
+      fontSize: '36px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setVisible(false);
+  }
+
+  showTurnBanner(text, color) {
+    const W = GAME_W;
+    this._bannerBg.setVisible(true);
+    this._bannerTxt.setVisible(true);
+    this._bannerBg.clear();
+    this._bannerBg.fillStyle(0x000000, 0.6);
+    this._bannerBg.fillRect(0, GAME_H/2 - 60, W, 80);
+    this._bannerBg.lineStyle(2, color, 0.8);
+    this._bannerBg.lineBetween(0, GAME_H/2 - 60, W, GAME_H/2 - 60);
+    this._bannerBg.lineBetween(0, GAME_H/2 + 20, W, GAME_H/2 + 20);
+
+    this._bannerTxt.setText(text);
+    this._bannerTxt.setStyle({ color: '#' + color.toString(16).padStart(6, '0') });
+
+    this._bannerBg.setAlpha(1);
+    this._bannerTxt.setAlpha(1);
+
+    this.tweens.add({
+      targets: [this._bannerBg, this._bannerTxt],
+      alpha: 0,
+      duration: 600,
+      delay: 900,
+      onComplete: () => {
+        this._bannerBg.setVisible(false);
+        this._bannerTxt.setVisible(false);
+      },
+    });
+
+    // Update turn label
+    const bn = this._battle;
+    if (bn) {
+      this._turnLabel?.setText(`TURN ${bn.turnNumber}`);
+      this._phaseLabel?.setText(bn.playerTurn ? 'YOUR TURN' : 'ENEMY TURN');
+      this._phaseLabel?.setStyle({ color: bn.playerTurn ? '#4488ff' : '#ff4444' });
+    }
+  }
+
+  // ==========================================================================
+  // UNIT INFO
+  // ==========================================================================
+
+  showUnitInfo(unit) {
+    if (!unit) { this.clearUnitInfo(); return; }
+    const hpPct = Math.floor(unit.hp / unit.maxHp * 100);
+    const hpColor = unit.hp > unit.maxHp * 0.5 ? '#44cc66'
+                  : unit.hp > unit.maxHp * 0.25 ? '#ffcc00' : '#ff4444';
+
+    const promoted = unit.promoted ? '★' : '';
+    this._unitNameTxt?.setText(`${unit.name}${promoted}  Lv${unit.level}`);
+    this._unitEmojiTxt?.setText(unit.emoji);
+    this._unitStatsTxt?.setText(`ATK:${unit.atk}  DEF:${unit.def}  MOV:${unit.mov}  AGI:${unit.agi}`);
+    this._unitHpTxt?.setText(`HP: ${unit.hp}/${unit.maxHp}  (${hpPct}%)`)
+                    .setStyle({ color: hpColor });
+
+    const skillList = unit.skills.map(s => SKILLS[s]?.name || s).join(' · ');
+    const itemList  = unit.items.map(i => ITEMS[i]?.emoji || '').join('');
+    this._skillsTxt?.setText(`${skillList}  ${itemList}`);
+
+    // Update phase labels
+    if (this._battle) {
+      this._turnLabel?.setText(`TURN ${this._battle.turnNumber}`);
+    }
+  }
+
+  clearUnitInfo() {
+    this._unitNameTxt?.setText('');
+    this._unitStatsTxt?.setText('Tap a unit to select');
+    this._unitHpTxt?.setText('');
+    this._unitEmojiTxt?.setText('');
+    this._skillsTxt?.setText('');
+  }
+
+  // ==========================================================================
+  // ACTION MENU
+  // ==========================================================================
+
+  showActionMenu(unit, battleScene) {
+    this._battle = battleScene;
+    this._actionMenu.setVisible(true);
+    // Disable magic button if no skills
+    const hasMagic = unit.skills.length > 0;
+    const hasItem  = unit.items.length > 0;
+    const magBtn = this._actionBtns['mag'];
+    const itmBtn = this._actionBtns['item'];
+    if (magBtn) {
+      const alpha = hasMagic ? 1 : 0.4;
+      magBtn.txt.setAlpha(alpha);
+      if (hasMagic) magBtn.zone.setInteractive({ useHandCursor: true });
+      else magBtn.zone.disableInteractive();
+    }
+    if (itmBtn) {
+      const alpha = hasItem ? 1 : 0.4;
+      itmBtn.txt.setAlpha(alpha);
+      if (hasItem) itmBtn.zone.setInteractive({ useHandCursor: true });
+      else itmBtn.zone.disableInteractive();
+    }
+  }
+
+  hideActionMenu() {
+    this._actionMenu.setVisible(false);
+  }
+
+  // ==========================================================================
+  // MESSAGE
+  // ==========================================================================
+
+  _buildMessage() {
+    const W = GAME_W;
+    this._msgBg  = this.add.graphics().setVisible(false);
+    this._msgTxt = this.add.text(W / 2, UI_Y - 22, '', {
+      fontSize: '13px',
+      color: '#ffffff',
+      fontFamily: 'Courier New, monospace',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setVisible(false);
+  }
+
+  showMessage(text) {
+    const W = GAME_W;
+    this._msgBg.clear();
+    this._msgBg.fillStyle(0x000000, 0.7);
+    this._msgBg.fillRoundedRect(W/2 - 160, UI_Y - 36, 320, 30, 6);
+    this._msgBg.setVisible(true);
+    this._msgTxt.setText(text).setVisible(true);
+
+    this.tweens.killTweensOf([this._msgBg, this._msgTxt]);
+    this._msgBg.setAlpha(1);
+    this._msgTxt.setAlpha(1);
+    this.tweens.add({
+      targets: [this._msgBg, this._msgTxt],
+      alpha: 0, duration: 400, delay: 2000,
+      onComplete: () => { this._msgBg.setVisible(false); this._msgTxt.setVisible(false); },
+    });
+  }
+
+  // ==========================================================================
+  // DIALOGUE BOX
+  // ==========================================================================
+
+  _buildDialogueBox() {
+    const W = GAME_W;
+    const boxH = 110;
+    const boxY = GAME_H - boxH - 10;
+
+    this._dlgContainer = this.add.container(0, 0).setVisible(false);
+
+    const dBg = this.add.graphics();
+    dBg.fillStyle(0x000020, 0.92);
+    dBg.fillRoundedRect(10, boxY, W - 20, boxH, 10);
+    dBg.lineStyle(2, PAL.GOLD, 0.8);
+    dBg.strokeRoundedRect(10, boxY, W - 20, boxH, 10);
+
+    this._dlgPortrait = this.add.text(28, boxY + 14, '', { fontSize: '38px' });
+    this._dlgSpeaker  = this.add.text(76, boxY + 12, '', {
+      fontSize: '14px', color: '#f8d030',
+      fontFamily: 'Georgia, serif',
+      fontStyle: 'bold',
+    });
+    this._dlgText = this.add.text(76, boxY + 34, '', {
+      fontSize: '13px', color: '#ddeeff',
+      fontFamily: 'Courier New, monospace',
+      wordWrap: { width: W - 106 },
+      lineSpacing: 4,
+    });
+    this._dlgPrompt = this.add.text(W - 24, boxY + boxH - 18, '▶ TAP', {
+      fontSize: '11px', color: '#8899aa',
+      fontFamily: 'Courier New, monospace',
+    }).setOrigin(1, 0.5);
+
+    this.tweens.add({
+      targets: this._dlgPrompt, alpha: { from: 0.3, to: 1 },
+      duration: 600, yoyo: true, repeat: -1,
+    });
+
+    this._dlgContainer.add([dBg, this._dlgPortrait, this._dlgSpeaker, this._dlgText, this._dlgPrompt]);
+
+    // Dialogue visual zone (visual only - BattleScene handles all input)
+    this._dlgContainer.add([]);
+  }
+
+  showDialogue(line) {
+    this._dlgContainer.setVisible(true);
+    this._dlgPortrait.setText(line.portrait || '');
+    this._dlgSpeaker.setText(line.speaker || '');
+    this._dlgText.setText(line.text || '');
+    // Typewriter effect
+    const fullText = line.text || '';
+    this._dlgText.setText('');
+    let i = 0;
+    const timer = this.time.addEvent({
+      delay: 28, repeat: fullText.length - 1,
+      callback: () => {
+        this._dlgText.setText(fullText.slice(0, ++i));
+      },
+    });
+  }
+
+  hideDialogue() {
+    this._dlgContainer.setVisible(false);
+  }
+
+  // ==========================================================================
+  // CHAPTER TITLE CARD
+  // ==========================================================================
+
+  showChapterTitle(chapterId) {
+    const chap = CHAPTERS[chapterId - 1];
+    const W = GAME_W;
+
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.85);
+    overlay.fillRect(0, 0, W, GAME_H);
+
+    const chNum = this.add.text(W/2, GAME_H/2 - 60, `CHAPTER ${chapterId}`, {
+      fontSize: '14px', color: '#8899aa',
+      fontFamily: 'Courier New, monospace',
+      letterSpacing: 6,
+    }).setOrigin(0.5).setAlpha(0);
+
+    const chTitle = this.add.text(W/2, GAME_H/2 - 30, chap.title, {
+      fontSize: '32px', color: '#f8d030',
+      fontFamily: 'Georgia, serif',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setAlpha(0);
+
+    const chSub = this.add.text(W/2, GAME_H/2 + 20, chap.subtitle, {
+      fontSize: '14px', color: '#aabbcc',
+      fontFamily: 'Courier New, monospace',
+      align: 'center',
+      wordWrap: { width: W - 60 },
+    }).setOrigin(0.5).setAlpha(0);
+
+    this.tweens.add({ targets:[chNum,chTitle,chSub], alpha:1, duration:600, stagger:200 });
+    this.time.delayedCall(2200, () => {
+      this.tweens.add({
+        targets:[overlay,chNum,chTitle,chSub], alpha:0, duration:500,
+        onComplete:() => { overlay.destroy(); chNum.destroy(); chTitle.destroy(); chSub.destroy(); },
+      });
+    });
+  }
+}

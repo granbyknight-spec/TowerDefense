@@ -1,197 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>Puppy Academy</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>🐾 Puppy Force</title>
+  <link rel="stylesheet" href="css/pf.css">
 </head>
 <body>
-    <div id="game-container">
-        <!-- Title Screen -->
-        <div id="title-screen" class="overlay-screen">
-            <div class="title-dogs">🐶🐕🐩</div>
-            <div class="game-title">PUPPY ACADEMY</div>
-            <div class="title-divider"></div>
-            <div class="game-subtitle">Raise dogs. Learn breeds. Defend the yard!</div>
-            <input id="player-name" type="text" class="name-input" placeholder="Enter your trainer name..." maxlength="16" autocomplete="off">
-            <div class="starter-label">Choose your starter dog:</div>
-            <div id="starter-select">
-                <button class="starter-btn selected" data-breed="barker">
-                    🐕
-                    <span class="starter-breed-name">Beagle</span>
-                    <span class="starter-trait">Curious</span>
-                </button>
-                <button class="starter-btn" data-breed="poodle">
-                    🐩
-                    <span class="starter-breed-name">Poodle</span>
-                    <span class="starter-trait">Clever</span>
-                </button>
-                <button class="starter-btn" data-breed="husky">
-                    🐺
-                    <span class="starter-breed-name">Husky</span>
-                    <span class="starter-trait">Tough</span>
-                </button>
-            </div>
-            <button id="start-btn" class="screen-btn">START ADVENTURE</button>
-            <button id="load-save-title-btn" class="screen-btn">Load Save</button>
-            <button id="highscores-btn" class="screen-btn">High Scores</button>
-            <button id="tactics-btn" class="screen-btn" onclick="startTacticalBattle()" style="background:linear-gradient(180deg,#4a1a6b 0%,#2d1040 100%);border-color:rgba(180,100,255,0.3);">TACTICAL BATTLE</button>
-            <div class="sound-hint">Sound enabled on tap</div>
-            <div id="version-tag" class="version-tag"></div>
-        </div>
-
-        <!-- Load Save Code Screen (from title) -->
-        <div id="load-save-screen" class="overlay-screen" style="display:none;">
-            <div class="end-title" style="color:#FFD700;">Load Save Code</div>
-            <textarea id="title-load-input" class="hub-save-code" rows="4" placeholder="Paste your save code here..." style="width:90%;max-width:340px;margin:8px auto;font-size:12px;"></textarea>
-            <button id="title-load-apply-btn" class="screen-btn">Load Game</button>
-            <button id="title-load-back-btn" class="screen-btn" style="background:linear-gradient(180deg,#37474F 0%,#263238 100%);border-color:rgba(100,140,200,0.2);padding:10px 28px;font-size:13px;">Back</button>
-        </div>
-
-        <!-- Hub/Academy Screen -->
-        <div id="hub-screen" class="overlay-screen" style="display:none;"></div>
-
-        <!-- Leaderboard Screen -->
-        <div id="leaderboard-screen" class="overlay-screen" style="display:none;">
-            <div class="end-title" style="color:#FFD700;">HIGH SCORES</div>
-            <table class="leaderboard-table">
-                <thead>
-                    <tr><th>#</th><th>Name</th><th>Score</th><th>Kills</th><th>Level</th></tr>
-                </thead>
-                <tbody id="leaderboard-body">
-                    <tr><td colspan="5" style="text-align:center;color:#5a7aaa;">No scores yet!</td></tr>
-                </tbody>
-            </table>
-            <button id="close-leaderboard-btn" class="screen-btn" style="padding:12px 36px;font-size:14px;background:linear-gradient(180deg,#37474F 0%,#263238 100%);border-color:rgba(100,140,200,0.2);">BACK</button>
-        </div>
-
-        <!-- HUD -->
-        <div id="hud">
-            <div class="hud-item">
-                <span class="hud-icon">💰</span>
-                <span id="gold-display">200</span>
-            </div>
-            <div id="level-display" class="hud-level"></div>
-            <div id="timer-display"></div>
-            <div class="hud-item">
-                <span class="hud-icon">🐾</span>
-                <span id="wave-display">0 / 7</span>
-            </div>
-            <div class="hud-item">
-                <span class="hud-icon">❤️</span>
-                <span id="lives-display">20</span>
-            </div>
-        </div>
-
-        <!-- Speed & Sound & Zoom Controls -->
-        <div id="game-controls">
-            <button id="speed-btn" class="ctrl-btn" title="Game Speed">1x</button>
-            <button id="mute-btn" class="ctrl-btn" title="Toggle Sound FX">🔊</button>
-            <button id="music-btn" class="ctrl-btn" title="Toggle Music">🎵</button>
-            <span class="ctrl-divider"></span>
-            <button id="zoom-in-btn" class="ctrl-btn" title="Zoom In">+</button>
-            <button id="zoom-out-btn" class="ctrl-btn" title="Zoom Out">−</button>
-            <button id="zoom-reset-btn" class="ctrl-btn" title="Reset Zoom">⊙</button>
-            <span class="ctrl-divider"></span>
-            <button id="perspective-btn" class="ctrl-btn" title="Toggle 2.5D View">2D</button>
-            <span class="ctrl-divider"></span>
-            <button id="pause-btn" class="ctrl-btn" title="Pause / Menu">⏸</button>
-        </div>
-
-        <!-- Pause Menu Overlay -->
-        <div id="pause-overlay" class="pause-overlay" style="display:none;">
-            <div class="pause-menu">
-                <div class="pause-title">PAUSED</div>
-                <button id="pause-resume-btn" class="pause-menu-btn pause-resume">Resume</button>
-                <button id="pause-quit-btn" class="pause-menu-btn pause-quit">Quit to Hub</button>
-            </div>
-        </div>
-
-        <!-- Game Canvas -->
-        <canvas id="game-canvas"></canvas>
-
-        <!-- Trivia Panel (between waves) -->
-        <div id="trivia-panel">
-            <div class="trivia-timer-bar"><div id="trivia-timer-fill" class="trivia-timer-fill"></div></div>
-            <div id="trivia-question" class="trivia-question"></div>
-            <div class="trivia-answers">
-                <button class="trivia-btn"></button>
-                <button class="trivia-btn"></button>
-                <button class="trivia-btn"></button>
-                <button class="trivia-btn"></button>
-            </div>
-            <div id="trivia-result" class="trivia-result"></div>
-        </div>
-
-        <!-- Upgrade/Sell Panel -->
-        <div id="upgrade-panel"></div>
-
-        <!-- Combined Bottom Bar: Abilities + Tower Selection -->
-        <div id="bottom-bar">
-            <div id="ability-bar"></div>
-            <div id="tower-bar"></div>
-        </div>
-
-        <!-- Level Complete Screen -->
-        <div id="level-complete-screen" class="overlay-screen">
-            <div style="font-size:48px;">🎉🐕🎉</div>
-            <div class="end-title" style="color:#4CAF50; text-shadow: 0 0 20px rgba(76,175,80,0.3);">LEVEL <span id="lc-level">1</span> COMPLETE!</div>
-            <div id="lc-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
-            <div class="end-subtitle">Next up: <span id="lc-next"></span></div>
-            <button id="next-level-btn" class="screen-btn">NEXT LEVEL</button>
-            <button class="screen-btn restart-btn" style="background:linear-gradient(180deg,#1565C0 0%,#0D47A1 100%);border-color:rgba(100,160,255,0.3);padding:12px 28px;font-size:14px;">Back to Academy</button>
-        </div>
-
-        <!-- Game Over Screen -->
-        <div id="game-over-screen" class="overlay-screen">
-            <div class="end-title">THE CATS GOT THROUGH!</div>
-            <div class="end-subtitle">Your puppies fought bravely...</div>
-            <div class="end-stat">Wave <span id="go-wave">0</span> | Kills: <span id="go-kills">0</span></div>
-            <div class="end-stat">Best Combo: <span id="go-combo" style="color:#FF8C00;">0</span>x</div>
-            <div class="end-stat">Score: <span id="go-score" style="color:#FFD700;">0</span></div>
-            <div id="go-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
-            <div style="font-size:48px;">😿🐱🐈</div>
-            <button class="screen-btn restart-btn" style="background:linear-gradient(180deg,#1565C0 0%,#0D47A1 100%);border-color:rgba(100,160,255,0.3);">Back to Academy</button>
-        </div>
-
-        <!-- Victory Screen -->
-        <div id="victory-screen" class="overlay-screen">
-            <div class="end-title">YARD DEFENDED!</div>
-            <div class="end-subtitle">The puppies saved the day!</div>
-            <div class="end-stat">Gold: <span id="vic-gold">0</span> | Kills: <span id="vic-kills">0</span></div>
-            <div class="end-stat">Best Combo: <span id="vic-combo" style="color:#FF8C00;">0</span>x</div>
-            <div class="end-stat">Score: <span id="vic-score" style="color:#FFD700;">0</span></div>
-            <div id="vic-rewards" class="end-stat" style="color:#4CAF50;display:none;"></div>
-            <div style="font-size:48px;">🎉🐶🏆</div>
-            <button class="screen-btn restart-btn" style="background:linear-gradient(180deg,#1565C0 0%,#0D47A1 100%);border-color:rgba(100,160,255,0.3);">Back to Academy</button>
-        </div>
-    </div>
-
-    <!-- Scripts (order matters) -->
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/pathfinding.js"></script>
-    <script src="js/grid.js"></script>
-    <script src="js/enemy.js"></script>
-    <script src="js/tower.js"></script>
-    <script src="js/projectile.js"></script>
-    <script src="js/wave.js"></script>
-    <script src="js/renderer.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/save.js"></script>
-    <script src="js/academy.js"></script>
-    <script src="js/episodes.js"></script>
-    <script src="js/story.js"></script>
-    <script src="js/village.js"></script>
-    <script src="js/villageMaps.js"></script>
-    <script src="js/hub.js"></script>
-    <script src="js/tacticsSprites.js"></script>
-    <script src="js/tacticsEngine.js"></script>
-    <script src="js/tactics.js"></script>
-    <script src="js/game.js"></script>
+  <div id="pf-container"></div>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <script src="js/pf/Config.js"></script>
+  <script src="js/pf/Unit.js"></script>
+  <script src="js/pf/Pathfinding.js"></script>
+  <script src="js/pf/EnemyAI.js"></script>
+  <script src="js/pf/ChapterData.js"></script>
+  <script src="js/pf/SaveManager.js"></script>
+  <script src="js/pf/scenes/TitleScene.js"></script>
+  <script src="js/pf/scenes/BattleScene.js"></script>
+  <script src="js/pf/scenes/UIScene.js"></script>
+  <script src="js/pf/scenes/VictoryScene.js"></script>
+  <script src="js/pf/main.js"></script>
 </body>
 </html>
