@@ -752,8 +752,10 @@ class TacticsEngine {
 
         // ── Post-combat bookkeeping ───────────────────────────────────────────
         this._awardExp(attacker, defender, killed);
-        this.checkStoryTriggers();
-        this.checkBattleEnd();
+        this.checkBattleEnd(); // Must come first — if battle is over, skip story triggers
+        if (this.state !== 'victory' && this.state !== 'defeat') {
+            this.checkStoryTriggers();
+        }
 
         return { damage, critical, killed };
     }
@@ -882,8 +884,10 @@ class TacticsEngine {
 
         this._emit('ability_used', { unit, abilityName, targetX, targetY, targets });
 
-        this.checkStoryTriggers();
         this.checkBattleEnd();
+        if (this.state !== 'victory' && this.state !== 'defeat') {
+            this.checkStoryTriggers();
+        }
         return true;
     }
 
@@ -1304,6 +1308,7 @@ class TacticsEngine {
      * Should be called after every combat/movement action.
      */
     checkStoryTriggers() {
+        if (this.state === 'victory' || this.state === 'defeat') return;
         for (const trigger of this.storyTriggers) {
             if (trigger.fired) continue;
             if (typeof trigger.condition === 'function' && trigger.condition()) {
