@@ -878,8 +878,9 @@ class TacticsEngine {
         targets.forEach(target => {
             // ── Damage ability ────────────────────────────────────────────────
             if (def.power !== undefined) {
+                // Use ability power directly as the ATK stat for damage calc
                 const { damage, critical } = this.calcDamage(
-                    { ...unit, atk: Math.floor(def.power / 2) },
+                    { ...unit, atk: def.power, _atkBuff: 0 },
                     target,
                     def.ignoresTerrain || false
                 );

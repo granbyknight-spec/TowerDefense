@@ -17689,8 +17689,9 @@ class TacticsEngine {
         targets.forEach(target => {
             // ── Damage ability ────────────────────────────────────────────────
             if (def.power !== undefined) {
+                // Use ability power directly as the ATK stat for damage calc
                 const { damage, critical } = this.calcDamage(
-                    { ...unit, atk: Math.floor(def.power / 2) },
+                    { ...unit, atk: def.power, _atkBuff: 0 },
                     target,
                     def.ignoresTerrain || false
                 );
@@ -18536,8 +18537,11 @@ class TacticalBattle {
         this._ptrH = null; this._wheelH = null; this._keyH = null;
         this._pinch = null;
         this.onComplete = null;
+        this.onCutscene = null; // callback for post-battle cutscene transition
         this._raf = null; this._lastT = 0;
         this._scenario = null;
+        // Victory animation state
+        this._victoryAnim = null; // {timer, phase, sparkles[], done}
     }
 
     // ── Loading ───────────────────────────────────────────────────────
@@ -18662,8 +18666,29 @@ class TacticalBattle {
             this.damageNumbers.push({
                 x:(data.target.x+0.5)*this.ts, y:data.target.y*this.ts-8,
                 text:'+'+data.amount, color:TPAL.HP_GREEN, timer:0, max:1.2});
-        } else if (name==='victory' && this._scenario.victoryDialogue) {
-            for (const l of this._scenario.victoryDialogue) this.engine.queueDialogue(l.speaker,l.text,null);
+            data.target._flashTimer = 0.2;
+        } else if (name==='unit_buffed' && data.target) {
+            this.damageNumbers.push({
+                x:(data.target.x+0.5)*this.ts, y:data.target.y*this.ts-8,
+                text:'ATK+'+data.amount, color:'#88ddff', timer:0, max:1.4});
+            data.target._flashTimer = 0.2;
+        } else if (name==='unit_debuffed' && data.target) {
+            this.damageNumbers.push({
+                x:(data.target.x+0.5)*this.ts, y:data.target.y*this.ts-8,
+                text:'DEF-'+data.amount, color:'#ff88ff', timer:0, max:1.4});
+            data.target._flashTimer = 0.2;
+        } else if (name==='ability_used' && data.abilityName) {
+            // Show ability name over the caster
+            this.damageNumbers.push({
+                x:(data.unit.x+0.5)*this.ts, y:data.unit.y*this.ts-16,
+                text:ABILITY_DEFS[data.abilityName]?ABILITY_DEFS[data.abilityName].name:data.abilityName,
+                color:TPAL.UI_ACCENT, timer:0, max:1.0});
+        } else if (name==='victory') {
+            // Start victory animation before dialogue
+            this._startVictoryAnim();
+            if (this._scenario.victoryDialogue) {
+                for (const l of this._scenario.victoryDialogue) this.engine.queueDialogue(l.speaker,l.text,null);
+            }
         } else if (name==='defeat' && this._scenario.defeatDialogue) {
             for (const l of this._scenario.defeatDialogue) this.engine.queueDialogue(l.speaker,l.text,null);
         } else if (name==='phase_change' && data.phase==='enemy') {
@@ -18707,6 +18732,64 @@ class TacticalBattle {
         const act=this.engine.selectedUnit;
         if (act&&act.alive){this.camTargetX=(act.x+0.5)*this.ts;this.camTargetY=(act.y+0.5)*this.ts;}
         this.engine.checkStoryTriggers();
+        // Victory animation update
+        if(this._victoryAnim){this._updateVictoryAnim(dt);}
+    }
+
+    // ── Victory animation ─────────────────────────────────────────────
+    _startVictoryAnim(){
+        const alive=this.engine.getTeamUnits('player');
+        // Center camera on surviving units
+        if(alive.length){
+            const ax=alive.reduce((s,u)=>s+u.x,0)/alive.length;
+            const ay=alive.reduce((s,u)=>s+u.y,0)/alive.length;
+            this.camTargetX=(ax+0.5)*this.ts;this.camTargetY=(ay+0.5)*this.ts;
+        }
+        // Create sparkle particles
+        const sparkles=[];
+        for(let i=0;i<30;i++){
+            sparkles.push({
+                x:Math.random()*this.engine.map.width*this.ts,
+                y:Math.random()*this.engine.map.height*this.ts,
+                vx:(Math.random()-0.5)*60, vy:-40-Math.random()*80,
+                size:2+Math.random()*4, color:['#f8d830','#fcfcfc','#88bbff','#38b764','#f07898'][Math.floor(Math.random()*5)],
+                life:1+Math.random()*2, age:0
+            });
+        }
+        this._victoryAnim={timer:0, duration:3.5, sparkles, done:false};
+    }
+    _updateVictoryAnim(dt){
+        const va=this._victoryAnim;if(!va||va.done)return;
+        va.timer+=dt;
+        for(const s of va.sparkles){
+            s.age+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt; s.vy+=30*dt; // gentle gravity
+        }
+        // Make surviving units bounce during the animation
+        const alive=this.engine.getTeamUnits('player');
+        for(const u of alive){u._victoryBounce=true;}
+        if(va.timer>=va.duration){va.done=true;}
+    }
+    _rVictoryAnim(ctx,ts){
+        const va=this._victoryAnim;if(!va)return;
+        // Render sparkle particles
+        for(const s of va.sparkles){
+            if(s.age>=s.life)continue;
+            const a=1-(s.age/s.life);
+            ctx.save();ctx.globalAlpha=a;
+            ctx.fillStyle=s.color;
+            // Star shape
+            const sz=s.size*(0.5+Math.sin(s.age*8)*0.5);
+            ctx.beginPath();
+            for(let i=0;i<5;i++){
+                const ang=i*Math.PI*2/5-Math.PI/2;
+                const r1=sz,r2=sz*0.4;
+                ctx.lineTo(s.x+Math.cos(ang)*r1,s.y+Math.sin(ang)*r1);
+                const ang2=ang+Math.PI/5;
+                ctx.lineTo(s.x+Math.cos(ang2)*r2,s.y+Math.sin(ang2)*r2);
+            }
+            ctx.closePath();ctx.fill();
+            ctx.restore();
+        }
     }
 
     // ── RENDER ────────────────────────────────────────────────────────
@@ -18729,6 +18812,7 @@ class TacticalBattle {
         this._rCursor(ctx,ts);
         this._rDeathAnims(ctx,ts);
         this._rDmg(ctx);
+        if(this._victoryAnim)this._rVictoryAnim(ctx,ts);
         ctx.restore();
         this._rBanner(ctx,cw,ch);
         this._rInfo(ctx,cw,ch);
@@ -18768,9 +18852,14 @@ class TacticalBattle {
         }
         if(e.attackableTiles.length){
             const p=0.35+Math.sin(this.time*5)*0.1;
-            ctx.fillStyle=`rgba(255,80,80,${p})`;
+            // Green for ally-targeting abilities (heal/buff), red for attack/enemy
+            const pa=e._pendingAbility;
+            const ad=pa?ABILITY_DEFS[pa]:null;
+            const isAlly=ad&&ad.targetType==='ally';
+            const cr=isAlly?'80,200,80':'255,80,80';
+            ctx.fillStyle=`rgba(${cr},${p})`;
             for(const t of e.attackableTiles)ctx.fillRect(t.x*ts+1,t.y*ts+1,ts-2,ts-2);
-            ctx.strokeStyle=`rgba(255,80,80,${p+0.15})`;ctx.lineWidth=1.5;
+            ctx.strokeStyle=`rgba(${cr},${p+0.15})`;ctx.lineWidth=1.5;
             for(const t of e.attackableTiles)ctx.strokeRect(t.x*ts+1,t.y*ts+1,ts-2,ts-2);
         }
     }
@@ -18781,7 +18870,8 @@ class TacticalBattle {
             ctx.fillStyle='rgba(0,0,0,0.18)';
             ctx.beginPath();ctx.ellipse(px+ts/2,py+ts-3,ts*0.28,ts*0.08,0,0,Math.PI*2);ctx.fill();
             let by=0;
-            if(u===this.engine.selectedUnit)by=Math.sin(this.time*6)*3;
+            if(u._victoryBounce)by=Math.abs(Math.sin(this.time*5+u.x*1.3+u.y*0.7))*-10;
+            else if(u===this.engine.selectedUnit)by=Math.sin(this.time*6)*3;
             const dir=['down','left','right','up'][u.dir||0];
             const fi=Math.floor(this.time*3)%2;
             let sp=getTacticsSprite(this.spriteCache,u.spriteKey+'_'+dir,fi);
@@ -18923,20 +19013,24 @@ class TacticalBattle {
         const items=[];
         if(!u.moved)items.push('Move');
         items.push('Attack');
-        for(const ab of(u.abilities||[])){if(ab==='attack')continue;const d=ABILITY_DEFS[ab];if(d&&u.mp>=d.mpCost)items.push(d.name);}
+        for(const ab of(u.abilities||[])){if(ab==='attack')continue;const d=ABILITY_DEFS[ab];if(d&&u.mp>=d.mpCost)items.push({label:d.name,mp:d.mpCost,key:ab});}
         items.push('Wait');
-        const bw=120,bh=28,gap=4;
+        const bw=130,bh=28,gap=4;
         const mH=items.length*(bh+gap)+gap,mx=cw-bw-16,my=ch-mH-96;
         this._dq(ctx,mx-8,my-8,bw+16,mH+16);
         this.actionButtons=[];
         ctx.save();
         for(let i=0;i<items.length;i++){
+            const item=items[i];
+            const isObj=typeof item==='object';
+            const lbl=isObj?item.label:item;
             const bx=mx,bby=my+i*(bh+gap);
             ctx.fillStyle='#001088';ctx.fillRect(bx,bby,bw,bh);
             ctx.strokeStyle=TPAL.UI_BORDER;ctx.lineWidth=1;ctx.strokeRect(bx,bby,bw,bh);
-            ctx.font='bold 13px monospace';ctx.fillStyle=TPAL.UI_TEXT;ctx.textAlign='center';
-            ctx.fillText(items[i],bx+bw/2,bby+19);
-            this.actionButtons.push({label:items[i],x:bx,y:bby,w:bw,h:bh});
+            ctx.font='bold 12px monospace';ctx.fillStyle=TPAL.UI_TEXT;ctx.textAlign='left';
+            ctx.fillText(lbl,bx+8,bby+19);
+            if(isObj&&item.mp>0){ctx.font='10px monospace';ctx.fillStyle='#88aaff';ctx.textAlign='right';ctx.fillText(item.mp+'MP',bx+bw-8,bby+19);}
+            this.actionButtons.push({label:lbl,x:bx,y:bby,w:bw,h:bh});
         }
         ctx.restore();
     }
@@ -18964,12 +19058,37 @@ class TacticalBattle {
         const e=this.engine;
         if(e.state!=='victory'&&e.state!=='defeat')return;
         if(e.currentDialogue)return;
-        ctx.save();ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,cw,ch);
         const win=e.state==='victory';
-        ctx.font='bold 32px monospace';ctx.textAlign='center';
+        // Animated fade-in overlay
+        const va=this._victoryAnim;
+        const fadeIn=va?Math.min(1,va.timer/1.5):1;
+        ctx.save();
+        ctx.fillStyle=`rgba(0,0,0,${0.65*fadeIn})`;ctx.fillRect(0,0,cw,ch);
+        if(win){
+            // Radial glow behind text
+            const grd=ctx.createRadialGradient(cw/2,ch/2-20,10,cw/2,ch/2-20,Math.min(cw,ch)*0.4);
+            grd.addColorStop(0,`rgba(248,216,48,${0.3*fadeIn})`);
+            grd.addColorStop(1,'rgba(248,216,48,0)');
+            ctx.fillStyle=grd;ctx.fillRect(0,0,cw,ch);
+        }
+        // Pulsing text scale
+        const pulse=1+Math.sin(this.time*3)*0.03;
+        ctx.translate(cw/2,ch/2-20);ctx.scale(pulse,pulse);ctx.translate(-cw/2,-(ch/2-20));
+        ctx.font='bold 36px monospace';ctx.textAlign='center';
         ctx.fillStyle='#000';ctx.fillText(win?'VICTORY!':'DEFEAT',cw/2+2,ch/2-18);
         ctx.fillStyle=win?TPAL.YELLOW:TPAL.HP_RED;ctx.fillText(win?'VICTORY!':'DEFEAT',cw/2,ch/2-20);
-        ctx.font='14px monospace';ctx.fillStyle=TPAL.UI_TEXT;ctx.fillText('Tap to continue',cw/2,ch/2+20);
+        if(win){
+            // EXP summary line
+            ctx.font='12px monospace';ctx.fillStyle=TPAL.UI_TEXT;
+            const alive=this.engine.getTeamUnits('player');
+            const names=alive.map(u=>u.name).join(', ');
+            ctx.fillText(names+' survived!',cw/2,ch/2+10);
+        }
+        // Blinking "tap to continue"
+        if(Math.floor(this.time*2)%2===0){
+            ctx.font='14px monospace';ctx.fillStyle=TPAL.UI_TEXT;
+            ctx.fillText(win&&this.onCutscene?'Tap for cutscene...':'Tap to continue',cw/2,ch/2+35);
+        }
         ctx.restore();
     }
     _dq(ctx,x,y,w,h){
@@ -19017,7 +19136,10 @@ class TacticalBattle {
         // Dialogue / intro: any tap advances — no coordinate conversion needed
         if(this.engine.state==='dialogue'||this.engine.state==='intro'){this.engine.advanceDialogue();return;}
         for(const b of this.actionButtons){if(sx>=b.x&&sx<=b.x+b.w&&sy>=b.y&&sy<=b.y+b.h){this._doAct(b.label);return;}}
-        if((this.engine.state==='victory'||this.engine.state==='defeat')&&!this.engine.currentDialogue){if(this.onComplete)this.onComplete();return;}
+        if((this.engine.state==='victory'||this.engine.state==='defeat')&&!this.engine.currentDialogue){
+            if(this.engine.state==='victory'&&this.onCutscene){this.stop();this.onCutscene();return;}
+            if(this.onComplete){this.onComplete();}return;
+        }
         const scrollX=this.camX*this.zoom-this.canvas.width/2;
         const scrollY=this.camY*this.zoom-this.canvas.height/2;
         this.engine.handleTap(Math.floor((sx+scrollX)/this.zoom/this.ts),Math.floor((sy+scrollY)/this.zoom/this.ts));
@@ -19044,6 +19166,11 @@ function startTacticalBattle(){
     const battle=new TacticalBattle(canvas);
     battle.loadScenario(PROLOGUE_SCENARIO);
     battle.onComplete=()=>{battle.stop();document.getElementById('title-screen').style.display='flex';};
+    // After victory dialogue, transition to anime cutscene
+    battle.onCutscene=()=>{
+        if(typeof startPrologueCutscene==='function') startPrologueCutscene(canvas);
+        else{document.getElementById('title-screen').style.display='flex';}
+    };
     battle.start();
 }
 
