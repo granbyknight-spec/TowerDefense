@@ -2011,121 +2011,373 @@ class Village {
     _renderPlayer(ctx, ts) {
         const x = this.playerX * ts;
         const y = this.playerY * ts;
-        const bounce = this.playerMoving ? Math.sin(this.playerAnimFrame) * ts * 0.04 : 0;
+        const bounce = this.playerMoving ? Math.sin(this.playerAnimFrame) * ts * 0.035 : 0;
+        const breathe = Math.sin(this.time * 2.5) * ts * 0.008;
+        const earBounce = this.playerMoving ? Math.sin(this.playerAnimFrame * 1.3) * ts * 0.025 : Math.sin(this.time * 1.5) * ts * 0.005;
+        const dir = this.playerDir;
 
-        // Body
-        const bodyW = ts * 0.5;
-        const bodyH = ts * 0.35;
-        ctx.fillStyle = '#d4a054'; // golden-ish dog color
-
-        // Direction-based shape
+        // Slightly chibi/SD proportions: big head, compact body (FF7 field style)
         const cx = x + ts * 0.5;
-        const cy = y + ts * 0.55 + bounce;
+        const cy = y + ts * 0.58 + bounce + breathe;
 
-        // Body ellipse
+        // Shadow circle beneath
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
         ctx.beginPath();
-        ctx.ellipse(cx, cy, bodyW * 0.5, bodyH * 0.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, y + ts * 0.92, ts * 0.22, ts * 0.06, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Head (direction-dependent)
-        let headX = cx, headY = cy;
-        if (this.playerDir === 0) { headY = cy + ts * 0.15; headX = cx; } // down
-        else if (this.playerDir === 3) { headY = cy - ts * 0.2; headX = cx; } // up
-        else if (this.playerDir === 1) { headX = cx - ts * 0.2; } // left
-        else { headX = cx + ts * 0.2; } // right
+        // === LEGS (drawn first, behind body) ===
+        const legPhase = this.playerMoving ? this.playerAnimFrame : 0;
+        const legColor = '#b07828';
+        const legColorDark = '#8a5a18';
+        ctx.lineCap = 'round';
 
-        ctx.fillStyle = '#c89540';
-        ctx.beginPath();
-        ctx.arc(headX, headY, ts * 0.15, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Ears
-        ctx.fillStyle = '#a07030';
-        if (this.playerDir === 0 || this.playerDir === 3) {
+        if (dir === 0 || dir === 3) {
+            // Front/back view - four visible legs
+            const lo1 = this.playerMoving ? Math.sin(legPhase) * ts * 0.06 : 0;
+            const lo2 = this.playerMoving ? Math.sin(legPhase + Math.PI) * ts * 0.06 : 0;
+            // Back legs (drawn first)
+            ctx.fillStyle = legColorDark;
             ctx.beginPath();
-            ctx.ellipse(headX - ts * 0.12, headY - ts * 0.08, ts * 0.06, ts * 0.1, -0.3, 0, Math.PI * 2);
+            ctx.roundRect(cx - ts * 0.17 + lo2, cy + ts * 0.1, ts * 0.08, ts * 0.18 - Math.abs(lo2) * 0.3, 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.ellipse(headX + ts * 0.12, headY - ts * 0.08, ts * 0.06, ts * 0.1, 0.3, 0, Math.PI * 2);
+            ctx.roundRect(cx + ts * 0.09 + lo1, cy + ts * 0.1, ts * 0.08, ts * 0.18 - Math.abs(lo1) * 0.3, 2);
             ctx.fill();
-        } else if (this.playerDir === 1) {
+            // Paws on back legs
+            ctx.fillStyle = '#c8a060';
             ctx.beginPath();
-            ctx.ellipse(headX - ts * 0.05, headY - ts * 0.12, ts * 0.08, ts * 0.1, -0.5, 0, Math.PI * 2);
+            ctx.ellipse(cx - ts * 0.13 + lo2, cy + ts * 0.27, ts * 0.05, ts * 0.02, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx + ts * 0.13 + lo1, cy + ts * 0.27, ts * 0.05, ts * 0.02, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Front legs
+            ctx.fillStyle = legColor;
+            ctx.beginPath();
+            ctx.roundRect(cx - ts * 0.14 + lo1, cy + ts * 0.08, ts * 0.09, ts * 0.2 - Math.abs(lo1) * 0.3, 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.roundRect(cx + ts * 0.06 + lo2, cy + ts * 0.08, ts * 0.09, ts * 0.2 - Math.abs(lo2) * 0.3, 2);
+            ctx.fill();
+            // Paws on front legs
+            ctx.fillStyle = '#c8a060';
+            ctx.beginPath();
+            ctx.ellipse(cx - ts * 0.095 + lo1, cy + ts * 0.27, ts * 0.055, ts * 0.022, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx + ts * 0.105 + lo2, cy + ts * 0.27, ts * 0.055, ts * 0.022, 0, 0, Math.PI * 2);
             ctx.fill();
         } else {
+            // Side view - two visible legs (near and far)
+            const lo1 = this.playerMoving ? Math.sin(legPhase) * ts * 0.07 : 0;
+            const lo2 = this.playerMoving ? Math.sin(legPhase + Math.PI) * ts * 0.07 : 0;
+            const flip = dir === 1 ? -1 : 1;
+            // Far leg (behind body)
+            ctx.fillStyle = legColorDark;
             ctx.beginPath();
-            ctx.ellipse(headX + ts * 0.05, headY - ts * 0.12, ts * 0.08, ts * 0.1, 0.5, 0, Math.PI * 2);
+            ctx.roundRect(cx + flip * ts * 0.02, cy + ts * 0.08 + lo2 * 0.5, ts * 0.09, ts * 0.2, 2);
+            ctx.fill();
+            ctx.fillStyle = '#c8a060';
+            ctx.beginPath();
+            ctx.ellipse(cx + flip * ts * 0.065, cy + ts * 0.27 + lo2 * 0.3, ts * 0.055, ts * 0.02, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Near leg (in front)
+            ctx.fillStyle = legColor;
+            ctx.beginPath();
+            ctx.roundRect(cx - flip * ts * 0.06, cy + ts * 0.08 + lo1 * 0.5, ts * 0.09, ts * 0.2, 2);
+            ctx.fill();
+            ctx.fillStyle = '#c8a060';
+            ctx.beginPath();
+            ctx.ellipse(cx - flip * ts * 0.015, cy + ts * 0.27 + lo1 * 0.3, ts * 0.055, ts * 0.02, 0, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Eyes (only when facing down or sideways)
-        if (this.playerDir !== 3) {
-            ctx.fillStyle = '#222';
-            if (this.playerDir === 0) {
+        // === TAIL (wagging, behind body for down/side views) ===
+        const tailWag = Math.sin(this.time * (this.playerMoving ? 8 : 5)) * 0.7;
+        ctx.strokeStyle = '#c89540';
+        ctx.lineWidth = ts * 0.055;
+        ctx.lineCap = 'round';
+        let tailBaseX = cx, tailBaseY = cy;
+        if (dir === 0) { tailBaseY = cy - ts * 0.12; }
+        else if (dir === 3) { tailBaseY = cy + ts * 0.15; }
+        else if (dir === 1) { tailBaseX = cx + ts * 0.2; }
+        else { tailBaseX = cx - ts * 0.2; }
+        ctx.beginPath();
+        ctx.moveTo(tailBaseX, tailBaseY);
+        ctx.quadraticCurveTo(
+            tailBaseX + Math.sin(tailWag) * ts * 0.15,
+            tailBaseY - ts * 0.12,
+            tailBaseX + Math.sin(tailWag) * ts * 0.2,
+            tailBaseY - ts * 0.22
+        );
+        ctx.stroke();
+        // Fluffy tail tip
+        ctx.fillStyle = '#d4a858';
+        ctx.beginPath();
+        ctx.arc(
+            tailBaseX + Math.sin(tailWag) * ts * 0.2,
+            tailBaseY - ts * 0.22,
+            ts * 0.035, 0, Math.PI * 2
+        );
+        ctx.fill();
+
+        // === BODY (chibi proportioned) ===
+        // Main body shape
+        ctx.fillStyle = '#d4a054';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, ts * 0.22, ts * 0.16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Belly lighter area
+        ctx.fillStyle = '#e8c880';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + ts * 0.04, ts * 0.14, ts * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === FF7-STYLE GEAR: Vest ===
+        if (dir === 0) {
+            // Front view vest
+            ctx.fillStyle = '#3a5a8a';
+            ctx.beginPath();
+            ctx.moveTo(cx - ts * 0.18, cy - ts * 0.08);
+            ctx.lineTo(cx - ts * 0.2, cy + ts * 0.1);
+            ctx.lineTo(cx - ts * 0.05, cy + ts * 0.12);
+            ctx.lineTo(cx, cy + ts * 0.06);
+            ctx.lineTo(cx + ts * 0.05, cy + ts * 0.12);
+            ctx.lineTo(cx + ts * 0.2, cy + ts * 0.1);
+            ctx.lineTo(cx + ts * 0.18, cy - ts * 0.08);
+            ctx.closePath();
+            ctx.fill();
+            // Vest trim
+            ctx.strokeStyle = '#c8a030';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+            // Belt
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(cx - ts * 0.19, cy + ts * 0.04, ts * 0.38, ts * 0.03);
+            // Belt buckle
+            ctx.fillStyle = '#d4a030';
+            ctx.fillRect(cx - ts * 0.03, cy + ts * 0.035, ts * 0.06, ts * 0.035);
+        } else if (dir === 3) {
+            // Back view vest
+            ctx.fillStyle = '#3a5a8a';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - ts * 0.02, ts * 0.2, ts * 0.12, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#c8a030';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+            // Belt from back
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(cx - ts * 0.19, cy + ts * 0.04, ts * 0.38, ts * 0.03);
+            // Tiny sword on back!
+            ctx.fillStyle = '#888';
+            ctx.save();
+            ctx.translate(cx + ts * 0.05, cy - ts * 0.15);
+            ctx.rotate(0.3);
+            ctx.fillRect(-ts * 0.015, 0, ts * 0.03, ts * 0.2);
+            // Sword hilt
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(-ts * 0.04, ts * 0.18, ts * 0.08, ts * 0.035);
+            // Sword pommel
+            ctx.fillStyle = '#d4a030';
+            ctx.beginPath();
+            ctx.arc(0, ts * 0.22, ts * 0.02, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        } else {
+            // Side view vest + sword
+            const flip = dir === 1 ? -1 : 1;
+            ctx.fillStyle = '#3a5a8a';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - ts * 0.02, ts * 0.18, ts * 0.12, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#c8a030';
+            ctx.lineWidth = 0.7;
+            ctx.stroke();
+            // Belt
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(cx - ts * 0.18, cy + ts * 0.04, ts * 0.36, ts * 0.028);
+            ctx.fillStyle = '#d4a030';
+            ctx.fillRect(cx + flip * ts * 0.08, cy + ts * 0.035, ts * 0.04, ts * 0.03);
+            // Sword on back (profile view - just the hilt sticking up)
+            ctx.fillStyle = '#888';
+            ctx.fillRect(cx - flip * ts * 0.12, cy - ts * 0.18, ts * 0.025, ts * 0.14);
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(cx - flip * ts * 0.14, cy - ts * 0.05, ts * 0.065, ts * 0.025);
+        }
+
+        // === HEAD (large chibi head, direction-dependent) ===
+        let headX = cx, headY = cy;
+        if (dir === 0) { headY = cy - ts * 0.18; }
+        else if (dir === 3) { headY = cy - ts * 0.22; }
+        else if (dir === 1) { headX = cx - ts * 0.08; headY = cy - ts * 0.18; }
+        else { headX = cx + ts * 0.08; headY = cy - ts * 0.18; }
+
+        // Head base (larger for chibi proportions)
+        ctx.fillStyle = '#d4a054';
+        ctx.beginPath();
+        ctx.arc(headX, headY, ts * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cheek/muzzle area (lighter)
+        if (dir === 0) {
+            ctx.fillStyle = '#e0b868';
+            ctx.beginPath();
+            ctx.ellipse(headX, headY + ts * 0.06, ts * 0.1, ts * 0.07, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (dir !== 3) {
+            const flip = dir === 1 ? -1 : 1;
+            ctx.fillStyle = '#e0b868';
+            ctx.beginPath();
+            ctx.ellipse(headX + flip * ts * 0.06, headY + ts * 0.04, ts * 0.09, ts * 0.07, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Floppy ears (beagle-style, with bounce animation)
+        ctx.fillStyle = '#a07030';
+        if (dir === 0 || dir === 3) {
+            // Left floppy ear
+            ctx.beginPath();
+            ctx.ellipse(headX - ts * 0.16, headY + ts * 0.02 + earBounce, ts * 0.06, ts * 0.13, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+            // Right floppy ear
+            ctx.beginPath();
+            ctx.ellipse(headX + ts * 0.16, headY + ts * 0.02 + earBounce, ts * 0.06, ts * 0.13, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            // Inner ear color
+            ctx.fillStyle = '#c09050';
+            ctx.beginPath();
+            ctx.ellipse(headX - ts * 0.16, headY + ts * 0.04 + earBounce, ts * 0.035, ts * 0.08, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(headX + ts * 0.16, headY + ts * 0.04 + earBounce, ts * 0.035, ts * 0.08, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            const flip = dir === 1 ? -1 : 1;
+            // Main visible ear (floppy)
+            ctx.beginPath();
+            ctx.ellipse(headX + flip * ts * 0.12, headY + ts * 0.02 + earBounce, ts * 0.055, ts * 0.13, flip * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#c09050';
+            ctx.beginPath();
+            ctx.ellipse(headX + flip * ts * 0.12, headY + ts * 0.04 + earBounce, ts * 0.03, ts * 0.08, flip * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            // Far ear (partially visible)
+            ctx.fillStyle = '#906828';
+            ctx.beginPath();
+            ctx.ellipse(headX - flip * ts * 0.06, headY - ts * 0.01 + earBounce, ts * 0.04, ts * 0.08, -flip * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Eyes
+        if (dir !== 3) {
+            if (dir === 0) {
+                // Front-facing eyes
+                // Eye whites
+                ctx.fillStyle = '#fff';
                 ctx.beginPath();
-                ctx.arc(headX - ts * 0.06, headY - ts * 0.02, ts * 0.025, 0, Math.PI * 2);
+                ctx.ellipse(headX - ts * 0.07, headY - ts * 0.03, ts * 0.04, ts * 0.035, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(headX + ts * 0.06, headY - ts * 0.02, ts * 0.025, 0, Math.PI * 2);
+                ctx.ellipse(headX + ts * 0.07, headY - ts * 0.03, ts * 0.04, ts * 0.035, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Pupils (FF7-style large expressive)
+                ctx.fillStyle = '#1a1a2e';
+                ctx.beginPath();
+                ctx.arc(headX - ts * 0.065, headY - ts * 0.025, ts * 0.025, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(headX + ts * 0.075, headY - ts * 0.025, ts * 0.025, 0, Math.PI * 2);
+                ctx.fill();
+                // Eye shine
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(headX - ts * 0.055, headY - ts * 0.035, ts * 0.01, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(headX + ts * 0.085, headY - ts * 0.035, ts * 0.01, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                const ex = this.playerDir === 1 ? headX - ts * 0.06 : headX + ts * 0.06;
+                // Side view - one visible eye
+                const flip = dir === 1 ? -1 : 1;
+                ctx.fillStyle = '#fff';
                 ctx.beginPath();
-                ctx.arc(ex, headY - ts * 0.02, ts * 0.025, 0, Math.PI * 2);
+                ctx.ellipse(headX + flip * ts * 0.06, headY - ts * 0.03, ts * 0.04, ts * 0.035, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1a1a2e';
+                ctx.beginPath();
+                ctx.arc(headX + flip * ts * 0.07, headY - ts * 0.025, ts * 0.025, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(headX + flip * ts * 0.08, headY - ts * 0.035, ts * 0.01, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
         // Nose
-        ctx.fillStyle = '#222';
-        let noseX = headX, noseY = headY + ts * 0.08;
-        if (this.playerDir === 1) { noseX = headX - ts * 0.12; noseY = headY + ts * 0.02; }
-        else if (this.playerDir === 2) { noseX = headX + ts * 0.12; noseY = headY + ts * 0.02; }
-        else if (this.playerDir === 3) { noseY = headY - ts * 0.12; }
+        if (dir === 0) {
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath();
+            ctx.ellipse(headX, headY + ts * 0.08, ts * 0.035, ts * 0.025, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Nose highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.beginPath();
+            ctx.arc(headX - ts * 0.01, headY + ts * 0.075, ts * 0.01, 0, Math.PI * 2);
+            ctx.fill();
+            // Tiny mouth line
+            ctx.strokeStyle = '#8a6030';
+            ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(headX, headY + ts * 0.1);
+            ctx.lineTo(headX - ts * 0.03, headY + ts * 0.12);
+            ctx.moveTo(headX, headY + ts * 0.1);
+            ctx.lineTo(headX + ts * 0.03, headY + ts * 0.12);
+            ctx.stroke();
+        } else if (dir === 3) {
+            // Back of head - no nose visible, but show head fur tuft
+            ctx.fillStyle = '#c89540';
+            ctx.beginPath();
+            ctx.ellipse(headX, headY - ts * 0.14, ts * 0.04, ts * 0.03, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            const flip = dir === 1 ? -1 : 1;
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath();
+            ctx.ellipse(headX + flip * ts * 0.15, headY + ts * 0.04, ts * 0.03, ts * 0.022, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.beginPath();
+            ctx.arc(headX + flip * ts * 0.145, headY + ts * 0.035, ts * 0.008, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Head fur tuft on top
+        ctx.fillStyle = '#c89540';
         ctx.beginPath();
-        ctx.arc(noseX, noseY, ts * 0.03, 0, Math.PI * 2);
+        ctx.moveTo(headX - ts * 0.03, headY - ts * 0.16);
+        ctx.quadraticCurveTo(headX, headY - ts * 0.22, headX + ts * 0.02, headY - ts * 0.16);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(headX + ts * 0.01, headY - ts * 0.15);
+        ctx.quadraticCurveTo(headX + ts * 0.04, headY - ts * 0.2, headX + ts * 0.05, headY - ts * 0.14);
         ctx.fill();
 
-        // Tail (wagging)
-        const tailAngle = Math.sin(this.time * 6) * 0.6;
-        ctx.strokeStyle = '#c89540';
-        ctx.lineWidth = ts * 0.06;
-        ctx.lineCap = 'round';
-        let tailX = cx, tailY = cy;
-        if (this.playerDir === 0) { tailY = cy - ts * 0.15; }
-        else if (this.playerDir === 3) { tailY = cy + ts * 0.18; }
-        else if (this.playerDir === 1) { tailX = cx + ts * 0.22; }
-        else { tailX = cx - ts * 0.22; }
+        // === 1px BLACK OUTLINE around whole sprite ===
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.lineWidth = 1;
+        ctx.lineJoin = 'round';
+        // Head outline
         ctx.beginPath();
-        ctx.moveTo(tailX, tailY);
-        ctx.quadraticCurveTo(
-            tailX + Math.sin(tailAngle) * ts * 0.15,
-            tailY - ts * 0.15,
-            tailX + Math.sin(tailAngle) * ts * 0.2,
-            tailY - ts * 0.25
-        );
+        ctx.arc(headX, headY, ts * 0.185, 0, Math.PI * 2);
         ctx.stroke();
-
-        // Legs (simple when moving)
-        if (this.playerMoving) {
-            ctx.fillStyle = '#b08030';
-            const legPhase = this.playerAnimFrame;
-            const legOffset1 = Math.sin(legPhase) * ts * 0.06;
-            const legOffset2 = Math.sin(legPhase + Math.PI) * ts * 0.06;
-
-            if (this.playerDir === 0 || this.playerDir === 3) {
-                // Front legs
-                ctx.fillRect(cx - ts * 0.15 + legOffset1, cy + ts * 0.12, ts * 0.08, ts * 0.15);
-                ctx.fillRect(cx + ts * 0.08 + legOffset2, cy + ts * 0.12, ts * 0.08, ts * 0.15);
-                // Back legs
-                ctx.fillRect(cx - ts * 0.12 + legOffset2, cy + ts * 0.12, ts * 0.07, ts * 0.12);
-                ctx.fillRect(cx + ts * 0.06 + legOffset1, cy + ts * 0.12, ts * 0.07, ts * 0.12);
-            } else {
-                // Side view legs
-                ctx.fillRect(cx - ts * 0.08, cy + ts * 0.1 + legOffset1, ts * 0.08, ts * 0.15);
-                ctx.fillRect(cx + ts * 0.02, cy + ts * 0.1 + legOffset2, ts * 0.08, ts * 0.15);
-            }
-        }
+        // Body outline
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, ts * 0.23, ts * 0.17, 0, 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     // === NPC RENDERING ===
