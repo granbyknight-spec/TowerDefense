@@ -750,41 +750,12 @@ class TacticsEngine {
             this._emit('unit_died', { unit: defender });
         }
 
-        // ── Counter-attack ────────────────────────────────────────────────────
-        let counterDamage   = null;
-        let counterCritical = null;
-
-        if (!killed && this._inAttackRange(defender.x, defender.y, attacker.x, attacker.y, defender.atkRange)) {
-            const counter = this.calcDamage(defender, attacker);
-            counterDamage   = counter.damage;
-            counterCritical = counter.critical;
-
-            attacker.hp = Math.max(0, attacker.hp - counterDamage);
-            const attackerKilled = attacker.hp <= 0;
-            if (attackerKilled) {
-                attacker.alive = false;
-            }
-
-            this._emit('unit_attacked', {
-                attacker:  defender,
-                defender:  attacker,
-                damage:    counterDamage,
-                critical:  counterCritical,
-                killed:    attackerKilled,
-                isCounter: true,
-            });
-
-            if (attackerKilled) {
-                this._emit('unit_died', { unit: attacker });
-            }
-        }
-
         // ── Post-combat bookkeeping ───────────────────────────────────────────
         this._awardExp(attacker, defender, killed);
         this.checkStoryTriggers();
         this.checkBattleEnd();
 
-        return { damage, critical, killed, counterDamage, counterCritical };
+        return { damage, critical, killed };
     }
 
     /**
@@ -1369,8 +1340,9 @@ class TacticsEngine {
         // ── Animating: ignore taps ────────────────────────────────────────────
         if (this.state === 'animating') return;
 
-        // ── Enemy turn: ignore taps ───────────────────────────────────────────
+        // ── Enemy turn / battle over: ignore taps ─────────────────────────────
         if (this.state === 'enemy_turn') return;
+        if (this.state === 'victory' || this.state === 'defeat') return;
 
         // ── Victory / defeat ──────────────────────────────────────────────────
         if (this.state === 'victory' || this.state === 'defeat') return;
