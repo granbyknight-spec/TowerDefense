@@ -17751,6 +17751,7 @@ class TacticsEngine {
      * Check whether all player units have acted; if so, start the enemy phase.
      */
     checkPhaseEnd() {
+        if (this.state === 'victory' || this.state === 'defeat') return;
         const playerUnits = this.getTeamUnits('player');
         const allActed    = playerUnits.every(u => u.acted);
 
@@ -18224,8 +18225,10 @@ class TacticsEngine {
                 this.selectedUnit    = null;
                 this.movableTiles    = [];
                 this.attackableTiles = [];
-                this.state = 'player_select';
-                this.checkPhaseEnd();
+                if (this.state !== 'victory' && this.state !== 'defeat') {
+                    this.state = 'player_select';
+                    this.checkPhaseEnd();
+                }
             } else {
                 // Regular attack
                 const target = this.getUnitAt(gridX, gridY);
