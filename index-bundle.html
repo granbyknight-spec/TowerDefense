@@ -1775,6 +1775,7 @@ body {
             <button id="start-btn" class="screen-btn">START ADVENTURE</button>
             <button id="load-save-title-btn" class="screen-btn">Load Save</button>
             <button id="highscores-btn" class="screen-btn">High Scores</button>
+            <button id="tactics-btn" class="screen-btn" onclick="startTacticalBattle()" style="background:linear-gradient(180deg,#4a1a6b 0%,#2d1040 100%);border-color:rgba(180,100,255,0.3);">TACTICAL BATTLE</button>
             <div class="sound-hint">Sound enabled on tap</div>
             <div id="version-tag" class="version-tag"></div>
         </div>
@@ -15198,6 +15199,3717 @@ class Hub {
             `;
         }).join('');
     }
+}
+
+
+// === js/tacticsSprites.js ===
+// tacticsSprites.js
+// Pixel art sprite data for Shining Force / Dragon Warrior style tactical RPG
+// Dog vs Cat themed JRPG battle system
+// Each sprite is a compact string array where each character maps to a palette color
+
+'use strict';
+
+// ---------------------------------------------------------------------------
+// COLOR PALETTE
+// ---------------------------------------------------------------------------
+const TACTICS_PALETTE = {
+    '.': null,           // transparent
+    'k': '#1a1a2e',      // dark outline
+    'K': '#000000',      // pure black
+    // Dog colors
+    'b': '#8b5e3c',      // brown fur
+    'B': '#6b3a1a',      // dark brown
+    't': '#d4a574',      // tan/light fur
+    'T': '#f0d8b0',      // cream
+    'w': '#ffffff',      // white
+    'W': '#e0e0e0',      // light gray
+    // Cat colors
+    'g': '#808080',      // gray cat
+    'G': '#505050',      // dark gray cat
+    'o': '#d08030',      // orange cat
+    'O': '#a06020',      // dark orange
+    'n': '#2a2a2a',      // ninja black
+    // Equipment/clothing
+    'r': '#c83030',      // red (armor/cape)
+    'R': '#882020',      // dark red
+    'l': '#3060c8',      // blue (mage robe)
+    'L': '#1a3a80',      // dark blue
+    's': '#c0c0c0',      // silver (armor)
+    'S': '#808080',      // dark silver
+    // Nature/terrain
+    'e': '#38b764',      // green (grass)
+    'E': '#1e6e2e',      // dark green
+    'd': '#c8956c',      // dirt/path
+    'D': '#a07040',      // dark dirt
+    'a': '#3978a8',      // water blue
+    'A': '#2d5e85',      // dark water
+    'y': '#f8d830',      // yellow (selection highlight)
+    'Y': '#c8a020',      // dark yellow
+    'p': '#f07898',      // pink (heal)
+    'P': '#c05070',      // dark pink
+    'm': '#90d0e0',      // light blue (ice/magic)
+    'M': '#60a0b8',      // med blue
+    'c': '#f0a830',      // gold/coin
+    'C': '#c08020',      // dark gold
+};
+
+// ---------------------------------------------------------------------------
+// SPRITE DEFINITIONS
+// ---------------------------------------------------------------------------
+// Each sprite is a 16x16 (or 8x8 for fx) array of strings.
+// Characters map to TACTICS_PALETTE colors.
+// Animated sprites are arrays of frames, each frame being a string array.
+// ---------------------------------------------------------------------------
+
+const TACTICS_SPRITES = {
+
+    // -----------------------------------------------------------------------
+    // DOG CHARACTERS
+    // -----------------------------------------------------------------------
+
+    // Buddy the Beagle Knight
+    // Brown/tan beagle, red cape, silver helmet
+    // Directions: down, left, right, up
+    // 2 frames each (standing, step)
+    dog_knight_down: [
+        // Frame 0: standing facing down
+        [
+            '................',
+            '................',
+            '....kkkkkkk.....',
+            '...ksssssssk....',
+            '...kstsstssk....',  // helmet with visor
+            '...ksssssssk....',
+            '..kttttttttk....',
+            '..kttKKttKKtk...',  // big round eyes
+            '..kttttkttttk...',
+            '..kttKtttttttk..',  // nose
+            '..kkttttttttk...',
+            '...krrkkrrk.....',  // cape start
+            '...krrttrrk.....',
+            '...ktk..ktk.....',  // stubby legs
+            '...kbk..kbk.....',
+            '................',
+        ],
+        // Frame 1: one step forward
+        [
+            '................',
+            '................',
+            '....kkkkkkk.....',
+            '...ksssssssk....',
+            '...kstsstssk....',
+            '...ksssssssk....',
+            '..kttttttttk....',
+            '..kttKKttKKtk...',
+            '..kttttkttttk...',
+            '..kttKtttttttk..',
+            '..kkttttttttk...',
+            '...krrkkrrk.....',
+            '...krrttrrk.....',
+            '..ktk....kk.....',  // legs shifted
+            '...kbk..kb......',
+            '................',
+        ],
+    ],
+
+    dog_knight_left: [
+        // Frame 0: facing left
+        [
+            '................',
+            '................',
+            '...kkkkkkk......',
+            '..kssssssk......',
+            '..kstssssk......',  // helmet
+            '..kssssssk......',
+            '.kttttttttk.....',
+            '.ktttKtttttk....',  // one visible eye
+            '.kttttktttttk...',
+            '.ktKtttttttttk..',  // nose to left side
+            '.kkbttttttttk...',
+            '..krrkkrrk......',
+            '..krrttrrrk.....',  // cape behind
+            '..kkt...........',
+            '..kbk...........',
+            '................',
+        ],
+        // Frame 1: step
+        [
+            '................',
+            '................',
+            '...kkkkkkk......',
+            '..kssssssk......',
+            '..kstssssk......',
+            '..kssssssk......',
+            '.kttttttttk.....',
+            '.ktttKtttttk....',
+            '.kttttktttttk...',
+            '.ktKtttttttttk..',
+            '.kkbttttttttk...',
+            '..krrkkrrk......',
+            '..krrttrrrk.....',
+            '.kkt............',
+            '..kbk...........',
+            '................',
+        ],
+    ],
+
+    dog_knight_right: [
+        // Frame 0: facing right
+        [
+            '................',
+            '................',
+            '......kkkkkkk...',
+            '......kssssssk..',
+            '......ksssstssk.',
+            '......kssssssk..',
+            '.....kttttttttk.',
+            '....ktttttKtttk.',
+            '...ktttttktttttk',
+            '..ktKtttttttttk.',
+            '...ktttttttttkk.',
+            '......krrkkkrk..',
+            '.....krrrttrrk..',
+            '...........tkk..',
+            '...........kbk..',
+            '................',
+        ],
+        // Frame 1: step
+        [
+            '................',
+            '................',
+            '......kkkkkkk...',
+            '......kssssssk..',
+            '......ksssstssk.',
+            '......kssssssk..',
+            '.....kttttttttk.',
+            '....ktttttKtttk.',
+            '...ktttttktttttk',
+            '..ktKtttttttttk.',
+            '...ktttttttttkk.',
+            '......krrkkkrk..',
+            '.....krrrttrrk..',
+            '..........tkk...',
+            '..........kbk...',
+            '................',
+        ],
+    ],
+
+    dog_knight_up: [
+        // Frame 0: facing up (back view)
+        [
+            '................',
+            '................',
+            '....kkkkkkk.....',
+            '...ksssssssk....',
+            '...ksssssssk....',
+            '...ksssssssk....',
+            '..kttttttttk....',
+            '..kttttttttk....',
+            '..kttttttttk....',
+            '..kbbbbbbbbbk...',  // back of neck/collar
+            '..kktttttttkk...',
+            '...krrkkrrk.....',
+            '...krrrrrrrk....',  // cape from behind
+            '...ktk..ktk.....',
+            '...kbk..kbk.....',
+            '................',
+        ],
+        // Frame 1: step
+        [
+            '................',
+            '................',
+            '....kkkkkkk.....',
+            '...ksssssssk....',
+            '...ksssssssk....',
+            '...ksssssssk....',
+            '..kttttttttk....',
+            '..kttttttttk....',
+            '..kttttttttk....',
+            '..kbbbbbbbbbk...',
+            '..kktttttttkk...',
+            '...krrkkrrk.....',
+            '...krrrrrrrk....',
+            '..ktk....kk.....',
+            '...kbk..kb......',
+            '................',
+        ],
+    ],
+
+    // Luna the Poodle Mage - White/cream poodle with blue mage robe and staff
+    dog_mage_down: [
+        // Frame 0: standing
+        [
+            '................',
+            '....kwwwwwwk....',
+            '...kwwwwwwwwk...',
+            '..kwwwwwwwwwwk..',
+            '..kwwKkkKkwwwk..',  // poofy head with eyes
+            '..kwwwkkwwwwwk..',  // nose area
+            '..kwkwwwwwwkwk..',  // poofy sides
+            '...kwwwwwwwwk...',
+            '...kllllllllk...',  // blue robe
+            '...klllllllllk..',
+            '...kllclllllk...',  // staff glow
+            '...kllllllllk...',
+            '...kllkk.kklk...',
+            '...ktk...kck....',  // legs + staff tip
+            '....kk....kk....',
+            '................',
+        ],
+        // Frame 1: step
+        [
+            '................',
+            '....kwwwwwwk....',
+            '...kwwwwwwwwk...',
+            '..kwwwwwwwwwwk..',
+            '..kwwKkkKkwwwk..',
+            '..kwwwkkwwwwwk..',
+            '..kwkwwwwwwkwk..',
+            '...kwwwwwwwwk...',
+            '...kllllllllk...',
+            '...klllllllllk..',
+            '...kllclllllk...',
+            '...kllllllllk...',
+            '...kllkk.kklk...',
+            '..ktk....kck....',  // step
+            '....kk....kk....',
+            '................',
+        ],
+    ],
+
+    dog_mage_left: [
+        [
+            '................',
+            '...kwwwwwwk.....',
+            '..kwwwwwwwwk....',
+            '.kwwwwwwwwwwk...',
+            '.kwwKkwwwwwwk...',
+            '.kwwwkkwwwwwk...',
+            '.kwkwwwwwwwwk...',
+            '..kwwwwwwwwk....',
+            '..kllllllllk....',
+            '..kllllllllk....',
+            '.kclllllllk.....',  // staff on left
+            '..kllllllllk....',
+            '..kllkk.kklk....',
+            '.kck..ktk.......',
+            '..kk...kk.......',
+            '................',
+        ],
+        [
+            '................',
+            '...kwwwwwwk.....',
+            '..kwwwwwwwwk....',
+            '.kwwwwwwwwwwk...',
+            '.kwwKkwwwwwwk...',
+            '.kwwwkkwwwwwk...',
+            '.kwkwwwwwwwwk...',
+            '..kwwwwwwwwk....',
+            '..kllllllllk....',
+            '..kllllllllk....',
+            '.kclllllllk.....',
+            '..kllllllllk....',
+            '..kllkk.kklk....',
+            'kck...ktk.......',
+            '..kk...kk.......',
+            '................',
+        ],
+    ],
+
+    dog_mage_right: [
+        [
+            '................',
+            '.....kwwwwwwk...',
+            '....kwwwwwwwwk..',
+            '...kwwwwwwwwwwk.',
+            '...kwwwwwwwkKwk.',
+            '...kwwwwwwwkkwk.',
+            '...kwwwwwwwwkwk.',
+            '....kwwwwwwwwk..',
+            '....kllllllllk..',
+            '....kllllllllk..',
+            '.....klllllllkc.',  // staff on right
+            '....kllllllllk..',
+            '....kllk.kkllk..',
+            '.......ktk..kck.',
+            '.......kk....kk.',
+            '................',
+        ],
+        [
+            '................',
+            '.....kwwwwwwk...',
+            '....kwwwwwwwwk..',
+            '...kwwwwwwwwwwk.',
+            '...kwwwwwwwkKwk.',
+            '...kwwwwwwwkkwk.',
+            '...kwwwwwwwwkwk.',
+            '....kwwwwwwwwk..',
+            '....kllllllllk..',
+            '....kllllllllk..',
+            '.....klllllllkc.',
+            '....kllllllllk..',
+            '....kllk.kkllk..',
+            '......ktk...kck.',
+            '.......kk....kk.',
+            '................',
+        ],
+    ],
+
+    dog_mage_up: [
+        [
+            '................',
+            '....kwwwwwwk....',
+            '...kwwwwwwwwk...',
+            '..kwwwwwwwwwwk..',
+            '..kwwwwwwwwwwk..',
+            '..kwwwwwwwwwwk..',
+            '..kwkwwwwwwkwk..',
+            '...kwwwwwwwwk...',
+            '...kllllllllk...',
+            '...kllllllllk...',
+            '...kllclllllk...',
+            '...kllllllllk...',
+            '...kllkk.kklk...',
+            '...ktk...kck....',
+            '....kk....kk....',
+            '................',
+        ],
+        [
+            '................',
+            '....kwwwwwwk....',
+            '...kwwwwwwwwk...',
+            '..kwwwwwwwwwwk..',
+            '..kwwwwwwwwwwk..',
+            '..kwwwwwwwwwwk..',
+            '..kwkwwwwwwkwk..',
+            '...kwwwwwwwwk...',
+            '...kllllllllk...',
+            '...kllllllllk...',
+            '...kllclllllk...',
+            '...kllllllllk...',
+            '...kllkk.kklk...',
+            '..ktk....kck....',
+            '....kk....kk....',
+            '................',
+        ],
+    ],
+
+    // Rex the Husky Warrior - Gray/white husky, bulky, no armor
+    dog_warrior_down: [
+        [
+            '................',
+            '...kkkkkkkk.....',
+            '..kwwwwwwwwk....',
+            '.kwwwwwwwwwwk...',
+            '.kwwKKkwKKwwk...',  // striking two-toned eyes
+            '.kwwwkwwwkwwk...',
+            '.kWWwwwwwwWWk...',  // white markings on sides
+            '.kwWWwwwwWWwk...',
+            '.kWwwwKwwwwWk...',  // nose
+            '.kkWwwwwwwWkk...',
+            '..kWwwwwwwWk....',
+            '..kWWkkkkkWk....',  // shoulder/collar
+            '..kwwkWWkwwk....',
+            '..kwk...kwk.....',  // legs
+            '..kWk...kWk.....',
+            '................',
+        ],
+        [
+            '................',
+            '...kkkkkkkk.....',
+            '..kwwwwwwwwk....',
+            '.kwwwwwwwwwwk...',
+            '.kwwKKkwKKwwk...',
+            '.kwwwkwwwkwwk...',
+            '.kWWwwwwwwWWk...',
+            '.kwWWwwwwWWwk...',
+            '.kWwwwKwwwwWk...',
+            '.kkWwwwwwwWkk...',
+            '..kWwwwwwwWk....',
+            '..kWWkkkkkWk....',
+            '..kwwkWWkwwk....',
+            '.kwk....kwk.....',  // step
+            '..kWk...kWk.....',
+            '................',
+        ],
+    ],
+
+    dog_warrior_left: [
+        [
+            '................',
+            '..kkkkkkkk......',
+            '.kwwwwwwwwk.....',
+            'kwwwwwwwwwwk....',
+            'kwwKKkwwwwwk....',
+            'kwwwkwwwwwwk....',
+            'kWWwwwwwwWWk....',
+            'kwWWwwwwWWwk....',
+            'kWwwwKwwwwWk....',
+            'kkWwwwwwwWkk....',
+            '.kWwwwwwwWk.....',
+            '.kWWkkkkkWk.....',
+            '.kwwkWWkwwk.....',
+            '.kwk...........k',
+            '.kWk............',
+            '................',
+        ],
+        [
+            '................',
+            '..kkkkkkkk......',
+            '.kwwwwwwwwk.....',
+            'kwwwwwwwwwwk....',
+            'kwwKKkwwwwwk....',
+            'kwwwkwwwwwwk....',
+            'kWWwwwwwwWWk....',
+            'kwWWwwwwWWwk....',
+            'kWwwwKwwwwWk....',
+            'kkWwwwwwwWkk....',
+            '.kWwwwwwwWk.....',
+            '.kWWkkkkkWk.....',
+            '.kwwkWWkwwk.....',
+            'kwk.............',
+            '.kWk............',
+            '................',
+        ],
+    ],
+
+    dog_warrior_right: [
+        [
+            '................',
+            '......kkkkkkkkk.',
+            '.....kwwwwwwwwk.',
+            '....kwwwwwwwwwwk',
+            '....kwwwwwwkKKwk',
+            '....kwwwwwwwkwwk',
+            '....kWWwwwwwwWWk',
+            '....kwWWwwwwWWwk',
+            '....kWwwwwKwwwWk',
+            '....kkWwwwwwwWkk',
+            '.....kWwwwwwwWk.',
+            '.....kWkkkkkWWk.',
+            '.....kwwkWWkwwk.',
+            'k..........kwk..',
+            '............kWk.',
+            '................',
+        ],
+        [
+            '................',
+            '......kkkkkkkkk.',
+            '.....kwwwwwwwwk.',
+            '....kwwwwwwwwwwk',
+            '....kwwwwwwkKKwk',
+            '....kwwwwwwwkwwk',
+            '....kWWwwwwwwWWk',
+            '....kwWWwwwwWWwk',
+            '....kWwwwwKwwwWk',
+            '....kkWwwwwwwWkk',
+            '.....kWwwwwwwWk.',
+            '.....kWkkkkkWWk.',
+            '.....kwwkWWkwwk.',
+            '...........kwk..',
+            '............kWk.',
+            '................',
+        ],
+    ],
+
+    dog_warrior_up: [
+        [
+            '................',
+            '...kkkkkkkk.....',
+            '..kwwwwwwwwk....',
+            '.kwwwwwwwwwwk...',
+            '.kwwwwwwwwwwk...',
+            '.kwwwwwwwwwwk...',
+            '.kWWwwwwwwWWk...',
+            '.kwWWwwwwWWwk...',
+            '.kWwwwwwwwwWk...',
+            '.kkWwwwwwwWkk...',
+            '..kWwwwwwwWk....',
+            '..kWWkkkkkWk....',
+            '..kwwkWWkwwk....',
+            '..kwk...kwk.....',
+            '..kWk...kWk.....',
+            '................',
+        ],
+        [
+            '................',
+            '...kkkkkkkk.....',
+            '..kwwwwwwwwk....',
+            '.kwwwwwwwwwwk...',
+            '.kwwwwwwwwwwk...',
+            '.kwwwwwwwwwwk...',
+            '.kWWwwwwwwWWk...',
+            '.kwWWwwwwWWwk...',
+            '.kWwwwwwwwwWk...',
+            '.kkWwwwwwwWkk...',
+            '..kWwwwwwwWk....',
+            '..kWWkkkkkWk....',
+            '..kwwkWWkwwk....',
+            '.kwk....kwk.....',
+            '..kWk...kWk.....',
+            '................',
+        ],
+    ],
+
+    // Daisy the Golden Retriever Healer - Golden/cream with pink bandana
+    dog_healer_down: [
+        [
+            '................',
+            '....kkkkkkkk....',
+            '...ktttttttttk..',
+            '...kttttttttttk.',
+            '...ktppppptttk..',  // pink bandana
+            '...ktttttttttk..',
+            '..kttttttttttk..',
+            '..kttKktKktttk..',  // gentle eyes
+            '..kttttktttttk..',
+            '..kttKtttttttk..',  // nose
+            '..kkttttttttk...',
+            '...kttttttttk...',
+            '...kttkEEkttk...',  // herb pouch (green)
+            '...ktk....ktk...',
+            '...kbk....kbk...',
+            '................',
+        ],
+        [
+            '................',
+            '....kkkkkkkk....',
+            '...ktttttttttk..',
+            '...kttttttttttk.',
+            '...ktppppptttk..',
+            '...ktttttttttk..',
+            '..kttttttttttk..',
+            '..kttKktKktttk..',
+            '..kttttktttttk..',
+            '..kttKtttttttk..',
+            '..kkttttttttk...',
+            '...kttttttttk...',
+            '...kttkEEkttk...',
+            '..ktk.....ktk...',
+            '...kbk....kbk...',
+            '................',
+        ],
+    ],
+
+    dog_healer_left: [
+        [
+            '................',
+            '...kkkkkkkk.....',
+            '..ktttttttttk...',
+            '..kttttttttttk..',
+            '..ktpppppttttk..',
+            '..ktttttttttttk.',
+            '.kttttttttttttk.',
+            '.kttKktttttttk..',
+            '.kttttktttttttk.',
+            '.ktttKttttttttk.',
+            '.kkttttttttttk..',
+            '..kttttttttttk..',
+            '..kttttEEkttk...',
+            '..ktk...........',
+            '..kbk...........',
+            '................',
+        ],
+        [
+            '................',
+            '...kkkkkkkk.....',
+            '..ktttttttttk...',
+            '..kttttttttttk..',
+            '..ktpppppttttk..',
+            '..ktttttttttttk.',
+            '.kttttttttttttk.',
+            '.kttKktttttttk..',
+            '.kttttktttttttk.',
+            '.ktttKttttttttk.',
+            '.kkttttttttttk..',
+            '..kttttttttttk..',
+            '..kttttEEkttk...',
+            '.ktk............',
+            '..kbk...........',
+            '................',
+        ],
+    ],
+
+    dog_healer_right: [
+        [
+            '................',
+            '.....kkkkkkkk...',
+            '...ktttttttttk..',
+            '..kttttttttttk..',
+            '..kttttppppptk..',
+            '.ktttttttttttk..',
+            '.ktttttttttttttk',
+            '..ktttttttttKktk',
+            '.kttttttttttktttk',
+            '.ktttttttttttKttk',
+            '..ktttttttttttkkk',
+            '..kttttttttttttk.',
+            '...ktttkEEttttk..',
+            '...........ktk..',
+            '...........kbk..',
+            '................',
+        ],
+        [
+            '................',
+            '.....kkkkkkkk...',
+            '...ktttttttttk..',
+            '..kttttttttttk..',
+            '..kttttppppptk..',
+            '.ktttttttttttk..',
+            '.ktttttttttttttk',
+            '..ktttttttttKktk',
+            '.kttttttttttktttk',
+            '.ktttttttttttKttk',
+            '..ktttttttttttkkk',
+            '..kttttttttttttk.',
+            '...ktttkEEttttk..',
+            '..........ktk...',
+            '...........kbk..',
+            '................',
+        ],
+    ],
+
+    dog_healer_up: [
+        [
+            '................',
+            '....kkkkkkkk....',
+            '...ktttttttttk..',
+            '...kttttttttttk.',
+            '...kpppppppptttk',  // bandana from behind
+            '...ktttttttttk..',
+            '..kttttttttttk..',
+            '..kttttttttttk..',
+            '..kttttttttttk..',
+            '..kbbbbbbbbbttk.',
+            '..kkttttttttk...',
+            '...kttttttttk...',
+            '...kttkEEkttk...',
+            '...ktk....ktk...',
+            '...kbk....kbk...',
+            '................',
+        ],
+        [
+            '................',
+            '....kkkkkkkk....',
+            '...ktttttttttk..',
+            '...kttttttttttk.',
+            '...kpppppppptttk',
+            '...ktttttttttk..',
+            '..kttttttttttk..',
+            '..kttttttttttk..',
+            '..kttttttttttk..',
+            '..kbbbbbbbbbttk.',
+            '..kkttttttttk...',
+            '...kttttttttk...',
+            '...kttkEEkttk...',
+            '..ktk.....ktk...',
+            '...kbk....kbk...',
+            '................',
+        ],
+    ],
+
+    // -----------------------------------------------------------------------
+    // CAT ENEMIES
+    // -----------------------------------------------------------------------
+
+    // Kitten Scout - small gray kitten, menacing slit eyes, whiskers
+    cat_scout_down: [
+        [
+            '................',
+            '................',
+            '....kkkkkkkk....',
+            '...kggggggggk...',
+            '..kGkggggkGkk...',  // pointed ears
+            '..kggggggggggk..',
+            '..kggKgggKggggk.',  // slit eyes
+            '..kggggggggggk..',
+            '..kGgkgggkgGgk..',  // whiskers
+            '..kgggkgkgggk...',  // nose
+            '..kkggggggggk...',
+            '...kggggggggk...',
+            '...kgGkkkGgk....',
+            '...kgk...kgk....',
+            '...kGk...kGk....',
+            '................',
+        ],
+        [
+            '................',
+            '................',
+            '....kkkkkkkk....',
+            '...kggggggggk...',
+            '..kGkggggkGkk...',
+            '..kggggggggggk..',
+            '..kggKgggKggggk.',
+            '..kggggggggggk..',
+            '..kGgkgggkgGgk..',
+            '..kgggkgkgggk...',
+            '..kkggggggggk...',
+            '...kggggggggk...',
+            '...kgGkkkGgk....',
+            '..kgk....kgk....',
+            '...kGk...kGk....',
+            '................',
+        ],
+    ],
+
+    cat_scout_left: [
+        [
+            '................',
+            '................',
+            '...kkkkkkkk.....',
+            '..kggggggggk....',
+            '.kGkggggkggk....',  // ear on left
+            '.kggggggggggk...',
+            '.kggKgggggggk...',  // one slit eye
+            '.kggggggggggk...',
+            '.kGgkgggkgGgk...',
+            '.kgggkgkgggk....',
+            '.kkggggggggk....',
+            '..kggggggggk....',
+            '..kgGkkkGgk.....',
+            '..kgk...........',
+            '..kGk...........',
+            '................',
+        ],
+        [
+            '................',
+            '................',
+            '...kkkkkkkk.....',
+            '..kggggggggk....',
+            '.kGkggggkggk....',
+            '.kggggggggggk...',
+            '.kggKgggggggk...',
+            '.kggggggggggk...',
+            '.kGgkgggkgGgk...',
+            '.kgggkgkgggk....',
+            '.kkggggggggk....',
+            '..kggggggggk....',
+            '..kgGkkkGgk.....',
+            '.kgk............',
+            '..kGk...........',
+            '................',
+        ],
+    ],
+
+    // Tabby Soldier - orange/brown tabby, darker stripe markings, chest plate
+    cat_soldier_down: [
+        [
+            '................',
+            '....kkkkkkkk....',
+            '...kooooooook...',
+            '..kOkooooookOk..',  // pointed ears
+            '..koooooooooook.',
+            '..koKoooKoooook.',  // eyes
+            '..kooooooooook..',
+            '..kOokoookokOk..',  // whiskers + stripes
+            '..koookokooook..',
+            '..kkooooooook...',
+            '...kooooooook...',
+            '...kSSSSSSSk....',  // chest plate
+            '...koSSSSook....',
+            '...kok...kok....',
+            '...kOk...kOk....',
+            '................',
+        ],
+        [
+            '................',
+            '....kkkkkkkk....',
+            '...kooooooook...',
+            '..kOkooooookOk..',
+            '..koooooooooook.',
+            '..koKoooKoooook.',
+            '..kooooooooook..',
+            '..kOokoookokOk..',
+            '..koookokooook..',
+            '..kkooooooook...',
+            '...kooooooook...',
+            '...kSSSSSSSk....',
+            '...koSSSSook....',
+            '..kok....kok....',
+            '...kOk...kOk....',
+            '................',
+        ],
+    ],
+
+    cat_soldier_left: [
+        [
+            '................',
+            '...kkkkkkkk.....',
+            '..kooooooook....',
+            '.kOkooooooook...',
+            '.koooooooooook..',
+            '.koKoooooooook..',
+            '.kooooooooook...',
+            '.kOokoookokOk...',
+            '.koookokooook...',
+            '.kkooooooook....',
+            '..kooooooook....',
+            '..kSSSSSSSk.....',
+            '..koSSSSook.....',
+            '..kok...........',
+            '..kOk...........',
+            '................',
+        ],
+        [
+            '................',
+            '...kkkkkkkk.....',
+            '..kooooooook....',
+            '.kOkooooooook...',
+            '.koooooooooook..',
+            '.koKoooooooook..',
+            '.kooooooooook...',
+            '.kOokoookokOk...',
+            '.koookokooook...',
+            '.kkooooooook....',
+            '..kooooooook....',
+            '..kSSSSSSSk.....',
+            '..koSSSSook.....',
+            '.kok............',
+            '..kOk...........',
+            '................',
+        ],
+    ],
+
+    // Fat Cat - large rotund orange cat, fills most of 16x16
+    cat_heavy_down: [
+        [
+            '................',
+            '...kkkkkkkkk....',
+            '..kooooooooook..',
+            '.kOkooooooooOkk.',  // pointed ears, fills wide
+            '.kooooooooooook.',
+            '.koKKooooKKoook.',  // beady eyes
+            '.kooooooooooook.',
+            '.kOokooookOookk.',  // whiskers
+            '.koooKoooooooook',  // nose
+            '.kooooooooooook.',
+            '.kkooooooooookk.',
+            '..kooooooooook..',
+            '..kooooooooook..',  // big rotund belly
+            '..koooooooook...',
+            '..kok.....kok...',  // short stubby legs
+            '..kOk.....kOk...',
+        ],
+        [
+            '................',
+            '...kkkkkkkkk....',
+            '..kooooooooook..',
+            '.kOkooooooooOkk.',
+            '.kooooooooooook.',
+            '.koKKooooKKoook.',
+            '.kooooooooooook.',
+            '.kOokooookOookk.',
+            '.koooKoooooooook',
+            '.kooooooooooook.',
+            '.kkooooooooookk.',
+            '..kooooooooook..',
+            '..kooooooooook..',
+            '.koooooooooook..',  // shifted legs
+            '..kok.....kok...',
+            '..kOk.....kOk...',
+        ],
+    ],
+
+    cat_heavy_left: [
+        [
+            '................',
+            '..kkkkkkkkk.....',
+            '.kooooooooook...',
+            'kOkooooooooook..',
+            'kooooooooooook..',
+            'koKKooooooooook.',
+            'kooooooooooook..',
+            'kOokooookooookk.',
+            'koooKooooooooook',
+            'kooooooooooooook',
+            'kkooooooooooookk',
+            '.kooooooooooook.',
+            '.kooooooooooook.',
+            '.koooooooooook..',
+            '.kok.....kok....',
+            '.kOk.....kOk....',
+        ],
+        [
+            '................',
+            '..kkkkkkkkk.....',
+            '.kooooooooook...',
+            'kOkooooooooook..',
+            'kooooooooooook..',
+            'koKKooooooooook.',
+            'kooooooooooook..',
+            'kOokooookooookk.',
+            'koooKooooooooook',
+            'kooooooooooooook',
+            'kkooooooooooookk',
+            '.kooooooooooook.',
+            '.kooooooooooook.',
+            'koooooooooooook.',
+            '.kok.....kok....',
+            '.kOk.....kOk....',
+        ],
+    ],
+
+    // Ninja Cat - black cat with red eyes, red headband, sleek angular
+    cat_boss_down: [
+        [
+            '................',
+            '....knkknkk.....',
+            '...knnnnnnnnk...',
+            '..knknnnnnnknk..',  // angular pointed ears
+            '..knnnnnnnnnnk..',
+            '..knnrnnnnrnnk..',  // red eyes
+            '..knnnnnnnnnnnk.',
+            '..knnknnnnknnk..',  // whiskers (subtle)
+            '..knnnRnnnnnk...',  // red nose dot
+            '..kknnnnnnnnk...',
+            '...knnnnnnnnk...',
+            '...knnRkkknnk...',  // red headband around body
+            '...knnnnnnnnk...',
+            '...knk....knk...',
+            '...knk....knk...',  // dark legs
+            '................',
+        ],
+        [
+            '................',
+            '....knkknkk.....',
+            '...knnnnnnnnk...',
+            '..knknnnnnnknk..',
+            '..knnnnnnnnnnk..',
+            '..knnrnnnnrnnk..',
+            '..knnnnnnnnnnnk.',
+            '..knnknnnnknnk..',
+            '..knnnRnnnnnk...',
+            '..kknnnnnnnnk...',
+            '...knnnnnnnnk...',
+            '...knnRkkknnk...',
+            '...knnnnnnnnk...',
+            '..knk.....knk...',
+            '...knk....knk...',
+            '................',
+        ],
+    ],
+
+    cat_boss_left: [
+        [
+            '................',
+            '...knkknkk......',
+            '..knnnnnnnnk....',
+            '.knknnnnnnnnk...',
+            '.knnnnnnnnnnk...',
+            '.knnrnnnnnnnnk..',
+            '.knnnnnnnnnnnk..',
+            '.knnknnnnknnkk..',
+            '.knnnRnnnnnk....',
+            '.kknnnnnnnnk....',
+            '..knnnnnnnnk....',
+            '..knnRkkknnk....',
+            '..knnnnnnnnk....',
+            '..knk...........',
+            '..knk...........',
+            '................',
+        ],
+        [
+            '................',
+            '...knkknkk......',
+            '..knnnnnnnnk....',
+            '.knknnnnnnnnk...',
+            '.knnnnnnnnnnk...',
+            '.knnrnnnnnnnnk..',
+            '.knnnnnnnnnnnk..',
+            '.knnknnnnknnkk..',
+            '.knnnRnnnnnk....',
+            '.kknnnnnnnnk....',
+            '..knnnnnnnnk....',
+            '..knnRkkknnk....',
+            '..knnnnnnnnk....',
+            '.knk............',
+            '..knk...........',
+            '................',
+        ],
+    ],
+
+    // -----------------------------------------------------------------------
+    // TERRAIN TILES
+    // -----------------------------------------------------------------------
+
+    tile_grass: [
+        // Variant 1
+        [
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeEeeeeeeeeeeeee',
+            'eeeeeeeeeeEeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeEeeeeeeeEee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eEeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeEeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeEeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeEeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+        ],
+        // Variant 2
+        [
+            'eeeeeeeeeeeeeeee',
+            'eeeEeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeEe',
+            'eeeeEeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeEeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eEeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeEeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeEeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeEeee',
+        ],
+        // Variant 3 (with a flower)
+        [
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeEeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeppeeeeeeeee',  // pink flower petals
+            'eeeeepypeeeeeEee',  // yellow center
+            'eeeeeppeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eEeeeeeeeeeeeeee',
+            'eeeeeeeeeeEeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeEeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+        ],
+    ],
+
+    tile_forest: [
+        // Variant 1
+        [
+            'eeeeEEEEEEeeeeee',
+            'eeeeEEEEEEEeeeee',
+            'eeeEEEEEEEEEeeee',
+            'eeeEEEEEEEEEEeee',
+            'eeeEEEEEEEEEEeee',
+            'eeeeEEEEEEEEeeee',
+            'eeeeeEEEEEeEeeee',
+            'eeeeeeeEEeeeeeee',
+            'eeeeeeedDeeeeeee',  // trunk
+            'eeeeeedDDDeeeeee',
+            'eeeeeeeeeeeeEEEE',
+            'eeeeeeeeeeeeEEEE',
+            'eeeeeeeeeeeeEEEE',
+            'eeeeeeeeeeeeeEEE',
+            'eeeeeeeeeeedDeee',
+            'eeeeeeeeeeedDeee',
+        ],
+        // Variant 2 (two trees)
+        [
+            'eEEEEEeeeeeEEEee',
+            'eEEEEEEeeEEEEEEe',
+            'eEEEEEEEEEEEEEEe',
+            'eeEEEEEEEEEEEEee',
+            'eeeeEEEEEEEEeeee',
+            'eeeeedDeeeeEeeee',
+            'eeeeedDeeeeEEeee',
+            'eeeeedDeeeeEEEee',
+            'eeeeeeeeeeeEEEee',
+            'eeeeeeeeeeeEEeee',
+            'eeeeeeeeeeeedDeee',
+            'eeeeeeeeeeedDeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeEeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+        ],
+    ],
+
+    tile_road: [
+        // Variant 1 (horizontal path)
+        [
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'DDDDDDDDDDDDDDdd',
+            'ddddddddddddddDD',
+            'ddDddddddddddddd',
+            'ddddDdddddddDddd',
+            'dddddddddddddDdd',
+            'DdddddDddddddddd',
+            'ddddddddddDddddd',
+            'DDDDDDDDDDDDDDdd',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+        ],
+        // Variant 2 (vertical path)
+        [
+            'eeeeDDddDeeeeeee',
+            'eeeeDddddDeeeeeee',
+            'eeeeDdDdddeeeeee',
+            'eeeeDddddDeeeeeee',
+            'eeeeDdddddeeeeee',
+            'eeeeDddDddeeeeee',
+            'eeeeDdddddeeeeee',
+            'eeeeDddddDeeeeeee',
+            'eeeeDdddddeeeeee',
+            'eeeeDDddddeeeeee',
+            'eeeeDddddDeeeeeee',
+            'eeeeDdDdddeeeeee',
+            'eeeeDddddDeeeeeee',
+            'eeeeDdddddeeeeee',
+            'eeeeDddDddeeeeee',
+            'eeeeDdddddeeeeee',
+        ],
+    ],
+
+    tile_water: [
+        // Frame 1
+        [
+            'aaaaaaaaaaaaaaaa',
+            'aAaaaaaaaaAaaaaa',
+            'aaaAaaaaaaaaaaaa',
+            'aaaaaaaaaaaAaaaa',
+            'mmmmmmmmmmmmmmm.',  // wave highlight
+            'aaaaaaaaaaaaaaaa',
+            'aAaaaaaaaaAaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aaaAaaaaaaaaaaaa',
+            'mmmmmmmmmmmmmmm.',
+            'aaaaaaaaaaaaaaaa',
+            'aAaaaaaaaaAaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aaaAaaaaaaaaaaaa',
+            'mmmmmmmmmmmmmmm.',
+            'aaaaaaaaaaaaaaaa',
+        ],
+        // Frame 2
+        [
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaAaaaaAaaaaa',
+            'aaaaaaaaaaaaaaAa',
+            'aAaaaaaaaaaaaaa.',
+            'aaaaaaaaaaaaaaaa',
+            '.mmmmmmmmmmmmmmm',
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaAaaaaAaaaaa',
+            'aaaaaaaaaaaaaaAa',
+            'aAaaaaaaaaaaaaa.',
+            'aaaaaaaaaaaaaaaa',
+            '.mmmmmmmmmmmmmmm',
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaAaaaaAaaaaa',
+            'aaaaaaaaaaaaaaAa',
+            'aAaaaaaaaaaaaaa.',
+        ],
+        // Frame 3
+        [
+            'aaaaaAaaaaAaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aAaaaaaaaaaaAaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'mmmmmmmmmmmmmmm.',
+            'aaaaaAaaaaAaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aAaaaaaaaaaaAaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            '.mmmmmmmmmmmmmmm',
+            'aaaaaAaaaaAaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aAaaaaaaaaaaAaaa',
+            'aaaaaaaaaaaaaaaa',
+        ],
+    ],
+
+    tile_mountain: [
+        [
+            'eeeeeeeeeeeeeeee',
+            'eeeeeekkeeeeeee.',
+            'eeeeeksskeeeeeee',
+            'eeeeksssskeeeeee',
+            'eeekssWsssk.eeee',
+            'eekssWWWssskeeee',
+            'ekssWWsssssskee.',
+            'ekssssssssssskeee',
+            'ksssssDDsssssskee',
+            'kssssDDDDsssssske',
+            'ksDDDDDDDDDssksse',
+            'kDDDDDDDDDDDssske',
+            'DDDDDDDDDDDDDDDk',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+            'eeeeeeeeeeeeeeee',
+        ],
+    ],
+
+    tile_bridge: [
+        [
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'kkkkkkkkkkkkkkkk',
+            'DBBBBBBBBBBBBBDk',  // bridge planks
+            'DbbbbbbbbbbbbDDk',
+            'DBBBBBBBBBBBBBDk',
+            'DbbbbbbbbbbbbDDk',
+            'DBBBBBBBBBBBBBDk',
+            'DbbbbbbbbbbbbDDk',
+            'DBBBBBBBBBBBBBDk',
+            'kkkkkkkkkkkkkkkk',
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaaaaaaaaaaaa',
+            'aaaaaaaaaaaaaaaa',
+        ],
+    ],
+
+    tile_wall: [
+        [
+            'kkkkkkkkkkkkkkkk',
+            'kSSSSSSkkSSSSSSk',  // stone blocks
+            'kSSSSSSkkSSSSSSk',
+            'kSSSSSSkkSSSSSSk',
+            'kkkkkkkkkkkkkkkk',
+            'kkSSSSSSkkSSSSSk',
+            'kkSSSSSSkkSSSSSk',
+            'kkSSSSSSkkSSSSSk',
+            'kkkkkkkkkkkkkkkk',
+            'kSSSSSSkkSSSSSSk',
+            'kSSSSSSkkSSSSSSk',
+            'kSSSSSSkkSSSSSSk',
+            'kkkkkkkkkkkkkkkk',
+            'kkSSSSSSkkSSSSSk',
+            'kkSSSSSSkkSSSSSk',
+            'kkkkkkkkkkkkkkkk',
+        ],
+    ],
+
+    // -----------------------------------------------------------------------
+    // UI SPRITES
+    // -----------------------------------------------------------------------
+
+    cursor: [
+        // Frame 0 (bright)
+        [
+            'yyyyyyyyyyyyyyyY',
+            'yk............Yy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yk...........kYy',
+            'yYYYYYYYYYYYYYyY',
+            'YYYYYYYYYYYYYYY.',
+        ],
+        // Frame 1 (dim pulse)
+        [
+            'YYYYYYYYYYYYYYYy',
+            'Yk............yY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'Yk...........kyY',
+            'YyyyyyyyyyyyyYyY',
+            'yyyyyyyyyyyyyyy.',
+        ],
+    ],
+
+    move_highlight: [
+        [
+            'llllllllllllllll',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'l..............l',
+            'llllllllllllllll',
+        ],
+    ],
+
+    attack_highlight: [
+        [
+            'rrrrrrrrrrrrrrrr',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'r..............r',
+            'rrrrrrrrrrrrrrrr',
+        ],
+    ],
+
+    heal_highlight: [
+        [
+            'eeeeeeeeeeeeeeee',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'e..............e',
+            'eeeeeeeeeeeeeeee',
+        ],
+    ],
+
+    // -----------------------------------------------------------------------
+    // BATTLE EFFECT SPRITES (8x8)
+    // -----------------------------------------------------------------------
+
+    fx_hit: [
+        // Frame 0
+        [
+            '........',
+            '...ww...',
+            '..wWww..',
+            '.wWKWww.',
+            '..wWww..',
+            '...ww...',
+            '........',
+            '........',
+        ],
+        // Frame 1
+        [
+            '..w.....',
+            '.wWw...w',
+            'wWKWw.wW',
+            '.wWwwwWK',
+            '..wwwwWw',
+            '...www.w',
+            '....w...',
+            '........',
+        ],
+        // Frame 2 (fading)
+        [
+            '........',
+            '.W......',
+            '..W..W..',
+            '...W....',
+            '..W..W..',
+            '........',
+            '....W...',
+            '........',
+        ],
+    ],
+
+    fx_magic: [
+        // Frame 0
+        [
+            '........',
+            '...mm...',
+            '..mMMm..',
+            '.mMMMMm.',
+            '..mMMm..',
+            '...mm...',
+            '........',
+            '........',
+        ],
+        // Frame 1
+        [
+            '.m......',
+            'mMm.m...',
+            '.mMmMm..',
+            '..mMMm.m',
+            '.mMMmMm.',
+            'mMm.mMm.',
+            '..m..m..',
+            '........',
+        ],
+        // Frame 2 (burst)
+        [
+            'm..m..m.',
+            '.m....m.',
+            '..mMm...',
+            'm.MMM..m',
+            '..mMm...',
+            '.m....m.',
+            'm..m..m.',
+            '........',
+        ],
+    ],
+
+    fx_heal: [
+        // Frame 0
+        [
+            '........',
+            '...pp...',
+            '..pPpp..',
+            '.pPepPp.',
+            '..pPpp..',
+            '...pp...',
+            '........',
+            '........',
+        ],
+        // Frame 1 (rising)
+        [
+            '...p....',
+            '..pPp...',
+            '.pPepPp.',
+            '..ppp...',
+            '...p.pp.',
+            '....pPp.',
+            '....pp..',
+            '........',
+        ],
+        // Frame 2 (dispersing)
+        [
+            '.p..p...',
+            'pPp..p..',
+            '.p..pPp.',
+            '......p.',
+            '.p......',
+            'p.p.....',
+            '..p.....',
+            '........',
+        ],
+    ],
+
+};
+
+// ---------------------------------------------------------------------------
+// HELPER FUNCTIONS
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a sprite definition (string array) to a canvas element.
+ * @param {string[]} spriteDef - Array of strings, each char is a palette key
+ * @param {Object} palette - Color palette mapping chars to CSS color strings
+ * @param {number} scale - Pixel scale factor (e.g., 2 for 2x)
+ * @returns {HTMLCanvasElement}
+ */
+function _renderSprite(spriteDef, palette, scale) {
+    const h = spriteDef.length;
+    const w = spriteDef[0].length;
+    const c = document.createElement('canvas');
+    c.width = w * scale;
+    c.height = h * scale;
+    const ctx = c.getContext('2d');
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const ch = spriteDef[y][x];
+            if (ch === '.' || !palette[ch]) continue;
+            ctx.fillStyle = palette[ch];
+            ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+    }
+    return c;
+}
+
+/**
+ * Build a complete sprite cache at a given scale factor.
+ * Sprites with multiple frames/variants are returned as arrays of canvases.
+ * Single sprites are returned as a single canvas.
+ * @param {number} scale - Pixel scale factor
+ * @returns {Object} - Map of sprite key to canvas or array of canvases
+ */
+function buildTacticsSpriteCache(scale) {
+    const cache = {};
+    for (const [key, def] of Object.entries(TACTICS_SPRITES)) {
+        if (Array.isArray(def[0])) {
+            // Multiple frames/variants (array of string arrays)
+            cache[key] = def.map(frame => _renderSprite(frame, TACTICS_PALETTE, scale));
+        } else {
+            // Single sprite (string array)
+            cache[key] = _renderSprite(def, TACTICS_PALETTE, scale);
+        }
+    }
+    return cache;
+}
+
+/**
+ * Get a specific frame canvas from the cache.
+ * @param {Object} cache - Sprite cache from buildTacticsSpriteCache
+ * @param {string} key - Sprite key (e.g., 'dog_knight_down')
+ * @param {number} [frame=0] - Frame index for animated sprites
+ * @returns {HTMLCanvasElement|null}
+ */
+function getTacticsSprite(cache, key, frame) {
+    frame = frame || 0;
+    const entry = cache[key];
+    if (!entry) return null;
+    if (Array.isArray(entry)) {
+        return entry[frame % entry.length] || null;
+    }
+    return entry;
+}
+
+// Expose as globals (for non-module use in browser)
+if (typeof window !== 'undefined') {
+    window.TACTICS_PALETTE = TACTICS_PALETTE;
+    window.TACTICS_SPRITES = TACTICS_SPRITES;
+    window.buildTacticsSpriteCache = buildTacticsSpriteCache;
+    window.getTacticsSprite = getTacticsSprite;
+    window._renderSprite = _renderSprite;
+}
+
+// CommonJS / module export
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        TACTICS_PALETTE,
+        TACTICS_SPRITES,
+        buildTacticsSpriteCache,
+        getTacticsSprite,
+        _renderSprite,
+    };
+}
+
+
+// === js/tacticsEngine.js ===
+// =============================================================================
+// tacticsEngine.js — Puppy Academy Tactical Battle Engine
+// =============================================================================
+// Shining Force-style tactical RPG battle engine for the "Puppy Academy" game.
+// Dogs vs. Cats themed JRPG combat on a grid map.
+//
+// This module handles ALL game logic: state machine, movement/attack ranges,
+// combat math, enemy AI, story triggers, and dialogue queuing.
+// It does NOT render anything — a separate renderer subscribes via onEvent.
+// =============================================================================
+
+'use strict';
+
+// -----------------------------------------------------------------------------
+// Terrain definitions
+// moveCost: movement points spent to enter this tile (99 = impassable)
+// defBonus: flat damage reduction when defending on this tile
+// avoid:    percentage chance to dodge an attack (unused by default AI, but
+//           available for future hit-rate calculations)
+// -----------------------------------------------------------------------------
+const TERRAIN = {
+    GRASS:    { name: 'Grass',    moveCost: 1,    defBonus: 0, avoid: 0  },
+    FOREST:   { name: 'Forest',   moveCost: 2,    defBonus: 2, avoid: 10 },
+    ROAD:     { name: 'Road',     moveCost: 0.8,  defBonus: 0, avoid: 0  },
+    MOUNTAIN: { name: 'Mountain', moveCost: 3,    defBonus: 3, avoid: 15 },
+    WATER:    { name: 'Water',    moveCost: 99,   defBonus: 0, avoid: 0  }, // impassable
+    BRIDGE:   { name: 'Bridge',   moveCost: 1,    defBonus: 0, avoid: 0  },
+    WALL:     { name: 'Wall',     moveCost: 99,   defBonus: 0, avoid: 0  }, // impassable
+};
+
+// -----------------------------------------------------------------------------
+// Built-in ability definitions
+// Abilities are looked up by name string stored in unit.abilities[].
+// Each entry describes how the ability works so useAbility() can resolve it.
+// -----------------------------------------------------------------------------
+const ABILITY_DEFS = {
+    // Every unit has access to the basic attack (handled separately in the
+    // action menu, but listed here for completeness / future extension).
+    attack: {
+        name: 'Attack',
+        mpCost: 0,
+        targetType: 'enemy',   // 'enemy' | 'ally' | 'self' | 'empty'
+        aoeRadius: 0,          // 0 = single target
+        description: 'Strike an adjacent enemy.',
+    },
+
+    // ── Player abilities ──────────────────────────────────────────────────────
+    heal: {
+        name: 'Heal',
+        mpCost: 3,
+        targetType: 'ally',
+        aoeRadius: 0,
+        healAmount: 8,
+        description: 'Restore HP to an ally.',
+    },
+    tailwhip: {
+        name: 'Tail Whip',
+        mpCost: 2,
+        targetType: 'enemy',
+        aoeRadius: 0,
+        power: 12,             // base magic damage before defender.def
+        description: 'A stinging tail whip that ignores terrain bonuses.',
+        ignoresTerrain: true,
+    },
+    barkwave: {
+        name: 'Bark Wave',
+        mpCost: 4,
+        targetType: 'enemy',
+        aoeRadius: 1,          // hits all enemies within 1 tile of target
+        power: 8,
+        description: 'A sonic bark that damages nearby enemies.',
+    },
+    fetchbuff: {
+        name: 'Fetch!',
+        mpCost: 3,
+        targetType: 'ally',
+        aoeRadius: 0,
+        atkBuff: 4,            // temporary ATK increase (lasts rest of phase)
+        duration: 1,           // turns
+        description: 'Rally an ally, boosting their ATK this turn.',
+    },
+    growl: {
+        name: 'Growl',
+        mpCost: 2,
+        targetType: 'enemy',
+        aoeRadius: 0,
+        defDebuff: 3,          // reduces target DEF temporarily
+        duration: 2,
+        description: 'Lower an enemy\'s guard.',
+    },
+
+    // ── Enemy abilities ───────────────────────────────────────────────────────
+    scratch: {
+        name: 'Scratch',
+        mpCost: 2,
+        targetType: 'enemy',
+        aoeRadius: 0,
+        power: 10,
+        description: 'A sharp claw strike.',
+    },
+    hiss: {
+        name: 'Hiss',
+        mpCost: 2,
+        targetType: 'enemy',
+        aoeRadius: 1,
+        power: 5,
+        description: 'An intimidating hiss that weakens nearby units.',
+        defDebuff: 2,
+        duration: 1,
+    },
+};
+
+// =============================================================================
+// TacticsEngine
+// =============================================================================
+class TacticsEngine {
+    constructor() {
+        // ── Phase state machine ───────────────────────────────────────────────
+        // Valid states:
+        //   'intro'         — opening story/dialogue before battle starts
+        //   'player_select' — player picks a unit to command
+        //   'player_move'   — movement range shown, waiting for destination
+        //   'player_action' — action menu visible (handled by renderer)
+        //   'player_target' — choosing attack/ability target
+        //   'animating'     — an animation is playing; input is blocked
+        //   'enemy_turn'    — AI is processing enemy moves
+        //   'dialogue'      — story/dialogue overlay is active
+        //   'victory'       — battle won
+        //   'defeat'        — battle lost
+        this.state = 'intro';
+
+        // ── Map data ──────────────────────────────────────────────────────────
+        this.map = null;          // { width, height, terrain: string[] }
+        this.units = [];          // all units (both teams, alive and dead)
+        this.turnNumber = 1;
+
+        // ── Player interaction state ──────────────────────────────────────────
+        this.selectedUnit = null;
+        this.movableTiles = [];    // [{x, y, cost}]  tiles the unit can reach
+        this.attackableTiles = []; // [{x, y}]         tiles the unit can attack
+        this.cursor = { x: 0, y: 0 };
+
+        // Position the selected unit occupied BEFORE moving this phase.
+        // Used by undoMove() to restore position.
+        this._preMovePosX = null;
+        this._preMovePosY = null;
+
+        // Which ability is being targeted (during 'player_target' state).
+        this._pendingAbility = null;
+
+        // ── Animation queue ───────────────────────────────────────────────────
+        this.animations = [];
+
+        // ── Dialogue system ───────────────────────────────────────────────────
+        this.dialogueQueue = [];    // [{speaker, text, portrait}] waiting lines
+        this.currentDialogue = null; // the line currently on screen
+        this._stateBeforeDialogue = null; // where to return after dialogue ends
+
+        // ── Story triggers ────────────────────────────────────────────────────
+        // Each trigger fires at most once. Populated by loadBattle().
+        this.storyTriggers = [];
+
+        // ── Event callback ────────────────────────────────────────────────────
+        // The renderer sets this. The engine calls it as:
+        //   this.onEvent('event_name', payloadObject)
+        this.onEvent = null;
+
+        // ── Enemy AI ──────────────────────────────────────────────────────────
+        // Index into getTeamUnits('enemy') — which enemy is currently acting.
+        this._enemyQueue = [];    // units left to process this enemy phase
+        this._enemyProcessTimer = null; // setTimeout handle for async AI steps
+    }
+
+    // =========================================================================
+    // Event emission helper
+    // =========================================================================
+
+    /**
+     * Emit an engine event to the renderer.
+     * @param {string} eventName
+     * @param {object} [payload={}]
+     */
+    _emit(eventName, payload = {}) {
+        if (typeof this.onEvent === 'function') {
+            this.onEvent(eventName, payload);
+        }
+    }
+
+    // =========================================================================
+    // Scenario loading
+    // =========================================================================
+
+    /**
+     * Load a battle scenario and start the intro phase.
+     *
+     * Expected scenario shape:
+     * {
+     *   map: { width, height, terrain: string[] },
+     *   units: UnitDefinition[],
+     *   dialogue: { intro: [{speaker, text}], victory: [...], defeat: [...] },
+     *   storyTriggers: [{ id, condition: fn, action: fn }],   // optional
+     * }
+     */
+    loadBattle(scenario) {
+        // ── Deep-copy the map ─────────────────────────────────────────────────
+        this.map = {
+            width:   scenario.map.width,
+            height:  scenario.map.height,
+            terrain: [...scenario.map.terrain], // shallow copy of primitives
+        };
+
+        // ── Clone unit definitions into live unit objects ──────────────────────
+        this.units = scenario.units.map(def => this._createUnit(def));
+
+        // ── Story triggers ────────────────────────────────────────────────────
+        this.storyTriggers = [];
+
+        // Built-in default triggers (can be overridden by scenario)
+        this._addDefaultTriggers();
+
+        // Scenario-supplied triggers
+        if (Array.isArray(scenario.storyTriggers)) {
+            scenario.storyTriggers.forEach(t => {
+                this.storyTriggers.push({
+                    id:        t.id || `trigger_${this.storyTriggers.length}`,
+                    condition: t.condition,
+                    action:    t.action,
+                    fired:     false,
+                });
+            });
+        }
+
+        // ── Reset engine state ────────────────────────────────────────────────
+        this.turnNumber = 1;
+        this.selectedUnit = null;
+        this.movableTiles = [];
+        this.attackableTiles = [];
+        this.cursor = { x: 0, y: 0 };
+        this.animations = [];
+        this.dialogueQueue = [];
+        this.currentDialogue = null;
+        this._stateBeforeDialogue = null;
+        this._pendingAbility = null;
+        this._enemyQueue = [];
+
+        // ── Queue intro dialogue, then transition to player phase ─────────────
+        const introLines = scenario.dialogue && scenario.dialogue.intro
+            ? scenario.dialogue.intro
+            : [];
+
+        if (introLines.length > 0) {
+            this.state = 'intro';
+            introLines.forEach(line => {
+                this.queueDialogue(line.speaker, line.text, line.portrait || null);
+            });
+            this._stateBeforeDialogue = 'player_select';
+            this._nextDialogue();
+        } else {
+            this.state = 'player_select';
+            this._emit('phase_change', { phase: 'player' });
+        }
+    }
+
+    /**
+     * Create a live unit object from a definition.  We deep-copy to avoid
+     * mutating the original scenario data.
+     * @private
+     */
+    _createUnit(def) {
+        return {
+            id:         def.id,
+            name:       def.name,
+            team:       def.team,
+            unitClass:  def.unitClass || 'fighter',
+            x:          def.x,
+            y:          def.y,
+            hp:         def.hp,
+            maxHp:      def.maxHp,
+            mp:         def.mp         !== undefined ? def.mp     : 0,
+            maxMp:      def.maxMp      !== undefined ? def.maxMp  : 0,
+            atk:        def.atk,
+            def:        def.def,
+            spd:        def.spd        !== undefined ? def.spd    : 5,
+            mov:        def.mov,
+            atkRange:   def.atkRange   !== undefined ? def.atkRange : 1,
+            level:      def.level      !== undefined ? def.level  : 1,
+            exp:        def.exp        !== undefined ? def.exp    : 0,
+            moved:      false,
+            acted:      false,
+            alive:      true,
+            abilities:  Array.isArray(def.abilities) ? [...def.abilities] : ['attack'],
+            portrait:   def.portrait   || null,
+            spriteKey:  def.spriteKey  || null,
+            dir:        def.dir        !== undefined ? def.dir : 0,
+            // Temporary stat buffs/debuffs — cleared at the start of each phase
+            _atkBuff:   0,
+            _defDebuff: 0,
+        };
+    }
+
+    /**
+     * Add default built-in story triggers.
+     * @private
+     */
+    _addDefaultTriggers() {
+        this.storyTriggers.push(
+            {
+                id:        'first_kill',
+                condition: () => this.units.some(u => u.team === 'enemy' && !u.alive),
+                action:    () => this.queueDialogue(
+                    'Buddy',
+                    "We got one! Keep it up, team!",
+                    null
+                ),
+                fired: false,
+            },
+            {
+                id:        'first_ally_down',
+                condition: () => this.units.some(u => u.team === 'player' && !u.alive),
+                action:    () => this.queueDialogue(
+                    'Buddy',
+                    "No! Stay strong everyone, we can still do this!",
+                    null
+                ),
+                fired: false,
+            },
+            {
+                id:        'half_enemies_down',
+                condition: () => {
+                    const enemies = this.units.filter(u => u.team === 'enemy');
+                    const dead    = enemies.filter(u => !u.alive).length;
+                    return enemies.length > 0 && dead >= Math.ceil(enemies.length / 2);
+                },
+                action:    () => this.queueDialogue(
+                    'Buddy',
+                    "We're more than halfway there — don't let up!",
+                    null
+                ),
+                fired: false,
+            },
+            {
+                id:        'low_hp_ally',
+                condition: () => this.units.some(
+                    u => u.team === 'player' && u.alive && u.hp <= Math.ceil(u.maxHp * 0.25)
+                ),
+                action:    () => this.queueDialogue(
+                    'Buddy',
+                    "Someone needs help — get a healer over there!",
+                    null
+                ),
+                fired: false,
+            }
+        );
+    }
+
+    // =========================================================================
+    // Map / terrain helpers
+    // =========================================================================
+
+    /**
+     * Return the terrain definition for the tile at (x, y).
+     * Falls back to GRASS if the tile is out of bounds or unrecognised.
+     * @param {number} x
+     * @param {number} y
+     * @returns {object} TERRAIN entry
+     */
+    getTerrain(x, y) {
+        if (!this.map) return TERRAIN.GRASS;
+        if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) {
+            return TERRAIN.WALL; // treat out-of-bounds as impassable wall
+        }
+        const key = this.map.terrain[y * this.map.width + x];
+        return TERRAIN[key] || TERRAIN.GRASS;
+    }
+
+    /**
+     * Return whether a grid coordinate is within map bounds.
+     * @param {number} x
+     * @param {number} y
+     * @returns {boolean}
+     */
+    _inBounds(x, y) {
+        return this.map !== null
+            && x >= 0 && x < this.map.width
+            && y >= 0 && y < this.map.height;
+    }
+
+    // =========================================================================
+    // Unit helpers
+    // =========================================================================
+
+    /**
+     * Return the alive unit occupying the given grid cell, or null.
+     * @param {number} x
+     * @param {number} y
+     * @returns {object|null}
+     */
+    getUnitAt(x, y) {
+        return this.units.find(u => u.alive && u.x === x && u.y === y) || null;
+    }
+
+    /**
+     * Return all alive units belonging to a team.
+     * @param {'player'|'enemy'} team
+     * @returns {object[]}
+     */
+    getTeamUnits(team) {
+        return this.units.filter(u => u.team === team && u.alive);
+    }
+
+    // =========================================================================
+    // Movement range (BFS with movement-cost accumulation)
+    // =========================================================================
+
+    /**
+     * Calculate tiles reachable by `unit` given its mov stat and terrain costs.
+     *
+     * Rules:
+     *   - Impassable terrain (moveCost === 99) blocks movement entirely.
+     *   - Friendly units can be passed through but not stopped on.
+     *   - Enemy units completely block the path (cannot enter their tile).
+     *   - The unit's current tile is NOT included in the returned list
+     *     (the unit is already there).
+     *
+     * @param {object} unit
+     * @returns {Array<{x:number, y:number, cost:number}>}
+     */
+    calcMovementRange(unit) {
+        const budget = unit.mov;
+        // visited: map from "x,y" -> lowest cost seen so far
+        const visited = new Map();
+        const start   = `${unit.x},${unit.y}`;
+        visited.set(start, 0);
+
+        // BFS queue entries: { x, y, cost }
+        const queue = [{ x: unit.x, y: unit.y, cost: 0 }];
+
+        const reachable = []; // tiles (not the starting tile)
+
+        const directions = [
+            { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+            { dx: 0, dy: 1 }, { dx:  0, dy: -1 },
+        ];
+
+        while (queue.length > 0) {
+            // Pop the node with lowest accumulated cost (priority queue via sort)
+            queue.sort((a, b) => a.cost - b.cost);
+            const { x, y, cost } = queue.shift();
+
+            for (const { dx, dy } of directions) {
+                const nx = x + dx;
+                const ny = y + dy;
+
+                if (!this._inBounds(nx, ny)) continue;
+
+                const terrain   = this.getTerrain(nx, ny);
+                const moveCost  = terrain.moveCost;
+
+                // Impassable terrain
+                if (moveCost >= 99) continue;
+
+                const newCost = cost + moveCost;
+                if (newCost > budget) continue;
+
+                // Enemy units block passage entirely
+                const occupant = this.getUnitAt(nx, ny);
+                if (occupant && occupant.team !== unit.team) continue;
+
+                const key = `${nx},${ny}`;
+                if (visited.has(key) && visited.get(key) <= newCost) continue;
+
+                visited.set(key, newCost);
+
+                // Friendly units can be passed through but not stopped on
+                const canStop = !occupant || occupant === unit;
+                if (canStop) {
+                    reachable.push({ x: nx, y: ny, cost: newCost });
+                }
+
+                queue.push({ x: nx, y: ny, cost: newCost });
+            }
+        }
+
+        return reachable;
+    }
+
+    /**
+     * Calculate all tiles attackable from (x, y) with the given range.
+     * Range is measured in Manhattan (Chebyshev) distance for the "diamond"
+     * pattern familiar from classic tactical RPGs.
+     *
+     * @param {number} x       Starting x
+     * @param {number} y       Starting y
+     * @param {number} range   Maximum Manhattan distance
+     * @param {number} [minRange=1]  Minimum distance (default 1, so melee
+     *                               excludes the unit's own tile)
+     * @returns {Array<{x:number, y:number}>}
+     */
+    calcAttackRange(x, y, range, minRange = 1) {
+        const tiles = [];
+        for (let dx = -range; dx <= range; dx++) {
+            for (let dy = -range; dy <= range; dy++) {
+                const dist = Math.abs(dx) + Math.abs(dy);
+                if (dist < minRange || dist > range) continue;
+                const nx = x + dx;
+                const ny = y + dy;
+                if (this._inBounds(nx, ny)) {
+                    tiles.push({ x: nx, y: ny });
+                }
+            }
+        }
+        return tiles;
+    }
+
+    /**
+     * Quick check: is (tx, ty) within attack range of (x, y)?
+     * @private
+     */
+    _inAttackRange(x, y, tx, ty, range) {
+        return Math.abs(tx - x) + Math.abs(ty - y) <= range;
+    }
+
+    // =========================================================================
+    // Unit selection
+    // =========================================================================
+
+    /**
+     * Select a player unit for commanding.
+     * Computes its movement and attack ranges and stores them.
+     * Transitions state to 'player_move'.
+     * @param {object} unit
+     */
+    selectUnit(unit) {
+        this.selectedUnit   = unit;
+        this.movableTiles   = this.calcMovementRange(unit);
+        this.attackableTiles = this.calcAttackRange(unit.x, unit.y, unit.atkRange);
+        this._preMovePosX  = unit.x;
+        this._preMovePosY  = unit.y;
+        this._pendingAbility = null;
+        this.state = 'player_move';
+        this._emit('unit_selected', { unit, movableTiles: this.movableTiles });
+    }
+
+    /**
+     * Cancel the current selection and return to player_select.
+     */
+    cancelSelection() {
+        this.selectedUnit    = null;
+        this.movableTiles    = [];
+        this.attackableTiles = [];
+        this._pendingAbility = null;
+        this.state = 'player_select';
+        this._emit('selection_cancelled', {});
+    }
+
+    // =========================================================================
+    // Movement
+    // =========================================================================
+
+    /**
+     * Move the selected unit to (x, y) (must be in movableTiles).
+     * Transitions state to 'player_action' after the move.
+     *
+     * A simple A* / BFS path is computed for the renderer to animate along.
+     *
+     * @param {number} x
+     * @param {number} y
+     */
+    moveUnit(x, y) {
+        const unit = this.selectedUnit;
+        if (!unit) return;
+
+        const fromX = unit.x;
+        const fromY = unit.y;
+
+        // Reconstruct movement path for the renderer
+        const path = this._buildPath(unit, x, y);
+
+        unit.x    = x;
+        unit.y    = y;
+        unit.moved = true;
+
+        // Recalculate attack range from the new position
+        this.attackableTiles = this.calcAttackRange(x, y, unit.atkRange);
+
+        this.state = 'player_action';
+
+        this._emit('unit_moved', { unit, fromX, fromY, toX: x, toY: y, path });
+    }
+
+    /**
+     * Build a walkable path from the unit's current position to (tx, ty).
+     * Uses the same BFS logic as calcMovementRange but also tracks predecessors.
+     * @private
+     * @returns {Array<{x:number, y:number}>} ordered list of tiles including destination
+     */
+    _buildPath(unit, tx, ty) {
+        const start = { x: unit.x, y: unit.y };
+
+        // predecessor map
+        const prev = new Map();
+        const visited = new Map();
+        const startKey = `${start.x},${start.y}`;
+        visited.set(startKey, 0);
+
+        const queue = [{ x: start.x, y: start.y, cost: 0 }];
+
+        const directions = [
+            { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+            { dx: 0, dy: 1 }, { dx:  0, dy: -1 },
+        ];
+
+        let found = false;
+        while (queue.length > 0 && !found) {
+            queue.sort((a, b) => a.cost - b.cost);
+            const { x, y, cost } = queue.shift();
+
+            if (x === tx && y === ty) { found = true; break; }
+
+            for (const { dx, dy } of directions) {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (!this._inBounds(nx, ny)) continue;
+
+                const terrain  = this.getTerrain(nx, ny);
+                if (terrain.moveCost >= 99) continue;
+
+                const newCost  = cost + terrain.moveCost;
+                if (newCost > unit.mov + 0.001) continue;
+
+                const occupant = this.getUnitAt(nx, ny);
+                if (occupant && occupant.team !== unit.team) continue;
+
+                const key = `${nx},${ny}`;
+                if (visited.has(key) && visited.get(key) <= newCost) continue;
+
+                visited.set(key, newCost);
+                prev.set(key, { x, y });
+                queue.push({ x: nx, y: ny, cost: newCost });
+            }
+        }
+
+        // Trace back path
+        const path = [];
+        let cur = `${tx},${ty}`;
+        while (prev.has(cur)) {
+            const [cx, cy] = cur.split(',').map(Number);
+            path.unshift({ x: cx, y: cy });
+            const p = prev.get(cur);
+            cur = `${p.x},${p.y}`;
+        }
+
+        return path;
+    }
+
+    /**
+     * Undo the selected unit's move (only valid before acting).
+     * Returns the unit to its position at the start of this phase.
+     */
+    undoMove() {
+        const unit = this.selectedUnit;
+        if (!unit || unit.acted) return; // can't undo after acting
+
+        unit.x     = this._preMovePosX;
+        unit.y     = this._preMovePosY;
+        unit.moved = false;
+
+        // Recalculate movement range from the restored position
+        this.movableTiles    = this.calcMovementRange(unit);
+        this.attackableTiles = this.calcAttackRange(unit.x, unit.y, unit.atkRange);
+
+        this.state = 'player_move';
+        this._emit('move_undone', { unit });
+    }
+
+    // =========================================================================
+    // Combat — damage calculation
+    // =========================================================================
+
+    /**
+     * Calculate damage dealt from attacker to defender.
+     *
+     * Shining Force-style formula:
+     *   base   = attacker.atk * 2 − defender.def
+     *   after terrain = base − TERRAIN[defender tile].defBonus
+     *   jitter = random integer in [−2, +2]
+     *   final  = max(1, after terrain + jitter)
+     *   critical (10%) → damage *= 1.5
+     *
+     * @param {object} attacker
+     * @param {object} defender
+     * @param {boolean} [ignoresTerrain=false]
+     * @returns {{ damage: number, critical: boolean }}
+     */
+    calcDamage(attacker, defender, ignoresTerrain = false) {
+        const atkStat    = attacker.atk + (attacker._atkBuff || 0);
+        const defStat    = Math.max(0, defender.def - (defender._defDebuff || 0));
+        const terrain    = this.getTerrain(defender.x, defender.y);
+        const terrainDef = ignoresTerrain ? 0 : terrain.defBonus;
+
+        const base    = atkStat * 2 - defStat;
+        const jitter  = Math.floor(Math.random() * 5) - 2; // -2 to +2
+        let damage    = Math.max(1, base - terrainDef + jitter);
+
+        const critical = Math.random() < 0.10;
+        if (critical) {
+            damage = Math.ceil(damage * 1.5);
+        }
+
+        return { damage, critical };
+    }
+
+    // =========================================================================
+    // Combat — attack execution
+    // =========================================================================
+
+    /**
+     * Execute a physical attack from `attacker` against `defender`.
+     *
+     * Counter-attack rules (classic Shining Force):
+     *   - Defender counter-attacks only if attacker is within DEFENDER's range.
+     *   - Counter only happens if the defender is still alive after the first hit.
+     *
+     * @param {object} attacker
+     * @param {object} defender
+     * @returns {{
+     *   damage: number, critical: boolean, killed: boolean,
+     *   counterDamage: number|null, counterCritical: boolean|null
+     * }}
+     */
+    executeAttack(attacker, defender) {
+        // ── Initial strike ────────────────────────────────────────────────────
+        const { damage, critical } = this.calcDamage(attacker, defender);
+        defender.hp = Math.max(0, defender.hp - damage);
+
+        const killed = defender.hp <= 0;
+        if (killed) {
+            defender.alive = false;
+        }
+
+        attacker.acted = true;
+
+        // Emit attack event
+        this._emit('unit_attacked', { attacker, defender, damage, critical, killed });
+
+        if (killed) {
+            this._emit('unit_died', { unit: defender });
+        }
+
+        // ── Counter-attack ────────────────────────────────────────────────────
+        let counterDamage   = null;
+        let counterCritical = null;
+
+        if (!killed && this._inAttackRange(defender.x, defender.y, attacker.x, attacker.y, defender.atkRange)) {
+            const counter = this.calcDamage(defender, attacker);
+            counterDamage   = counter.damage;
+            counterCritical = counter.critical;
+
+            attacker.hp = Math.max(0, attacker.hp - counterDamage);
+            const attackerKilled = attacker.hp <= 0;
+            if (attackerKilled) {
+                attacker.alive = false;
+            }
+
+            this._emit('unit_attacked', {
+                attacker:  defender,
+                defender:  attacker,
+                damage:    counterDamage,
+                critical:  counterCritical,
+                killed:    attackerKilled,
+                isCounter: true,
+            });
+
+            if (attackerKilled) {
+                this._emit('unit_died', { unit: attacker });
+            }
+        }
+
+        // ── Post-combat bookkeeping ───────────────────────────────────────────
+        this._awardExp(attacker, defender, killed);
+        this.checkStoryTriggers();
+        this.checkBattleEnd();
+
+        return { damage, critical, killed, counterDamage, counterCritical };
+    }
+
+    /**
+     * Award EXP to a unit after combat.
+     * Levels up if EXP >= 100.
+     * @private
+     */
+    _awardExp(unit, defeated, killed) {
+        if (!unit.alive) return;
+
+        // Base exp: 10 per attack, +20 bonus if target was killed
+        const gain = 10 + (killed ? 20 : 0);
+        unit.exp  += gain;
+
+        while (unit.exp >= 100) {
+            unit.exp -= 100;
+            this._levelUp(unit);
+        }
+    }
+
+    /**
+     * Level a unit up, boosting stats.
+     * @private
+     */
+    _levelUp(unit) {
+        unit.level += 1;
+
+        // Small random stat gains (Shining Force style)
+        unit.maxHp  += Math.floor(Math.random() * 3) + 2;  // +2..4
+        unit.hp      = unit.maxHp; // full restore on level up
+        unit.maxMp  += Math.floor(Math.random() * 2);       // +0..1
+        unit.mp      = unit.maxMp;
+        unit.atk    += Math.floor(Math.random() * 2) + 1;  // +1..2
+        unit.def    += Math.floor(Math.random() * 2);       // +0..1
+        unit.spd    += Math.floor(Math.random() * 2);       // +0..1
+
+        this._emit('level_up', { unit });
+    }
+
+    // =========================================================================
+    // Abilities
+    // =========================================================================
+
+    /**
+     * Use an ability.
+     *
+     * @param {object} unit         — the caster
+     * @param {string} abilityName  — key in ABILITY_DEFS
+     * @param {number} targetX
+     * @param {number} targetY
+     * @returns {boolean} true if ability was used successfully
+     */
+    useAbility(unit, abilityName, targetX, targetY) {
+        const def = ABILITY_DEFS[abilityName];
+        if (!def) {
+            console.warn(`[TacticsEngine] Unknown ability: ${abilityName}`);
+            return false;
+        }
+
+        if (unit.mp < def.mpCost) {
+            this._emit('ability_failed', { unit, reason: 'not_enough_mp' });
+            return false;
+        }
+
+        unit.mp -= def.mpCost;
+        unit.acted = true;
+
+        // Collect targets in AoE or single-target
+        let targets = [];
+
+        if (def.aoeRadius > 0) {
+            // All units in radius around (targetX, targetY)
+            targets = this.units.filter(u => {
+                if (!u.alive) return false;
+                const dist = Math.abs(u.x - targetX) + Math.abs(u.y - targetY);
+                return dist <= def.aoeRadius;
+            });
+        } else {
+            const t = this.getUnitAt(targetX, targetY);
+            if (t) targets.push(t);
+        }
+
+        // Filter by target type
+        targets = targets.filter(t => {
+            if (def.targetType === 'enemy') return t.team !== unit.team;
+            if (def.targetType === 'ally')  return t.team === unit.team;
+            return true;
+        });
+
+        // Apply effect to each target
+        targets.forEach(target => {
+            // ── Damage ability ────────────────────────────────────────────────
+            if (def.power !== undefined) {
+                const { damage, critical } = this.calcDamage(
+                    { ...unit, atk: Math.floor(def.power / 2) },
+                    target,
+                    def.ignoresTerrain || false
+                );
+                target.hp = Math.max(0, target.hp - damage);
+                const killed = target.hp <= 0;
+                if (killed) target.alive = false;
+
+                this._emit('unit_attacked', { attacker: unit, defender: target, damage, critical, killed, isAbility: true, abilityName });
+                if (killed) this._emit('unit_died', { unit: target });
+
+            // ── Heal ability ──────────────────────────────────────────────────
+            } else if (def.healAmount !== undefined) {
+                const healed = Math.min(def.healAmount, target.maxHp - target.hp);
+                target.hp   += healed;
+                this._emit('unit_healed', { healer: unit, target, amount: healed });
+
+            // ── ATK buff ──────────────────────────────────────────────────────
+            } else if (def.atkBuff !== undefined) {
+                target._atkBuff = (target._atkBuff || 0) + def.atkBuff;
+                this._emit('unit_buffed', { source: unit, target, stat: 'atk', amount: def.atkBuff });
+
+            // ── DEF debuff ────────────────────────────────────────────────────
+            } else if (def.defDebuff !== undefined) {
+                target._defDebuff = (target._defDebuff || 0) + def.defDebuff;
+                this._emit('unit_debuffed', { source: unit, target, stat: 'def', amount: def.defDebuff });
+            }
+        });
+
+        this._emit('ability_used', { unit, abilityName, targetX, targetY, targets });
+
+        this.checkStoryTriggers();
+        this.checkBattleEnd();
+        return true;
+    }
+
+    /**
+     * Enter targeting state for an ability.
+     * Called by the renderer when player picks an ability from the action menu.
+     *
+     * @param {string} abilityName
+     */
+    beginAbilityTarget(abilityName) {
+        if (!this.selectedUnit) return;
+        const def = ABILITY_DEFS[abilityName];
+        if (!def) return;
+
+        this._pendingAbility = abilityName;
+
+        // Compute targetable tiles based on unit's attack range (reuse atkRange)
+        this.attackableTiles = this.calcAttackRange(
+            this.selectedUnit.x,
+            this.selectedUnit.y,
+            this.selectedUnit.atkRange
+        );
+
+        this.state = 'player_target';
+        this._emit('ability_targeting', { unit: this.selectedUnit, abilityName, attackableTiles: this.attackableTiles });
+    }
+
+    // =========================================================================
+    // Turn management
+    // =========================================================================
+
+    /**
+     * Mark the selected unit's turn as done (Wait action).
+     * The unit's acted flag is set and turn passes to checkPhaseEnd.
+     */
+    endUnitTurn() {
+        const unit = this.selectedUnit;
+        if (!unit) return;
+
+        unit.acted = true;
+        unit.moved = true; // treat as having moved too
+
+        this.selectedUnit    = null;
+        this.movableTiles    = [];
+        this.attackableTiles = [];
+
+        this.state = 'player_select';
+        this._emit('unit_waited', { unit });
+
+        this.checkPhaseEnd();
+    }
+
+    /**
+     * Check whether all player units have acted; if so, start the enemy phase.
+     */
+    checkPhaseEnd() {
+        const playerUnits = this.getTeamUnits('player');
+        const allActed    = playerUnits.every(u => u.acted);
+
+        if (allActed) {
+            this.startEnemyPhase();
+        }
+    }
+
+    /**
+     * Start the player phase: increment turn counter, reset flags, emit event.
+     */
+    startPlayerPhase() {
+        this.turnNumber += 1;
+
+        // Reset player unit flags and clear temporary buffs
+        this.getTeamUnits('player').forEach(u => {
+            u.moved      = false;
+            u.acted      = false;
+            u._atkBuff   = 0;
+            u._defDebuff = 0;
+        });
+
+        // Also clear enemy debuffs that shouldn't persist
+        this.getTeamUnits('enemy').forEach(u => {
+            u._defDebuff = 0;
+        });
+
+        this.state = 'player_select';
+        this._emit('phase_change', { phase: 'player', turnNumber: this.turnNumber });
+    }
+
+    // =========================================================================
+    // Enemy AI
+    // =========================================================================
+
+    /**
+     * Start the enemy phase.
+     * Queues all alive enemy units and processes them one at a time
+     * with a small delay between each so the renderer can animate.
+     */
+    startEnemyPhase() {
+        this.state = 'enemy_turn';
+        this._emit('phase_change', { phase: 'enemy', turnNumber: this.turnNumber });
+
+        // Reset enemy flags
+        this.getTeamUnits('enemy').forEach(u => {
+            u.moved    = false;
+            u.acted    = false;
+            u._atkBuff = 0;
+        });
+        this.getTeamUnits('player').forEach(u => {
+            u._defDebuff = 0;
+        });
+
+        // Build the queue of enemies to process
+        this._enemyQueue = [...this.getTeamUnits('enemy')];
+        this._processNextEnemy();
+    }
+
+    /**
+     * Pull the next enemy off the queue and process it, or end the enemy phase.
+     * @private
+     */
+    _processNextEnemy() {
+        if (this._enemyQueue.length === 0) {
+            // All enemies done → back to player phase
+            this.startPlayerPhase();
+            return;
+        }
+
+        const unit = this._enemyQueue.shift();
+
+        // Unit may have been killed during a counter-attack earlier this phase
+        if (!unit.alive) {
+            this._processNextEnemy();
+            return;
+        }
+
+        this.processEnemyUnit(unit);
+
+        // Yield control to let the renderer animate, then continue
+        // In environments without setTimeout (testing), call synchronously.
+        if (typeof setTimeout !== 'undefined') {
+            this._enemyProcessTimer = setTimeout(() => this._processNextEnemy(), 400);
+        } else {
+            this._processNextEnemy();
+        }
+    }
+
+    /**
+     * AI logic for a single enemy unit.
+     *
+     * Strategy:
+     *  1. Find all reachable tiles.
+     *  2. For each reachable tile, check if any player unit is in attack range.
+     *  3. Score (moveTile, attackTarget) pairs:
+     *       - bonus if target is low HP (can finish it off)
+     *       - bonus for defensive terrain on the move tile
+     *  4. If a good (move, attack) pair found → move + attack.
+     *  5. Otherwise, move toward nearest player unit.
+     *  6. After moving, attack if now in range.
+     *
+     * @param {object} unit
+     */
+    processEnemyUnit(unit) {
+        const playerUnits = this.getTeamUnits('player');
+        if (playerUnits.length === 0) return;
+
+        const reachable = this.calcMovementRange(unit);
+
+        // Include the unit's current tile as a valid "don't move" option
+        const allPositions = [{ x: unit.x, y: unit.y, cost: 0 }, ...reachable];
+
+        // ── Phase 1: find best (move, attack) combo ───────────────────────────
+        let bestScore   = -Infinity;
+        let bestMove    = null;
+        let bestTarget  = null;
+
+        for (const pos of allPositions) {
+            const attackable = this.calcAttackRange(pos.x, pos.y, unit.atkRange);
+
+            for (const tile of attackable) {
+                const target = this.getUnitAt(tile.x, tile.y);
+                if (!target || target.team !== 'player') continue;
+
+                let score = 0;
+
+                // Strongly prefer targets that can be killed in one hit
+                const estimatedDmg = Math.max(1, unit.atk * 2 - target.def);
+                if (estimatedDmg >= target.hp) score += 100;
+
+                // Prefer low-HP targets (opportunistic)
+                score += (1 - target.hp / target.maxHp) * 40;
+
+                // Prefer defensive terrain for the move position
+                const moveTerrain = this.getTerrain(pos.x, pos.y);
+                score += moveTerrain.defBonus * 3;
+                score += moveTerrain.avoid;
+
+                // Penalise tiles occupied by another allied unit
+                // (can't stop there, but we check this for the starting tile)
+                const occupant = this.getUnitAt(pos.x, pos.y);
+                if (occupant && occupant !== unit) score -= 999;
+
+                if (score > bestScore) {
+                    bestScore  = score;
+                    bestMove   = pos;
+                    bestTarget = target;
+                }
+            }
+        }
+
+        // ── Phase 2: execute best action ──────────────────────────────────────
+        if (bestMove && bestTarget) {
+            // Move to best position if it differs from current
+            if (bestMove.x !== unit.x || bestMove.y !== unit.y) {
+                const fromX = unit.x;
+                const fromY = unit.y;
+                const path  = this._buildPath(unit, bestMove.x, bestMove.y);
+                unit.x      = bestMove.x;
+                unit.y      = bestMove.y;
+                unit.moved  = true;
+                this._emit('unit_moved', { unit, fromX, fromY, toX: bestMove.x, toY: bestMove.y, path });
+            }
+
+            // Attack
+            this.executeAttack(unit, bestTarget);
+            unit.acted = true;
+            return;
+        }
+
+        // ── Phase 3: no attack available → move toward nearest player unit ────
+        const nearest = this._findNearestPlayer(unit, playerUnits);
+        if (!nearest) return;
+
+        const bestTile = this._findBestMoveToward(unit, nearest, reachable);
+
+        if (bestTile) {
+            const fromX = unit.x;
+            const fromY = unit.y;
+            const path  = this._buildPath(unit, bestTile.x, bestTile.y);
+            unit.x      = bestTile.x;
+            unit.y      = bestTile.y;
+            unit.moved  = true;
+            this._emit('unit_moved', { unit, fromX, fromY, toX: bestTile.x, toY: bestTile.y, path });
+
+            // Check if now in range after moving
+            if (this._inAttackRange(unit.x, unit.y, nearest.x, nearest.y, unit.atkRange)) {
+                this.executeAttack(unit, nearest);
+            }
+        }
+
+        unit.acted = true;
+    }
+
+    /**
+     * Find the nearest alive player unit by Manhattan distance.
+     * @private
+     */
+    _findNearestPlayer(unit, playerUnits) {
+        let nearest  = null;
+        let minDist  = Infinity;
+
+        for (const p of playerUnits) {
+            const d = Math.abs(p.x - unit.x) + Math.abs(p.y - unit.y);
+            if (d < minDist) {
+                minDist  = d;
+                nearest  = p;
+            }
+        }
+
+        return nearest;
+    }
+
+    /**
+     * Among reachable tiles, find the one that gets closest to the target.
+     * Prefer defensive terrain as a tiebreaker.
+     * @private
+     */
+    _findBestMoveToward(unit, target, reachable) {
+        let best       = null;
+        let bestDist   = Math.abs(target.x - unit.x) + Math.abs(target.y - unit.y);
+        let bestTerrain = 0;
+
+        for (const tile of reachable) {
+            // Don't try to stop on a tile occupied by another unit
+            const occupant = this.getUnitAt(tile.x, tile.y);
+            if (occupant && occupant !== unit) continue;
+
+            const d = Math.abs(target.x - tile.x) + Math.abs(target.y - tile.y);
+            const t = this.getTerrain(tile.x, tile.y);
+
+            if (d < bestDist || (d === bestDist && t.defBonus > bestTerrain)) {
+                bestDist    = d;
+                bestTerrain = t.defBonus;
+                best        = tile;
+            }
+        }
+
+        return best;
+    }
+
+    // =========================================================================
+    // Victory / Defeat
+    // =========================================================================
+
+    /**
+     * Check if the battle is over (all enemies dead → victory, all players dead → defeat).
+     * Emits the appropriate event and updates state.
+     */
+    checkBattleEnd() {
+        const playerAlive = this.getTeamUnits('player').length;
+        const enemyAlive  = this.getTeamUnits('enemy').length;
+
+        if (enemyAlive === 0) {
+            this.state = 'victory';
+            this._emit('victory', { turnNumber: this.turnNumber });
+            return;
+        }
+
+        if (playerAlive === 0) {
+            this.state = 'defeat';
+            this._emit('defeat', { turnNumber: this.turnNumber });
+            return;
+        }
+    }
+
+    // =========================================================================
+    // Dialogue system
+    // =========================================================================
+
+    /**
+     * Add a line to the dialogue queue.
+     * @param {string}      speaker   — character name
+     * @param {string}      text      — dialogue text
+     * @param {string|null} portrait  — portrait key/URL or null
+     */
+    queueDialogue(speaker, text, portrait = null) {
+        this.dialogueQueue.push({ speaker, text, portrait });
+
+        // If we're not already in dialogue, start now
+        if (this.state !== 'dialogue' && this.state !== 'intro') {
+            this._stateBeforeDialogue = this.state;
+            this._nextDialogue();
+        }
+    }
+
+    /**
+     * Display the next queued dialogue line, or end dialogue mode.
+     * @private
+     */
+    _nextDialogue() {
+        if (this.dialogueQueue.length === 0) {
+            // Dialogue finished — return to previous state
+            this.currentDialogue = null;
+            this.state = this._stateBeforeDialogue || 'player_select';
+            this._stateBeforeDialogue = null;
+            this._emit('dialogue_end', {});
+            return;
+        }
+
+        const line = this.dialogueQueue.shift();
+        this.currentDialogue = line;
+
+        if (this.state !== 'dialogue' && this.state !== 'intro') {
+            this._stateBeforeDialogue = this.state;
+        }
+        this.state = 'dialogue';
+
+        this._emit('dialogue', { speaker: line.speaker, text: line.text, portrait: line.portrait });
+    }
+
+    /**
+     * Advance to the next dialogue line (player tapped / pressed confirm).
+     */
+    advanceDialogue() {
+        this._nextDialogue();
+    }
+
+    // =========================================================================
+    // Story triggers
+    // =========================================================================
+
+    /**
+     * Check all unfired story triggers and fire any whose conditions are met.
+     * Should be called after every combat/movement action.
+     */
+    checkStoryTriggers() {
+        for (const trigger of this.storyTriggers) {
+            if (trigger.fired) continue;
+            if (typeof trigger.condition === 'function' && trigger.condition()) {
+                trigger.fired = true;
+                if (typeof trigger.action === 'function') {
+                    trigger.action();
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // Input handling — the main interaction entry point
+    // =========================================================================
+
+    /**
+     * Handle a player tap at the given grid coordinates.
+     *
+     * This is the primary input method. The renderer translates pixel
+     * coordinates to grid coordinates and forwards them here.
+     *
+     * @param {number} gridX
+     * @param {number} gridY
+     */
+    handleTap(gridX, gridY) {
+        this.cursor.x = gridX;
+        this.cursor.y = gridY;
+
+        // ── Dialogue: any tap advances to the next line ───────────────────────
+        if (this.state === 'dialogue' || this.state === 'intro') {
+            this.advanceDialogue();
+            return;
+        }
+
+        // ── Animating: ignore taps ────────────────────────────────────────────
+        if (this.state === 'animating') return;
+
+        // ── Enemy turn: ignore taps ───────────────────────────────────────────
+        if (this.state === 'enemy_turn') return;
+
+        // ── Victory / defeat ──────────────────────────────────────────────────
+        if (this.state === 'victory' || this.state === 'defeat') return;
+
+        // ── player_select: pick a friendly unit ───────────────────────────────
+        if (this.state === 'player_select') {
+            const unit = this.getUnitAt(gridX, gridY);
+            if (unit && unit.team === 'player' && !unit.acted && unit.alive) {
+                this.selectUnit(unit);
+            }
+            return;
+        }
+
+        // ── player_move: choose destination or switch unit ────────────────────
+        if (this.state === 'player_move') {
+            // Tapped a movable tile?
+            const inMovable = this.movableTiles.some(t => t.x === gridX && t.y === gridY);
+            if (inMovable) {
+                this.moveUnit(gridX, gridY);
+                return;
+            }
+
+            // Tapped the currently selected unit → deselect
+            if (this.selectedUnit && this.selectedUnit.x === gridX && this.selectedUnit.y === gridY) {
+                this.cancelSelection();
+                return;
+            }
+
+            // Tapped a different friendly unit → switch selection
+            const other = this.getUnitAt(gridX, gridY);
+            if (other && other.team === 'player' && !other.acted && other.alive) {
+                this.selectUnit(other);
+                return;
+            }
+
+            return;
+        }
+
+        // ── player_action: action menu is visible — renderer handles the menu
+        //    buttons, but a tap on the map while the menu is open deselects
+        //    only if we explicitly support that (we don't consume taps here).
+        if (this.state === 'player_action') {
+            // Renderer presents buttons; tapping the map elsewhere = undo move
+            const unit = this.selectedUnit;
+            if (unit && !unit.acted) {
+                this.undoMove();
+            }
+            return;
+        }
+
+        // ── player_target: choose a target tile ───────────────────────────────
+        if (this.state === 'player_target') {
+            const inRange = this.attackableTiles.some(t => t.x === gridX && t.y === gridY);
+
+            if (!inRange) {
+                // Tapped outside range — cancel targeting and return to action
+                this._pendingAbility = null;
+                this.state = 'player_action';
+                this._emit('targeting_cancelled', {});
+                return;
+            }
+
+            if (this._pendingAbility && this._pendingAbility !== 'attack') {
+                // Ability targeting
+                this.useAbility(this.selectedUnit, this._pendingAbility, gridX, gridY);
+                this._pendingAbility = null;
+                // After ability, end the unit's turn and return to player_select
+                this.selectedUnit    = null;
+                this.movableTiles    = [];
+                this.attackableTiles = [];
+                this.state = 'player_select';
+                this.checkPhaseEnd();
+            } else {
+                // Regular attack
+                const target = this.getUnitAt(gridX, gridY);
+                if (target && target.team === 'enemy' && target.alive) {
+                    const result = this.executeAttack(this.selectedUnit, target);
+
+                    // Clean up selection after attack
+                    this.selectedUnit    = null;
+                    this.movableTiles    = [];
+                    this.attackableTiles = [];
+
+                    if (this.state !== 'victory' && this.state !== 'defeat') {
+                        this.state = 'player_select';
+                        this.checkPhaseEnd();
+                    }
+                }
+            }
+
+            return;
+        }
+    }
+
+    /**
+     * Convenience method: enter attack-targeting mode for the selected unit.
+     * Called by the renderer when the player chooses "Attack" from the menu.
+     */
+    beginAttackTarget() {
+        if (!this.selectedUnit) return;
+
+        this._pendingAbility = 'attack';
+        this.attackableTiles = this.calcAttackRange(
+            this.selectedUnit.x,
+            this.selectedUnit.y,
+            this.selectedUnit.atkRange
+        );
+        this.state = 'player_target';
+        this._emit('attack_targeting', { unit: this.selectedUnit, attackableTiles: this.attackableTiles });
+    }
+
+    // =========================================================================
+    // Serialisation helpers (for save/restore)
+    // =========================================================================
+
+    /**
+     * Return a plain-object snapshot of the engine state.
+     * Suitable for JSON.stringify / localStorage persistence.
+     */
+    getSnapshot() {
+        return {
+            state:      this.state,
+            turnNumber: this.turnNumber,
+            map:        this.map,
+            units:      this.units.map(u => ({ ...u })),
+        };
+    }
+
+    /**
+     * Restore engine state from a snapshot produced by getSnapshot().
+     * NOTE: storyTriggers and onEvent must be re-attached after restoring.
+     * @param {object} snapshot
+     */
+    restoreSnapshot(snapshot) {
+        this.state      = snapshot.state;
+        this.turnNumber = snapshot.turnNumber;
+        this.map        = snapshot.map;
+        this.units      = snapshot.units.map(u => ({ ...u }));
+
+        this.selectedUnit    = null;
+        this.movableTiles    = [];
+        this.attackableTiles = [];
+        this.animations      = [];
+        this.dialogueQueue   = [];
+        this.currentDialogue = null;
+        this._enemyQueue     = [];
+    }
+
+    // =========================================================================
+    // Debug helpers
+    // =========================================================================
+
+    /**
+     * Print a simple ASCII representation of the current map state to console.
+     * P = player unit, E = enemy unit, . = empty passable, # = impassable
+     */
+    debugPrintMap() {
+        if (!this.map) { console.log('[TacticsEngine] No map loaded.'); return; }
+
+        const { width, height } = this.map;
+        let out = `Turn ${this.turnNumber} | State: ${this.state}\n`;
+
+        for (let y = 0; y < height; y++) {
+            let row = '';
+            for (let x = 0; x < width; x++) {
+                const unit = this.getUnitAt(x, y);
+                if (unit) {
+                    row += unit.team === 'player' ? 'P' : 'E';
+                } else {
+                    const t = this.getTerrain(x, y);
+                    row += t.moveCost >= 99 ? '#' : '.';
+                }
+            }
+            out += row + '\n';
+        }
+
+        console.log(out);
+    }
+}
+
+// =============================================================================
+// Module export — works in both Node.js (for testing) and browser globals
+// =============================================================================
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { TacticsEngine, TERRAIN, ABILITY_DEFS };
+}
+
+
+// === js/tactics.js ===
+// =============================================================================
+// tactics.js — Shining Force Tactical Battle: Renderer + Scenario + Integration
+// =============================================================================
+// Depends on: tacticsSprites.js, tacticsEngine.js (loaded before this file)
+// =============================================================================
+
+'use strict';
+
+// ---------------------------------------------------------------------------
+// Rendering palette
+// ---------------------------------------------------------------------------
+const TPAL = {
+    UI_BG: '#000070', UI_BORDER: '#fcfcfc', UI_TEXT: '#fcfcfc',
+    UI_ACCENT: '#f8d830', UI_SHADOW: '#000044',
+    BLACK: '#000000', WHITE: '#fcfcfc',
+    HP_GREEN: '#38b764', HP_YELLOW: '#f8d830', HP_RED: '#c83030',
+    YELLOW: '#f8d830',
+};
+
+// Fallback terrain tile colors
+const TERRAIN_COLORS = {
+    GRASS:    { bg: '#38b764', d1: '#2e9e54', d2: '#4ac878' },
+    FOREST:   { bg: '#2e7e3e', d1: '#1e5e2e', d2: '#38b764' },
+    MOUNTAIN: { bg: '#8b7355', d1: '#6b5535', d2: '#a08c6c' },
+    WATER:    { bg: '#3978a8', d1: '#2d5e85', d2: '#5898c8' },
+    ROAD:     { bg: '#c8956c', d1: '#a07850', d2: '#d8b08c' },
+    BRIDGE:   { bg: '#8b6914', d1: '#6b4914', d2: '#ab8934' },
+    WALL:     { bg: '#707070', d1: '#505050', d2: '#909090' },
+};
+
+const TERRAIN_NAMES = ['GRASS','FOREST','MOUNTAIN','WATER','ROAD','BRIDGE','WALL'];
+
+// =============================================================================
+// PROLOGUE SCENARIO
+// =============================================================================
+const PROLOGUE_SCENARIO = {
+    name: 'Prologue: The Midnight Raid',
+    mapWidth: 15, mapHeight: 10,
+    // 0=GRASS 1=FOREST 2=MOUNTAIN 3=WATER 4=ROAD 5=BRIDGE 6=WALL
+    terrain: [
+        1,1,0,0,4,0,0,0,0,0,0,1,1,1,2,
+        1,0,0,0,4,0,0,0,0,0,0,0,1,1,1,
+        0,0,0,0,4,0,0,3,0,0,0,0,0,1,1,
+        0,0,0,4,4,0,0,3,0,0,1,0,0,0,1,
+        0,0,0,4,0,0,0,3,0,0,0,0,0,0,0,
+        0,1,0,4,0,0,0,5,0,0,0,0,1,0,0,
+        0,0,0,4,0,0,0,3,0,0,0,0,0,0,0,
+        0,0,0,4,4,0,0,3,0,0,1,0,0,0,1,
+        1,0,0,0,4,0,0,0,0,0,0,0,1,1,2,
+        1,1,0,0,4,0,0,0,0,0,1,1,1,2,2,
+    ],
+    playerUnits: [
+        { id:'buddy', name:'Buddy', team:'player', unitClass:'knight',
+          x:2, y:4, hp:28, maxHp:28, mp:5, maxMp:5,
+          atk:10, def:7, spd:6, mov:4, atkRange:1,
+          level:1, exp:0, spriteKey:'dog_knight',
+          abilities:['attack','growl'] },
+        { id:'luna', name:'Luna', team:'player', unitClass:'mage',
+          x:1, y:2, hp:18, maxHp:18, mp:10, maxMp:10,
+          atk:12, def:3, spd:8, mov:3, atkRange:2,
+          level:1, exp:0, spriteKey:'dog_mage',
+          abilities:['attack','tailwhip'] },
+        { id:'rex', name:'Rex', team:'player', unitClass:'warrior',
+          x:2, y:7, hp:35, maxHp:35, mp:3, maxMp:3,
+          atk:11, def:9, spd:4, mov:3, atkRange:1,
+          level:1, exp:0, spriteKey:'dog_warrior',
+          abilities:['attack','barkwave'] },
+    ],
+    enemyUnits: [
+        { id:'scout1', name:'Whiskers', team:'enemy', unitClass:'scout',
+          x:10, y:2, hp:12, maxHp:12, mp:0, maxMp:0,
+          atk:6, def:3, spd:9, mov:5, atkRange:1,
+          level:1, exp:0, spriteKey:'cat_scout', abilities:['attack'] },
+        { id:'scout2', name:'Mittens', team:'enemy', unitClass:'scout',
+          x:11, y:7, hp:12, maxHp:12, mp:0, maxMp:0,
+          atk:6, def:3, spd:9, mov:5, atkRange:1,
+          level:1, exp:0, spriteKey:'cat_scout', abilities:['attack'] },
+        { id:'soldier1', name:'Patches', team:'enemy', unitClass:'soldier',
+          x:12, y:4, hp:20, maxHp:20, mp:2, maxMp:2,
+          atk:8, def:5, spd:5, mov:4, atkRange:1,
+          level:1, exp:0, spriteKey:'cat_soldier', abilities:['attack','scratch'] },
+        { id:'soldier2', name:'Ginger', team:'enemy', unitClass:'soldier',
+          x:12, y:6, hp:20, maxHp:20, mp:2, maxMp:2,
+          atk:8, def:5, spd:5, mov:4, atkRange:1,
+          level:1, exp:0, spriteKey:'cat_soldier', abilities:['attack','scratch'] },
+        { id:'boss', name:'Shadow', team:'enemy', unitClass:'boss',
+          x:13, y:5, hp:32, maxHp:32, mp:4, maxMp:4,
+          atk:12, def:6, spd:10, mov:5, atkRange:1,
+          level:3, exp:0, spriteKey:'cat_boss', abilities:['attack','scratch','hiss'] },
+    ],
+    triggers: [
+        { id:'opening',
+          condition: e => e.turnNumber===1 && e.state==='player_select',
+          dialogueChain: [
+            {speaker:'Buddy', text:"Squad, hold position! I see movement beyond the stream..."},
+            {speaker:'Luna',  text:"I count five of them. Scouts and soldiers."},
+            {speaker:'Rex',   text:"*growls* Let 'em come. Nobody crosses this border."},
+            {speaker:'Buddy', text:"Luna, use your range. Rex, hold the center. I'll push up the road."},
+            {speaker:'',      text:"[Tap a unit to select, choose MOVE, then tap a blue tile!]"},
+          ]},
+        { id:'first_blood',
+          condition: e => e.units.filter(u=>u.team==='enemy'&&!u.alive).length>=1,
+          dialogueChain: [
+            {speaker:'Buddy', text:"One down! Keep the pressure on!"},
+            {speaker:'Rex',   text:"Hah! Too easy."},
+          ]},
+        { id:'boss_encounter',
+          condition: e => {
+            const b=e.units.find(u=>u.id==='boss');
+            if(!b||!b.alive) return false;
+            return e.units.filter(u=>u.team==='player'&&u.alive)
+              .some(p=>Math.abs(p.x-b.x)+Math.abs(p.y-b.y)<=3);
+          },
+          dialogueChain: [
+            {speaker:'Shadow', text:"So... the famous Puppy Guard. How disappointing."},
+            {speaker:'Buddy',  text:"Shadow?! The Ninja Cat..."},
+            {speaker:'Shadow', text:"Oh, I'm very real. And this raid is merely a taste."},
+            {speaker:'Luna',   text:"Careful — he's incredibly fast!"},
+          ]},
+        { id:'buddy_hurt',
+          condition: e => {const b=e.units.find(u=>u.id==='buddy'); return b&&b.alive&&b.hp<=b.maxHp*0.35;},
+          dialogueChain: [
+            {speaker:'Rex',   text:"Buddy! Fall back — you're hurt!"},
+            {speaker:'Buddy', text:"Not yet... we can't let them through..."},
+          ]},
+    ],
+    victoryDialogue: [
+        {speaker:'Buddy',  text:"We did it! The border is secure!"},
+        {speaker:'Shadow', text:"Heh... enjoy your little victory, pups."},
+        {speaker:'Shadow', text:"This was merely a scouting party. The Cat Kingdom has much bigger plans..."},
+        {speaker:'Luna',   text:"He vanished... What did he mean by 'bigger plans'?"},
+        {speaker:'Rex',    text:"Nothing good. We need to report to the Academy."},
+        {speaker:'Buddy',  text:"Agreed. Let's move out. This isn't over."},
+        {speaker:'',       text:"[ End of Prologue — Chapter 1 coming soon! ]"},
+    ],
+    defeatDialogue: [
+        {speaker:'Shadow', text:"Pathetic. The Puppy Guard is finished."},
+        {speaker:'',       text:"[ Game Over — Tap to retry ]"},
+    ],
+};
+
+// =============================================================================
+// TacticalBattle — Renderer wrapping TacticsEngine
+// =============================================================================
+class TacticalBattle {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.engine = new TacticsEngine();
+        this.spriteCache = null;
+        this.terrainCache = null;
+        this.pixelScale = 3;
+        this.ts = 48;
+        this.camX = 0; this.camY = 0;
+        this.camTargetX = 0; this.camTargetY = 0;
+        this.camSpeed = 5;
+        this.zoom = 1.0; this.zoomTarget = 1.0;
+        this.zoomMin = 0.4; this.zoomMax = 2.5; this.zoomSpeed = 4;
+        this.time = 0;
+        this.damageNumbers = [];
+        this.shakeTimer = 0; this.shakeIntensity = 0;
+        this.actionButtons = [];
+        this._ptrH = null; this._wheelH = null; this._keyH = null;
+        this._pinch = null;
+        this.onComplete = null;
+        this._raf = null; this._lastT = 0;
+        this._scenario = null;
+    }
+
+    // ── Loading ───────────────────────────────────────────────────────
+    loadScenario(sc) {
+        this._scenario = sc;
+        const tNames = sc.terrain.map(id => TERRAIN_NAMES[id] || 'GRASS');
+        // Build triggers in engine format: { id, condition: fn(), action: fn() }
+        const engineTriggers = (sc.triggers || [])
+            .filter(t => t.id !== 'opening') // opening handled separately
+            .map(t => ({
+                id: t.id,
+                condition: () => t.condition(this.engine),
+                action: () => {
+                    if (t.dialogueChain) {
+                        for (const l of t.dialogueChain)
+                            this.engine.queueDialogue(l.speaker, l.text, null);
+                    }
+                },
+            }));
+        this.engine.loadBattle({
+            map: { width: sc.mapWidth, height: sc.mapHeight, terrain: tNames },
+            units: [...sc.playerUnits, ...sc.enemyUnits],
+            dialogue: {
+                intro: [],
+                victory: sc.victoryDialogue || [],
+                defeat: sc.defeatDialogue || [],
+            },
+            storyTriggers: engineTriggers,
+        });
+        this.spriteCache = buildTacticsSpriteCache(this.pixelScale);
+        this._buildTerrainCache();
+        const pu = this.engine.getTeamUnits('player');
+        if (pu.length) {
+            const ax = pu.reduce((s,u)=>s+u.x,0)/pu.length;
+            const ay = pu.reduce((s,u)=>s+u.y,0)/pu.length;
+            this.camX = this.camTargetX = (ax+0.5)*this.ts;
+            this.camY = this.camTargetY = (ay+0.5)*this.ts;
+        }
+    }
+
+    // ── Start / Stop ──────────────────────────────────────────────────
+    start() {
+        this._resize();
+        this.engine.onEvent = (n,d) => this._onEv(n,d);
+        this._bindInput();
+        this._lastT = 0;
+        this._raf = requestAnimationFrame(t => this._loop(t));
+        // Fire opening dialogue from scenario triggers
+        const op = (this._scenario.triggers||[]).find(t=>t.id==='opening');
+        if (op && op.dialogueChain) {
+            for (const l of op.dialogueChain) this.engine.queueDialogue(l.speaker, l.text, null);
+        }
+    }
+    stop() {
+        this._unbindInput();
+        if (this._raf) cancelAnimationFrame(this._raf);
+        this._raf = null; this.engine.onEvent = null;
+    }
+    _resize() {
+        const p = this.canvas.parentElement;
+        if (p) { this.canvas.width=p.clientWidth||480; this.canvas.height=p.clientHeight||360; }
+    }
+
+    // ── Terrain cache ─────────────────────────────────────────────────
+    _buildTerrainCache() {
+        this.terrainCache = {};
+        const s = this.pixelScale;
+        for (const name of Object.keys(TERRAIN_COLORS)) {
+            const sk = 'tile_'+name.toLowerCase();
+            const sd = TACTICS_SPRITES[sk];
+            if (sd && Array.isArray(sd[0]) && typeof sd[0][0]==='string') {
+                this.terrainCache[name] = sd.map(fr => _renderSprite(fr, TACTICS_PALETTE, s));
+            } else if (sd && typeof sd[0]==='string') {
+                this.terrainCache[name] = [_renderSprite(sd, TACTICS_PALETTE, s)];
+            }
+            if (!this.terrainCache[name]||!this.terrainCache[name].length) {
+                const col = TERRAIN_COLORS[name];
+                const c = document.createElement('canvas'); c.width=16*s; c.height=16*s;
+                const cx = c.getContext('2d');
+                cx.fillStyle=col.bg; cx.fillRect(0,0,c.width,c.height);
+                cx.fillStyle=col.d1;
+                for (let i=0;i<8;i++) cx.fillRect(((i*7+3)%16)*s,((i*11+5)%16)*s,s,s);
+                cx.fillStyle=col.d2;
+                for (let i=0;i<4;i++) cx.fillRect(((i*13+1)%16)*s,((i*9+7)%16)*s,s,s);
+                this.terrainCache[name] = [c];
+            }
+        }
+    }
+
+    // ── Engine events ─────────────────────────────────────────────────
+    _onEv(name, data) {
+        if (name==='unit_attacked' && data.defender) {
+            this.damageNumbers.push({
+                x:(data.defender.x+0.5)*this.ts, y:data.defender.y*this.ts-8,
+                text:data.critical?data.damage+'!':''+data.damage,
+                color:data.critical?TPAL.YELLOW:TPAL.WHITE, timer:0, max:1.2});
+            this.shakeTimer=data.critical?0.3:0.15;
+            this.shakeIntensity=data.critical?4:2;
+        } else if (name==='unit_healed' && data.target) {
+            this.damageNumbers.push({
+                x:(data.target.x+0.5)*this.ts, y:data.target.y*this.ts-8,
+                text:'+'+data.amount, color:TPAL.HP_GREEN, timer:0, max:1.2});
+        } else if (name==='victory' && this._scenario.victoryDialogue) {
+            for (const l of this._scenario.victoryDialogue) this.engine.queueDialogue(l.speaker,l.text,null);
+        } else if (name==='defeat' && this._scenario.defeatDialogue) {
+            for (const l of this._scenario.defeatDialogue) this.engine.queueDialogue(l.speaker,l.text,null);
+        } else if (name==='phase_change' && data.phase==='enemy') {
+            const eu=this.engine.getTeamUnits('enemy');
+            if (eu.length){this.camTargetX=(eu[0].x+0.5)*this.ts;this.camTargetY=(eu[0].y+0.5)*this.ts;}
+        } else if (name==='unit_moved' && data.unit && data.unit.team==='enemy') {
+            this.camTargetX=(data.unit.x+0.5)*this.ts;
+            this.camTargetY=(data.unit.y+0.5)*this.ts;
+        }
+    }
+
+    // ── Game loop ─────────────────────────────────────────────────────
+    _loop(ts) {
+        if (!this._raf) return;
+        if (!this._lastT) this._lastT=ts;
+        const dt=Math.min((ts-this._lastT)/1000,0.1);
+        this._lastT=ts;
+        this._update(dt); this._render();
+        this._raf = requestAnimationFrame(t=>this._loop(t));
+    }
+    _update(dt) {
+        this.time+=dt;
+        this.camX+=(this.camTargetX-this.camX)*this.camSpeed*dt;
+        this.camY+=(this.camTargetY-this.camY)*this.camSpeed*dt;
+        this.zoom+=(this.zoomTarget-this.zoom)*this.zoomSpeed*dt;
+        if (this.shakeTimer>0) this.shakeTimer-=dt;
+        for (let i=this.damageNumbers.length-1;i>=0;i--) {
+            const d=this.damageNumbers[i]; d.timer+=dt; d.y-=30*dt;
+            if (d.timer>=d.max) this.damageNumbers.splice(i,1);
+        }
+        const act=this.engine.selectedUnit;
+        if (act&&act.alive){this.camTargetX=(act.x+0.5)*this.ts;this.camTargetY=(act.y+0.5)*this.ts;}
+        this.engine.checkStoryTriggers();
+    }
+
+    // ── RENDER ────────────────────────────────────────────────────────
+    _render() {
+        const ctx=this.ctx, cw=this.canvas.width, ch=this.canvas.height, ts=this.ts, z=this.zoom;
+        ctx.imageSmoothingEnabled=false;
+        ctx.fillStyle=TPAL.BLACK; ctx.fillRect(0,0,cw,ch);
+        if (!this.engine.map) return;
+        const scrollX=this.camX*z-cw/2, scrollY=this.camY*z-ch/2;
+        let sx=0,sy=0;
+        if (this.shakeTimer>0){sx=(Math.random()-0.5)*this.shakeIntensity*2;sy=(Math.random()-0.5)*this.shakeIntensity*2;}
+        ctx.save(); ctx.translate(-scrollX+sx,-scrollY+sy); ctx.scale(z,z);
+        const mW=this.engine.map.width, mH=this.engine.map.height;
+        const sc=Math.max(0,Math.floor(scrollX/z/ts)-1), ec=Math.min(mW,Math.ceil((scrollX/z+cw/z)/ts)+1);
+        const sr=Math.max(0,Math.floor(scrollY/z/ts)-1), er=Math.min(mH,Math.ceil((scrollY/z+ch/z)/ts)+1);
+        this._rTerrain(ctx,sc,ec,sr,er,ts);
+        this._rGrid(ctx,sc,ec,sr,er,ts);
+        this._rHL(ctx,ts);
+        this._rUnits(ctx,ts);
+        this._rCursor(ctx,ts);
+        this._rDmg(ctx);
+        ctx.restore();
+        this._rBanner(ctx,cw,ch);
+        this._rInfo(ctx,cw,ch);
+        this._rActions(ctx,cw,ch);
+        this._rDlg(ctx,cw,ch);
+        this._rEnd(ctx,cw,ch);
+        if (Math.abs(this.zoom-1)>0.05){
+            ctx.save();ctx.font='bold 11px monospace';ctx.fillStyle='rgba(255,255,255,0.4)';
+            ctx.textAlign='right';ctx.fillText((this.zoom*100|0)+'%',cw-6,ch-6);ctx.restore();
+        }
+    }
+    _rTerrain(ctx,sc,ec,sr,er,ts) {
+        for (let r=sr;r<er;r++) for (let c=sc;c<ec;c++) {
+            const t=this.engine.getTerrain(c,r), nm=t.name.toUpperCase();
+            const arr=this.terrainCache[nm];
+            if(arr) ctx.drawImage(arr[((c*7+r*13)&0x7FFFFFFF)%arr.length],c*ts,r*ts,ts,ts);
+            else{ctx.fillStyle='#38b764';ctx.fillRect(c*ts,r*ts,ts,ts);}
+            if(nm==='WATER'){
+                ctx.fillStyle='rgba(88,152,200,0.25)';
+                ctx.fillRect(c*ts,r*ts+Math.sin(this.time*3+c*2)*2+(Math.floor(this.time*2)%4)*4,ts,4);
+            }
+        }
+    }
+    _rGrid(ctx,sc,ec,sr,er,ts) {
+        ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=0.5;
+        for(let r=sr;r<=er;r++){ctx.beginPath();ctx.moveTo(sc*ts,r*ts);ctx.lineTo(ec*ts,r*ts);ctx.stroke();}
+        for(let c=sc;c<=ec;c++){ctx.beginPath();ctx.moveTo(c*ts,sr*ts);ctx.lineTo(c*ts,er*ts);ctx.stroke();}
+    }
+    _rHL(ctx,ts) {
+        const e=this.engine;
+        if(e.movableTiles.length){
+            const p=0.35+Math.sin(this.time*4)*0.1;
+            ctx.fillStyle=`rgba(80,130,255,${p})`;
+            for(const t of e.movableTiles)ctx.fillRect(t.x*ts+1,t.y*ts+1,ts-2,ts-2);
+            ctx.strokeStyle=`rgba(80,130,255,${p+0.15})`;ctx.lineWidth=1.5;
+            for(const t of e.movableTiles)ctx.strokeRect(t.x*ts+1,t.y*ts+1,ts-2,ts-2);
+        }
+        if(e.attackableTiles.length){
+            const p=0.35+Math.sin(this.time*5)*0.1;
+            ctx.fillStyle=`rgba(255,80,80,${p})`;
+            for(const t of e.attackableTiles)ctx.fillRect(t.x*ts+1,t.y*ts+1,ts-2,ts-2);
+            ctx.strokeStyle=`rgba(255,80,80,${p+0.15})`;ctx.lineWidth=1.5;
+            for(const t of e.attackableTiles)ctx.strokeRect(t.x*ts+1,t.y*ts+1,ts-2,ts-2);
+        }
+    }
+    _rUnits(ctx,ts) {
+        const units=this.engine.units.filter(u=>u.alive).sort((a,b)=>a.y-b.y);
+        for(const u of units){
+            const px=u.x*ts,py=u.y*ts;
+            ctx.fillStyle='rgba(0,0,0,0.18)';
+            ctx.beginPath();ctx.ellipse(px+ts/2,py+ts-3,ts*0.28,ts*0.08,0,0,Math.PI*2);ctx.fill();
+            let by=0;
+            if(u===this.engine.selectedUnit)by=Math.sin(this.time*6)*3;
+            const dir=['down','left','right','up'][u.dir||0];
+            const fi=Math.floor(this.time*3)%2;
+            let sp=getTacticsSprite(this.spriteCache,u.spriteKey+'_'+dir,fi);
+            if(!sp)sp=getTacticsSprite(this.spriteCache,u.spriteKey+'_down',fi);
+            if(u.acted)ctx.globalAlpha=0.45;
+            if(sp)ctx.drawImage(sp,px,py+by-4,ts,ts);
+            else{
+                ctx.fillStyle=u.team==='player'?'#4488ff':'#ff4444';
+                ctx.beginPath();ctx.arc(px+ts/2,py+ts/2+by,ts*0.32,0,Math.PI*2);ctx.fill();
+                ctx.fillStyle=TPAL.WHITE;ctx.font='bold 11px monospace';ctx.textAlign='center';
+                ctx.fillText(u.name[0],px+ts/2,py+ts/2+by+4);
+            }
+            ctx.globalAlpha=1;
+            this._hp(ctx,px+4,py+ts-6+by,ts-8,4,u.hp,u.maxHp);
+            ctx.fillStyle=u.team==='player'?'#4488ff':'#ff4444';
+            ctx.beginPath();ctx.arc(px+ts-5,py+5+by,3,0,Math.PI*2);ctx.fill();
+            if(u.unitClass==='boss'||u.id==='boss'){
+                ctx.fillStyle=TPAL.YELLOW;ctx.font='10px serif';ctx.textAlign='center';
+                ctx.fillText('\u265A',px+ts/2,py+by-2);
+            }
+        }
+    }
+    _hp(ctx,x,y,w,h,hp,mx){
+        const p=hp/mx;
+        ctx.fillStyle='#1a1a2e';ctx.fillRect(x,y,w,h);
+        ctx.fillStyle=p>0.5?TPAL.HP_GREEN:p>0.25?TPAL.HP_YELLOW:TPAL.HP_RED;
+        ctx.fillRect(x,y,w*p,h);
+        ctx.strokeStyle='#000';ctx.lineWidth=0.5;ctx.strokeRect(x,y,w,h);
+    }
+    _rCursor(ctx,ts){
+        const e=this.engine,cx=e.cursor.x,cy=e.cursor.y;
+        if(cx<0||cy<0)return;
+        if(e.state==='dialogue'||e.state==='victory'||e.state==='defeat')return;
+        const px=cx*ts,py=cy*ts,pu=0.6+Math.sin(this.time*5)*0.25;
+        ctx.strokeStyle=`rgba(248,216,48,${pu})`;ctx.lineWidth=2;
+        ctx.strokeRect(px+1,py+1,ts-2,ts-2);
+        const cl=7;ctx.strokeStyle=TPAL.YELLOW;ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(px,py+cl);ctx.lineTo(px,py);ctx.lineTo(px+cl,py);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(px+ts-cl,py);ctx.lineTo(px+ts,py);ctx.lineTo(px+ts,py+cl);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(px,py+ts-cl);ctx.lineTo(px,py+ts);ctx.lineTo(px+cl,py+ts);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(px+ts-cl,py+ts);ctx.lineTo(px+ts,py+ts);ctx.lineTo(px+ts,py+ts-cl);ctx.stroke();
+    }
+    _rDmg(ctx){
+        for(const d of this.damageNumbers){
+            const a=1-d.timer/d.max;
+            ctx.save();ctx.globalAlpha=a;ctx.font='bold 16px monospace';ctx.textAlign='center';
+            ctx.fillStyle=TPAL.BLACK;ctx.fillText(d.text,d.x+1,d.y+1);
+            ctx.fillStyle=d.color;ctx.fillText(d.text,d.x,d.y);ctx.restore();
+        }
+    }
+    _rBanner(ctx,cw,ch){
+        const e=this.engine;
+        if(e.state==='dialogue'||e.state==='victory'||e.state==='defeat')return;
+        const isE=e.state.startsWith('enemy');
+        const txt=isE?`Enemy Phase \u2014 Round ${e.turnNumber}`:`Your Turn \u2014 Round ${e.turnNumber}`;
+        ctx.save();ctx.font='bold 13px monospace';
+        const tw=ctx.measureText(txt).width;
+        const bx=(cw-tw)/2-12,by=4,bw=tw+24,bh=22;
+        this._dq(ctx,bx,by,bw,bh);
+        ctx.fillStyle=isE?'#ff8888':TPAL.UI_TEXT;ctx.textAlign='center';ctx.fillText(txt,cw/2,by+16);
+        ctx.restore();
+    }
+    _rInfo(ctx,cw,ch){
+        const sel=this.engine.selectedUnit;if(!sel)return;
+        this._pan(ctx,6,32,140,sel);
+        const tgt=this.engine.getUnitAt(this.engine.cursor.x,this.engine.cursor.y);
+        if(tgt&&tgt!==sel&&tgt.alive)this._pan(ctx,cw-146,32,140,tgt);
+    }
+    _pan(ctx,x,y,w,u){
+        const h=70;this._dq(ctx,x,y,w,h);
+        ctx.save();
+        ctx.font='bold 12px monospace';ctx.fillStyle=u.team==='player'?'#88bbff':'#ff8888';
+        ctx.textAlign='left';ctx.fillText(u.name,x+8,y+16);
+        ctx.font='10px monospace';ctx.fillStyle=TPAL.UI_TEXT;
+        ctx.fillText('HP',x+8,y+31);this._hp(ctx,x+28,y+24,w-38,7,u.hp,u.maxHp);
+        ctx.fillText(`${u.hp}/${u.maxHp}`,x+8,y+44);
+        ctx.fillText(`ATK:${u.atk} DEF:${u.def} SPD:${u.spd}`,x+8,y+56);
+        if(u.maxMp>0){ctx.fillStyle='#88aaff';ctx.fillText(`MP:${u.mp}/${u.maxMp}`,x+8,y+66);}
+        ctx.restore();
+    }
+    _rActions(ctx,cw,ch){
+        const e=this.engine;
+        if(e.state!=='player_action'){this.actionButtons=[];return;}
+        const u=e.selectedUnit;if(!u)return;
+        const items=[];
+        if(!u.moved)items.push('Move');
+        items.push('Attack');
+        for(const ab of(u.abilities||[])){if(ab==='attack')continue;const d=ABILITY_DEFS[ab];if(d&&u.mp>=d.mpCost)items.push(d.name);}
+        items.push('Wait');
+        const bw=120,bh=28,gap=4;
+        const mH=items.length*(bh+gap)+gap,mx=cw/2-bw/2,my=ch/2-mH/2;
+        this._dq(ctx,mx-8,my-8,bw+16,mH+16);
+        this.actionButtons=[];
+        ctx.save();
+        for(let i=0;i<items.length;i++){
+            const bx=mx,bby=my+i*(bh+gap);
+            ctx.fillStyle='#001088';ctx.fillRect(bx,bby,bw,bh);
+            ctx.strokeStyle=TPAL.UI_BORDER;ctx.lineWidth=1;ctx.strokeRect(bx,bby,bw,bh);
+            ctx.font='bold 13px monospace';ctx.fillStyle=TPAL.UI_TEXT;ctx.textAlign='center';
+            ctx.fillText(items[i],bx+bw/2,bby+19);
+            this.actionButtons.push({label:items[i],x:bx,y:bby,w:bw,h:bh});
+        }
+        ctx.restore();
+    }
+    _rDlg(ctx,cw,ch){
+        const e=this.engine;if(!e.currentDialogue)return;
+        const bH=80,bY=ch-bH-8,bX=16,bW=cw-32;
+        this._dq(ctx,bX,bY,bW,bH);
+        ctx.save();
+        const{speaker,text}=e.currentDialogue;
+        if(speaker){ctx.font='bold 13px monospace';ctx.fillStyle=TPAL.UI_ACCENT;ctx.textAlign='left';ctx.fillText(speaker,bX+12,bY+18);}
+        ctx.font='12px monospace';ctx.fillStyle=TPAL.UI_TEXT;
+        const maxW=bW-24,lH=16,words=text.split(' ');
+        let line='',ly=bY+(speaker?36:20);
+        for(const w of words){const t=line+(line?' ':'')+w;if(ctx.measureText(t).width>maxW){ctx.fillText(line,bX+12,ly);line=w;ly+=lH;}else line=t;}
+        if(line)ctx.fillText(line,bX+12,ly);
+        if(Math.floor(this.time*3)%2===0){ctx.fillStyle=TPAL.UI_TEXT;ctx.font='10px monospace';ctx.textAlign='right';ctx.fillText('TAP \u25B6',bX+bW-12,bY+bH-10);}
+        ctx.restore();
+    }
+    _rEnd(ctx,cw,ch){
+        const e=this.engine;
+        if(e.state!=='victory'&&e.state!=='defeat')return;
+        if(e.currentDialogue)return;
+        ctx.save();ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,cw,ch);
+        const win=e.state==='victory';
+        ctx.font='bold 32px monospace';ctx.textAlign='center';
+        ctx.fillStyle='#000';ctx.fillText(win?'VICTORY!':'DEFEAT',cw/2+2,ch/2-18);
+        ctx.fillStyle=win?TPAL.YELLOW:TPAL.HP_RED;ctx.fillText(win?'VICTORY!':'DEFEAT',cw/2,ch/2-20);
+        ctx.font='14px monospace';ctx.fillStyle=TPAL.UI_TEXT;ctx.fillText('Tap to continue',cw/2,ch/2+20);
+        ctx.restore();
+    }
+    _dq(ctx,x,y,w,h){
+        ctx.save();ctx.fillStyle=TPAL.UI_BG;ctx.fillRect(x+2,y+2,w-4,h-4);
+        ctx.strokeStyle=TPAL.UI_BORDER;ctx.lineWidth=2;const r=4;
+        ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+        ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);
+        ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.stroke();
+        ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;ctx.strokeRect(x+4,y+4,w-8,h-8);
+        ctx.restore();
+    }
+
+    // ── Input ─────────────────────────────────────────────────────────
+    _bindInput(){
+        this._ptrH=e=>{e.preventDefault();e.stopPropagation();this._onPtr(e);};
+        this.canvas.addEventListener('pointerdown',this._ptrH);
+        this._wheelH=e=>{e.preventDefault();this.zoomTarget=Math.max(this.zoomMin,Math.min(this.zoomMax,this.zoomTarget+(e.deltaY>0?-0.12:0.12)));};
+        this.canvas.addEventListener('wheel',this._wheelH,{passive:false});
+        this._keyH=e=>{
+            if(e.key==='+'||e.key==='=')this.zoomTarget=Math.min(this.zoomMax,this.zoomTarget+0.15);
+            else if(e.key==='-'||e.key==='_')this.zoomTarget=Math.max(this.zoomMin,this.zoomTarget-0.15);
+            else if(e.key==='0')this.zoomTarget=1;
+            else if(e.key==='Escape')this.engine.cancelSelection();
+        };
+        document.addEventListener('keydown',this._keyH);
+        this.canvas.addEventListener('touchstart',e=>{
+            if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;this._pinch={dist:Math.sqrt(dx*dx+dy*dy),zoom:this.zoomTarget};}
+        },{passive:true});
+        this.canvas.addEventListener('touchmove',e=>{
+            if(e.touches.length===2&&this._pinch){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;this.zoomTarget=Math.max(this.zoomMin,Math.min(this.zoomMax,this._pinch.zoom*(Math.sqrt(dx*dx+dy*dy)/this._pinch.dist)));}
+        },{passive:true});
+        this.canvas.addEventListener('touchend',()=>{this._pinch=null;},{passive:true});
+    }
+    _unbindInput(){
+        if(this._ptrH)this.canvas.removeEventListener('pointerdown',this._ptrH);
+        if(this._wheelH)this.canvas.removeEventListener('wheel',this._wheelH);
+        if(this._keyH)document.removeEventListener('keydown',this._keyH);
+    }
+    _onPtr(e){
+        const rect=this.canvas.getBoundingClientRect();
+        const sx=(e.clientX-rect.left)*(this.canvas.width/rect.width);
+        const sy=(e.clientY-rect.top)*(this.canvas.height/rect.height);
+        for(const b of this.actionButtons){if(sx>=b.x&&sx<=b.x+b.w&&sy>=b.y&&sy<=b.y+b.h){this._doAct(b.label);return;}}
+        if((this.engine.state==='victory'||this.engine.state==='defeat')&&!this.engine.currentDialogue){if(this.onComplete)this.onComplete();return;}
+        const scrollX=this.camX*this.zoom-this.canvas.width/2;
+        const scrollY=this.camY*this.zoom-this.canvas.height/2;
+        this.engine.handleTap(Math.floor((sx+scrollX)/this.zoom/this.ts),Math.floor((sy+scrollY)/this.zoom/this.ts));
+    }
+    _doAct(label){
+        const e=this.engine,u=e.selectedUnit;if(!u)return;
+        if(label==='Move'){e.movableTiles=e.calcMovementRange(u);e.state='player_move';}
+        else if(label==='Attack')e.beginAttackTarget();
+        else if(label==='Wait')e.endUnitTurn();
+        else{for(const ab of(u.abilities||[])){const d=ABILITY_DEFS[ab];if(d&&d.name===label){e.beginAbilityTarget(ab);break;}}}
+    }
+}
+
+// =============================================================================
+// LAUNCH
+// =============================================================================
+function startTacticalBattle(){
+    document.querySelectorAll('.overlay-screen').forEach(s=>s.style.display='none');
+    ['hud','game-controls','bottom-bar','trivia-panel','upgrade-panel','pause-overlay'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+    const canvas=document.getElementById('game-canvas');
+    canvas.style.display='block';
+    const p=canvas.parentElement;
+    if(p){canvas.width=p.clientWidth||window.innerWidth;canvas.height=p.clientHeight||window.innerHeight;}
+    const battle=new TacticalBattle(canvas);
+    battle.loadScenario(PROLOGUE_SCENARIO);
+    battle.onComplete=()=>{battle.stop();document.getElementById('title-screen').style.display='flex';};
+    battle.start();
 }
 
 

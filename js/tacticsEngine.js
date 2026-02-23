@@ -290,6 +290,8 @@ class TacticsEngine {
             alive:      true,
             abilities:  Array.isArray(def.abilities) ? [...def.abilities] : ['attack'],
             portrait:   def.portrait   || null,
+            spriteKey:  def.spriteKey  || null,
+            dir:        def.dir        !== undefined ? def.dir : 0,
             // Temporary stat buffs/debuffs — cleared at the start of each phase
             _atkBuff:   0,
             _defDebuff: 0,

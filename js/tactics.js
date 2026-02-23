@@ -171,13 +171,28 @@ class TacticalBattle {
     loadScenario(sc) {
         this._scenario = sc;
         const tNames = sc.terrain.map(id => TERRAIN_NAMES[id] || 'GRASS');
+        // Build triggers in engine format: { id, condition: fn(), action: fn() }
+        const engineTriggers = (sc.triggers || [])
+            .filter(t => t.id !== 'opening') // opening handled separately
+            .map(t => ({
+                id: t.id,
+                condition: () => t.condition(this.engine),
+                action: () => {
+                    if (t.dialogueChain) {
+                        for (const l of t.dialogueChain)
+                            this.engine.queueDialogue(l.speaker, l.text, null);
+                    }
+                },
+            }));
         this.engine.loadBattle({
-            name: sc.name, width: sc.mapWidth, height: sc.mapHeight,
-            terrain: tNames,
-            playerUnits: sc.playerUnits, enemyUnits: sc.enemyUnits,
-            triggers: sc.triggers || [],
-            victoryDialogue: sc.victoryDialogue || [],
-            defeatDialogue: sc.defeatDialogue || [],
+            map: { width: sc.mapWidth, height: sc.mapHeight, terrain: tNames },
+            units: [...sc.playerUnits, ...sc.enemyUnits],
+            dialogue: {
+                intro: [],
+                victory: sc.victoryDialogue || [],
+                defeat: sc.defeatDialogue || [],
+            },
+            storyTriggers: engineTriggers,
         });
         this.spriteCache = buildTacticsSpriteCache(this.pixelScale);
         this._buildTerrainCache();
@@ -197,12 +212,10 @@ class TacticalBattle {
         this._bindInput();
         this._lastT = 0;
         this._raf = requestAnimationFrame(t => this._loop(t));
-        // Fire opening dialogue
+        // Fire opening dialogue from scenario triggers
         const op = (this._scenario.triggers||[]).find(t=>t.id==='opening');
         if (op && op.dialogueChain) {
             for (const l of op.dialogueChain) this.engine.queueDialogue(l.speaker, l.text, null);
-            const st = this.engine.storyTriggers.find(t=>t.id==='opening');
-            if (st) st.fired = true;
         }
     }
     stop() {
@@ -261,7 +274,7 @@ class TacticalBattle {
         } else if (name==='phase_change' && data.phase==='enemy') {
             const eu=this.engine.getTeamUnits('enemy');
             if (eu.length){this.camTargetX=(eu[0].x+0.5)*this.ts;this.camTargetY=(eu[0].y+0.5)*this.ts;}
-        } else if (name==='enemy_acting' && data.unit) {
+        } else if (name==='unit_moved' && data.unit && data.unit.team==='enemy') {
             this.camTargetX=(data.unit.x+0.5)*this.ts;
             this.camTargetY=(data.unit.y+0.5)*this.ts;
         }
