@@ -100,17 +100,17 @@ const EPISODES = {
                             {
                                 id: 'rex', emoji: '🦮', name: 'Old Rex',
                                 x: 14, y: 10, wander: true,
-                                dialogue: 'The Cat Army has been growing bolder. Scout the southern edge of our grounds — I saw movement there last night.'
+                                dialogue: 'The Cat Army grows bolder by the day... I saw movement near our southern perimeter last night. Scout the grounds carefully, {dogName}.'
                             },
                             {
                                 id: 'nurse', emoji: '🐩', name: 'Nurse Fifi',
                                 x: 24, y: 8, wander: false,
-                                dialogue: 'The little puppy is resting in the infirmary. Did you know puppies need 18-20 hours of sleep a day? Golden Retrievers especially need their rest while growing!'
+                                dialogue: 'The little puppy is resting peacefully in the infirmary... Did you know puppies need 18 to 20 hours of sleep? Golden Retrievers especially; their growing bodies demand it.'
                             },
                             {
                                 id: 'scout', emoji: '🐕‍🦺', name: 'Scout',
                                 x: 20, y: 14, wander: true,
-                                dialogue: 'I spotted cat pawprints near the south fence! Be careful, {dogName}. Cats are sneaky — they can see 6 times better than us in low light.'
+                                dialogue: 'Psst... {dogName}! I spotted fresh cat pawprints near the south fence! Be on your guard; cats can see six times better than us in the dark...'
                             },
                         ],
                         triggers: [
@@ -124,7 +124,7 @@ const EPISODES = {
                     },
                     // After reaching south fence
                     { type: 'endExplore' },
-                    { type: 'narration', text: 'As you approach the south fence, you hear hissing from the shadows...' },
+                    { type: 'narration', text: 'As you approach the south fence... a chill runs down your spine. Hissing... from the shadows beyond the fence.' },
                     { type: 'shake', duration: 0.6, intensity: 6 },
                     { type: 'bg', color: '#1a1a2e', emojis: [
                         { emoji: '🌙', x: 0.8, y: 0.1, alpha: 0.5 },
@@ -135,11 +135,11 @@ const EPISODES = {
                     { type: 'enter', id: 'catleader', emoji: '😼', name: 'Captain Whiskers', x: 0.5, y: 0.35, scale: 1.2 },
                     { type: 'enter', id: 'cat1', emoji: '🐱', name: '', x: 0.25, y: 0.4, scale: 0.8 },
                     { type: 'enter', id: 'cat2', emoji: '🐱', name: '', x: 0.75, y: 0.4, scale: 0.8 },
-                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'Well, well, well... A little puppy playing guard dog. How adorable.' },
-                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'You! You\'re the ones who took that puppy\'s parents! Where are they?!' },
-                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'Hahaha! Those Golden Retrievers? They\'re our... guests... at Cat Central. Very comfortable, I assure you. *evil grin*' },
-                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'But enough chit-chat. CATS! Show this mutt what happens when dogs get too nosy!' },
-                    { type: 'narration', text: '⚔️ BATTLE! The Cat Army attacks the Academy backyard!' },
+                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'Well, well, well... A little puppy playing guard dog. How utterly... adorable.' },
+                    { type: 'dialogue', speaker: '{dogName}', emoji: '{dogEmoji}', text: 'You...! You\'re the ones who took that puppy\'s parents! Tell me where they are!' },
+                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'Hahaha! Those Golden Retrievers? They\'re our... honored guests... at Cat Central. Very comfortable, I assure you. *evil grin*' },
+                    { type: 'dialogue', speaker: 'Captain Whiskers', emoji: '😼', text: 'But enough pleasantries. CATS! Show this mutt what happens to dogs... who stick their noses where they don\'t belong!' },
+                    { type: 'narration', text: '⚔️ BATTLE! The Cat Army launches an ambush on the Academy grounds!' },
                     { type: 'battle', level: 0 },
                 ]
             },
