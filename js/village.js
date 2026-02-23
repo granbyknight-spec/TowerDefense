@@ -613,6 +613,9 @@ class Village {
 
         ctx.restore();
 
+        // === NOISE GRAIN (FF7 painted texture) ===
+        this._renderNoiseOverlay(ctx, cw, ch);
+
         // === LIGHTING OVERLAY ===
         this._renderLighting(ctx, cw, ch, scrollX, scrollY, ts);
 
@@ -3952,5 +3955,344 @@ class Village {
             return [parseInt(match[0]), parseInt(match[1]), parseInt(match[2])];
         }
         return [128, 128, 128]; // default gray
+    }
+
+    // === PROCEDURAL TILE TEXTURE CACHE ===
+    // Pre-renders rich pixel-art textures for each tile type at startup.
+    // Uses offscreen canvases cached as ImageBitmap for fast drawImage() stamping.
+
+    _buildTileCache() {
+        this._tileTextures = {};
+        const ts = this.ts;
+        const types = {
+            grass: TILE.GRASS,
+            darkGrass: TILE.DARK_GRASS,
+            path: TILE.PATH,
+            wall: TILE.WALL,
+            floor: TILE.FLOOR,
+            fence: TILE.FENCE,
+            bridge: TILE.BRIDGE,
+            sand: TILE.SAND,
+            roof: TILE.ROOF,
+            door: TILE.DOOR,
+            stone: TILE.STONE,
+        };
+
+        // Seeded pseudo-random for reproducible textures
+        const srand = (seed) => {
+            let s = seed;
+            return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+        };
+
+        // 2x2 Bayer dithering for FF7 pixel art look
+        const bayer2 = [[0, 2], [3, 1]];
+        const dither = (x, y, threshold) => bayer2[y % 2][x % 2] / 4 < threshold;
+
+        for (const [name, tileType] of Object.entries(types)) {
+            this._tileTextures[name] = [];
+            const variantCount = (name === 'wall' || name === 'roof' || name === 'door') ? 2 : 4;
+
+            for (let v = 0; v < variantCount; v++) {
+                const c = document.createElement('canvas');
+                c.width = ts; c.height = ts;
+                const ctx = c.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                const rng = srand(v * 1000 + tileType * 100);
+
+                switch (name) {
+                    case 'grass':
+                    case 'darkGrass': {
+                        const dark = name === 'darkGrass';
+                        const colors = dark
+                            ? ['#1e4010', '#245012', '#2a5814', '#1a3a0e', '#2e6016']
+                            : ['#2e6a18', '#357a1e', '#3c8a24', '#2a6014', '#409028'];
+                        // Base fill with noise
+                        for (let py = 0; py < ts; py++) {
+                            for (let px = 0; px < ts; px++) {
+                                const ci = Math.floor(rng() * colors.length);
+                                // Dither between two adjacent colors for painterly look
+                                const c1 = colors[ci];
+                                const c2 = colors[(ci + 1) % colors.length];
+                                ctx.fillStyle = dither(px, py, 0.5 + rng() * 0.3) ? c1 : c2;
+                                ctx.fillRect(px, py, 1, 1);
+                            }
+                        }
+                        // Shadow patches (ambient occlusion)
+                        ctx.fillStyle = 'rgba(0,20,0,0.15)';
+                        for (let i = 0; i < 3; i++) {
+                            ctx.beginPath();
+                            ctx.ellipse(rng() * ts, rng() * ts, ts * 0.15 + rng() * ts * 0.15,
+                                ts * 0.1 + rng() * ts * 0.1, rng() * Math.PI, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        // Highlight patches
+                        ctx.fillStyle = dark ? 'rgba(60,120,30,0.12)' : 'rgba(100,200,50,0.1)';
+                        ctx.beginPath();
+                        ctx.ellipse(rng() * ts, rng() * ts, ts * 0.2, ts * 0.15, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Tiny stones/dirt specks
+                        ctx.fillStyle = 'rgba(100,80,60,0.25)';
+                        for (let i = 0; i < 2; i++) {
+                            ctx.fillRect(Math.floor(rng() * ts), Math.floor(rng() * ts), 1, 1);
+                        }
+                        break;
+                    }
+                    case 'path': {
+                        // Cobblestone pattern
+                        const stoneColors = ['#7a6a50', '#8a7a60', '#6a5a45', '#8a7560', '#756550'];
+                        const mortarColor = '#5a4a35';
+                        // Fill with mortar
+                        ctx.fillStyle = mortarColor;
+                        ctx.fillRect(0, 0, ts, ts);
+                        // Draw stones
+                        const stoneW = ts / 4;
+                        const stoneH = ts / 3;
+                        for (let sy = 0; sy < 3; sy++) {
+                            const offset = (sy % 2) * stoneW * 0.5;
+                            for (let sx = 0; sx < 5; sx++) {
+                                const cx = sx * stoneW + offset - stoneW * 0.25;
+                                const cy = sy * stoneH;
+                                const sw = stoneW - 1.5 + rng() * 1;
+                                const sh = stoneH - 1.5 + rng() * 1;
+                                ctx.fillStyle = stoneColors[Math.floor(rng() * stoneColors.length)];
+                                ctx.fillRect(cx + 0.75, cy + 0.75, sw, sh);
+                                // Highlight top edge
+                                ctx.fillStyle = 'rgba(255,240,200,0.12)';
+                                ctx.fillRect(cx + 1, cy + 0.75, sw - 1, 1);
+                                // Shadow bottom edge
+                                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                                ctx.fillRect(cx + 1, cy + sh, sw - 1, 1);
+                            }
+                        }
+                        // Wear in center (lighter)
+                        ctx.fillStyle = 'rgba(180,160,130,0.08)';
+                        ctx.beginPath();
+                        ctx.ellipse(ts / 2, ts / 2, ts * 0.35, ts * 0.3, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    }
+                    case 'wall': {
+                        const brickColors = ['#8a7060', '#7a6050', '#9a8070', '#856555', '#8f7565'];
+                        const mortar = '#5a4a3a';
+                        ctx.fillStyle = mortar;
+                        ctx.fillRect(0, 0, ts, ts);
+                        const brickH = ts / 4;
+                        const brickW = ts / 2;
+                        for (let by = 0; by < 4; by++) {
+                            const offset = (by % 2) * brickW * 0.5;
+                            for (let bx = -1; bx < 3; bx++) {
+                                const cx = bx * brickW + offset;
+                                const cy = by * brickH;
+                                ctx.fillStyle = brickColors[Math.floor(rng() * brickColors.length)];
+                                ctx.fillRect(cx + 0.5, cy + 0.5, brickW - 1, brickH - 1);
+                                // Dithered texture on brick surface
+                                for (let dy = 0; dy < brickH - 1; dy++) {
+                                    for (let dx = 0; dx < brickW - 1; dx++) {
+                                        if (rng() < 0.08) {
+                                            ctx.fillStyle = `rgba(0,0,0,${rng() * 0.12})`;
+                                            ctx.fillRect(cx + 0.5 + dx, cy + 0.5 + dy, 1, 1);
+                                        }
+                                    }
+                                }
+                                // Top highlight
+                                ctx.fillStyle = 'rgba(255,240,220,0.1)';
+                                ctx.fillRect(cx + 1, cy + 0.5, brickW - 2, 1);
+                            }
+                        }
+                        break;
+                    }
+                    case 'floor': {
+                        const plankColors = ['#6a5030', '#7a5a38', '#5a4528', '#6e5535'];
+                        const plankH = ts / 4;
+                        for (let py = 0; py < 4; py++) {
+                            ctx.fillStyle = plankColors[py % plankColors.length];
+                            ctx.fillRect(0, py * plankH, ts, plankH - 0.5);
+                            // Wood grain
+                            ctx.fillStyle = 'rgba(0,0,0,0.06)';
+                            for (let gy = 0; gy < plankH; gy += 2) {
+                                const gx = Math.sin(gy * 0.5 + py) * 2 + rng() * ts;
+                                ctx.fillRect(gx % ts, py * plankH + gy, ts * 0.3, 0.5);
+                            }
+                            // Knot
+                            if (rng() > 0.6) {
+                                ctx.fillStyle = 'rgba(60,35,15,0.3)';
+                                ctx.beginPath();
+                                ctx.arc(rng() * ts, py * plankH + plankH * 0.5, 1.5, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                            // Gap shadow
+                            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                            ctx.fillRect(0, (py + 1) * plankH - 0.5, ts, 0.5);
+                        }
+                        break;
+                    }
+                    case 'roof': {
+                        const shingleColors = ['#5a3a20', '#6a4528', '#503218', '#5e3e22'];
+                        const rowH = ts / 4;
+                        for (let ry = 0; ry < 4; ry++) {
+                            const offset = (ry % 2) * ts * 0.25;
+                            for (let rx = -1; rx < 5; rx++) {
+                                const sx = rx * (ts * 0.25) + offset;
+                                ctx.fillStyle = shingleColors[Math.floor(rng() * shingleColors.length)];
+                                ctx.fillRect(sx, ry * rowH, ts * 0.24, rowH - 0.5);
+                                // Overlap shadow at top
+                                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                                ctx.fillRect(sx, ry * rowH, ts * 0.24, 1);
+                                // Bottom highlight
+                                ctx.fillStyle = 'rgba(255,220,180,0.08)';
+                                ctx.fillRect(sx, ry * rowH + rowH - 1.5, ts * 0.24, 0.5);
+                            }
+                        }
+                        break;
+                    }
+                    case 'sand': {
+                        const sandColors = ['#c8a870', '#d0b078', '#c0a068', '#c4a870'];
+                        for (let py = 0; py < ts; py++) {
+                            for (let px = 0; px < ts; px++) {
+                                ctx.fillStyle = sandColors[Math.floor(rng() * sandColors.length)];
+                                if (dither(px, py, rng())) {
+                                    ctx.fillStyle = 'rgba(200,180,140,0.5)';
+                                }
+                                ctx.fillRect(px, py, 1, 1);
+                            }
+                        }
+                        // Wind ripple pattern
+                        ctx.strokeStyle = 'rgba(180,150,110,0.15)';
+                        ctx.lineWidth = 0.5;
+                        for (let i = 0; i < 3; i++) {
+                            ctx.beginPath();
+                            const wy = rng() * ts;
+                            ctx.moveTo(0, wy);
+                            ctx.quadraticCurveTo(ts * 0.5, wy + rng() * 3 - 1.5, ts, wy + rng() * 2);
+                            ctx.stroke();
+                        }
+                        break;
+                    }
+                    case 'stone': {
+                        const stColors = ['#606060', '#6a6a6a', '#585858', '#707070'];
+                        ctx.fillStyle = '#555555';
+                        ctx.fillRect(0, 0, ts, ts);
+                        const blockH = ts / 3;
+                        const blockW = ts / 2;
+                        for (let sy = 0; sy < 3; sy++) {
+                            const off = (sy % 2) * blockW * 0.5;
+                            for (let sx = -1; sx < 3; sx++) {
+                                const cx = sx * blockW + off;
+                                ctx.fillStyle = stColors[Math.floor(rng() * stColors.length)];
+                                ctx.fillRect(cx + 0.5, sy * blockH + 0.5, blockW - 1, blockH - 1);
+                                // Rough surface texture
+                                for (let d = 0; d < 4; d++) {
+                                    ctx.fillStyle = `rgba(${rng() > 0.5 ? '80,80,80' : '50,50,50'},0.2)`;
+                                    ctx.fillRect(cx + rng() * blockW, sy * blockH + rng() * blockH, 1, 1);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case 'fence': {
+                        // Transparent base, vertical wooden slats
+                        ctx.clearRect(0, 0, ts, ts);
+                        ctx.fillStyle = '#6a5030';
+                        const slatW = ts / 5;
+                        for (let i = 0; i < 5; i++) {
+                            ctx.fillStyle = i % 2 === 0 ? '#6a5030' : '#7a5a38';
+                            ctx.fillRect(i * slatW + 0.5, ts * 0.1, slatW - 1, ts * 0.85);
+                            // Pointed top
+                            ctx.beginPath();
+                            ctx.moveTo(i * slatW + 0.5, ts * 0.1);
+                            ctx.lineTo(i * slatW + slatW * 0.5, 0);
+                            ctx.lineTo(i * slatW + slatW - 0.5, ts * 0.1);
+                            ctx.fill();
+                        }
+                        // Horizontal rail
+                        ctx.fillStyle = '#5a4020';
+                        ctx.fillRect(0, ts * 0.35, ts, 2);
+                        ctx.fillRect(0, ts * 0.7, ts, 2);
+                        break;
+                    }
+                    case 'bridge': {
+                        const plankC = ['#7a5a30', '#8a6a38', '#6a5028'];
+                        const pw = ts / 4;
+                        for (let i = 0; i < 4; i++) {
+                            ctx.fillStyle = plankC[i % plankC.length];
+                            ctx.fillRect(0, i * pw, ts, pw - 1);
+                            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                            ctx.fillRect(0, (i + 1) * pw - 1, ts, 1);
+                        }
+                        // Side rails
+                        ctx.fillStyle = '#5a3a18';
+                        ctx.fillRect(0, 0, 2, ts);
+                        ctx.fillRect(ts - 2, 0, 2, ts);
+                        break;
+                    }
+                    case 'door': {
+                        // Floor base
+                        ctx.fillStyle = '#5a4525';
+                        ctx.fillRect(0, 0, ts, ts);
+                        // Door planks
+                        const doorW = ts * 0.7;
+                        const doorX = (ts - doorW) / 2;
+                        ctx.fillStyle = '#4a3018';
+                        ctx.fillRect(doorX, 0, doorW, ts);
+                        // Plank lines
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        ctx.fillRect(doorX + doorW * 0.33, 0, 0.5, ts);
+                        ctx.fillRect(doorX + doorW * 0.66, 0, 0.5, ts);
+                        // Metal band
+                        ctx.fillStyle = '#4a4a4a';
+                        ctx.fillRect(doorX, ts * 0.25, doorW, 1.5);
+                        ctx.fillRect(doorX, ts * 0.7, doorW, 1.5);
+                        // Handle
+                        ctx.fillStyle = '#b8a040';
+                        ctx.beginPath();
+                        ctx.arc(doorX + doorW * 0.75, ts * 0.5, 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    }
+                }
+                this._tileTextures[name].push(c);
+            }
+        }
+
+        // Also build a noise overlay texture for FF7 "painted" grain
+        this._buildNoiseTexture();
+    }
+
+    _buildNoiseTexture() {
+        // FF7's pre-rendered backgrounds had subtle grain/noise that made them look painted.
+        // Generate a cached noise texture to overlay each frame.
+        const w = 256, h = 256;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        const imgData = ctx.createImageData(w, h);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const n = (Math.random() - 0.5) * 20;
+            d[i] = 128 + n;
+            d[i + 1] = 128 + n;
+            d[i + 2] = 128 + n;
+            d[i + 3] = 6; // Very subtle
+        }
+        ctx.putImageData(imgData, 0, 0);
+        this._noiseCanvas = c;
+    }
+
+    _buildObjectCache() {
+        // Object textures will be generated here for richer sprites
+        // Currently using real-time drawing; this can be enhanced incrementally
+        this._objTextures = {};
+    }
+
+    // Render noise overlay for FF7 painted grain effect
+    _renderNoiseOverlay(ctx, cw, ch) {
+        if (!this._noiseCanvas) return;
+        ctx.save();
+        ctx.globalCompositeOperation = 'overlay';
+        // Tile the 256x256 noise across the screen
+        const pattern = ctx.createPattern(this._noiseCanvas, 'repeat');
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.restore();
     }
 }
