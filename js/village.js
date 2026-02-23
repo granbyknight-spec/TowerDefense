@@ -409,6 +409,7 @@ class Village {
 
     _render() {
         const ctx = this.ctx;
+        ctx.imageSmoothingEnabled = false;
         const cw = this.canvas.width;
         const ch = this.canvas.height;
         const ts = this.ts;
@@ -621,6 +622,9 @@ class Village {
 
         // === VIGNETTE ===
         this._renderVignette(ctx, cw, ch);
+
+        // === PS1 POST-PROCESS (FF7 pre-rendered background feel) ===
+        this._applyPS1PostProcess(ctx, cw, ch);
 
         // === SCREEN TRANSITION OVERLAY ===
         this._renderTransition(ctx, cw, ch);
@@ -867,48 +871,209 @@ class Village {
         const px = col * ts;
         const py = row * ts;
 
+        // Helper: pick a deterministic variant index from the texture array
+        const pickVariant = (arr) => arr[(col * 7 + row * 13) % arr.length];
+
         switch (tile) {
-            case TILE.GRASS:
-                this._drawGrass(ctx, px, py, ts, col, row);
+            case TILE.GRASS: {
+                // Draw cached static base
+                ctx.drawImage(pickVariant(this._tileTextures.grass), px, py, ts, ts);
+                // Animated overlays: grass blade sway, wildflower shimmer, dew sparkle
+                this._drawGrassAnimOverlay(ctx, px, py, ts, col, row, false);
                 break;
-            case TILE.DARK_GRASS:
-                this._drawGrass(ctx, px, py, ts, col, row, true);
+            }
+            case TILE.DARK_GRASS: {
+                ctx.drawImage(pickVariant(this._tileTextures.darkGrass), px, py, ts, ts);
+                // Animated overlays (dark variant)
+                this._drawGrassAnimOverlay(ctx, px, py, ts, col, row, true);
                 break;
+            }
             case TILE.PATH:
-                this._drawPath(ctx, px, py, ts, col, row);
+                ctx.drawImage(pickVariant(this._tileTextures.path), px, py, ts, ts);
+                // Path edge-shadow detection is static per-frame but cheap; keep it
+                this._drawPathEdges(ctx, px, py, ts, col, row);
                 break;
             case TILE.WATER:
+                // Water is fully animated - not cached
                 this._drawWater(ctx, px, py, ts, col, row);
                 break;
             case TILE.WALL:
-                this._drawWall(ctx, px, py, ts, col, row);
+                ctx.drawImage(pickVariant(this._tileTextures.wall), px, py, ts, ts);
+                // Moss growth depends on neighbour tiles - draw on top of cached base
+                this._drawWallMoss(ctx, px, py, ts, col, row);
                 break;
             case TILE.FLOOR:
-                this._drawFloor(ctx, px, py, ts);
+                ctx.drawImage(pickVariant(this._tileTextures.floor), px, py, ts, ts);
                 break;
             case TILE.FENCE:
-                this._drawFence(ctx, px, py, ts, col, row);
+                // Grass base first, then cached fence overlay on top
+                ctx.drawImage(pickVariant(this._tileTextures.grass), px, py, ts, ts);
+                this._drawGrassAnimOverlay(ctx, px, py, ts, col, row, false);
+                ctx.drawImage(pickVariant(this._tileTextures.fence), px, py, ts, ts);
                 break;
             case TILE.BRIDGE:
-                this._drawBridge(ctx, px, py, ts);
+                ctx.drawImage(pickVariant(this._tileTextures.bridge), px, py, ts, ts);
                 break;
             case TILE.FLOWERS:
-                this._drawGrass(ctx, px, py, ts, col, row);
+                // Cached grass base, then static flower overlay on top
+                ctx.drawImage(pickVariant(this._tileTextures.grass), px, py, ts, ts);
+                this._drawGrassAnimOverlay(ctx, px, py, ts, col, row, false);
                 this._drawFlowers(ctx, px, py, ts, col, row);
                 break;
             case TILE.SAND:
-                this._drawSand(ctx, px, py, ts);
+                ctx.drawImage(pickVariant(this._tileTextures.sand), px, py, ts, ts);
                 break;
             case TILE.ROOF:
-                this._drawRoof(ctx, px, py, ts, col, row);
+                ctx.drawImage(pickVariant(this._tileTextures.roof), px, py, ts, ts);
                 break;
             case TILE.DOOR:
-                this._drawFloor(ctx, px, py, ts);
-                this._drawDoor(ctx, px, py, ts);
+                ctx.drawImage(pickVariant(this._tileTextures.door), px, py, ts, ts);
                 break;
             case TILE.STONE:
-                this._drawStone(ctx, px, py, ts);
+                ctx.drawImage(pickVariant(this._tileTextures.stone), px, py, ts, ts);
                 break;
+        }
+    }
+
+    // Animated grass overlay: wind-swayed blades, wildflower shimmer, dew sparkle.
+    // Separated from _drawGrass() so it can be layered on top of cached textures.
+    _drawGrassAnimOverlay(ctx, x, y, ts, col, row, dark) {
+        const seed  = (col * 7  + row * 13) % 17;
+        const seed2 = (col * 31 + row * 47) % 23;
+
+        // Animated grass blades with wind sway
+        const windPhase = this.time * 1.5 + col * 0.7 + row * 0.5;
+        const windSway  = Math.sin(windPhase) * ts * 0.03;
+        const bladeColor1 = dark ? 'rgba(25,90,12,0.6)'  : 'rgba(70,170,35,0.45)';
+        const bladeColor2 = dark ? 'rgba(40,100,20,0.5)' : 'rgba(90,200,50,0.35)';
+
+        ctx.strokeStyle = bladeColor1;
+        ctx.lineWidth   = 0.8;
+        ctx.lineCap     = 'round';
+        for (let i = 0; i < 5; i++) {
+            const bx = x + ((seed  + i * 7)  % (ts - 2)) + 1;
+            const by = y + ((seed2 + i * 11) % (ts - 4)) + 4;
+            const h  = ts * (0.08 + (seed + i) % 3 * 0.03);
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo(
+                bx + windSway * (1 + i * 0.2),   by - h * 0.6,
+                bx + windSway * (1.5 + i * 0.15), by - h
+            );
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = bladeColor2;
+        ctx.lineWidth   = 0.6;
+        for (let i = 0; i < 3; i++) {
+            const bx = x + ((seed2 + i * 9) % (ts - 2)) + 1;
+            const by = y + ((seed  + i * 5) % (ts - 3)) + 3;
+            const h  = ts * (0.06 + (seed2 + i) % 3 * 0.025);
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo(
+                bx + windSway * 1.2, by - h * 0.5,
+                bx + windSway * 1.8, by - h
+            );
+            ctx.stroke();
+        }
+
+        // Small wildflower details (animated petal rotation) on some tiles
+        if ((col * 13 + row * 7) % 11 < 2 && !dark) {
+            const flowerColors = ['#ffeb3b', '#e8f5e9', '#fff9c4', '#f8bbd0'];
+            const fc = flowerColors[(col + row) % flowerColors.length];
+            const fx = x + ((seed  * 4) % (ts - 6)) + 3;
+            const fy = y + ((seed2 * 2) % (ts - 6)) + 3;
+            const petalR = ts * 0.025;
+            ctx.fillStyle = fc;
+            for (let p = 0; p < 4; p++) {
+                const pa = p * Math.PI * 0.5 + this.time * 0.3;
+                ctx.beginPath();
+                ctx.arc(
+                    fx + Math.cos(pa) * petalR * 1.2,
+                    fy + Math.sin(pa) * petalR * 1.2,
+                    petalR, 0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+            ctx.fillStyle = '#fdd835';
+            ctx.beginPath();
+            ctx.arc(fx, fy, petalR * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Dew sparkle (very subtle, pulsing)
+        if ((col * 3 + row * 11) % 19 === 0) {
+            const sparkle = Math.sin(this.time * 2.5 + seed) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(255,255,240,${sparkle * 0.25})`;
+            ctx.beginPath();
+            ctx.arc(x + ts * 0.6, y + ts * 0.3, ts * 0.02, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // Edge-shadow pass for PATH tiles (neighbour-dependent, must run per-frame).
+    _drawPathEdges(ctx, x, y, ts, col, row) {
+        const above = row > 0              ? this.tiles[(row - 1) * this.mapW + col]     : -1;
+        const below = row < this.mapH - 1  ? this.tiles[(row + 1) * this.mapW + col]     : -1;
+        const left  = col > 0              ? this.tiles[row * this.mapW + col - 1]        : -1;
+        const right = col < this.mapW - 1  ? this.tiles[row * this.mapW + col + 1]        : -1;
+
+        ctx.fillStyle = 'rgba(40,25,10,0.25)';
+        if (above !== TILE.PATH && above !== TILE.BRIDGE && above !== TILE.DOOR && above !== TILE.FLOOR) {
+            ctx.fillRect(x, y, ts, 2);
+        }
+        if (below !== TILE.PATH && below !== TILE.BRIDGE && below !== TILE.DOOR && below !== TILE.FLOOR) {
+            ctx.fillRect(x, y + ts - 2, ts, 2);
+        }
+        if (left  !== TILE.PATH && left  !== TILE.BRIDGE && left  !== TILE.DOOR && left  !== TILE.FLOOR) {
+            ctx.fillRect(x, y, 2, ts);
+        }
+        if (right !== TILE.PATH && right !== TILE.BRIDGE && right !== TILE.DOOR && right !== TILE.FLOOR) {
+            ctx.fillRect(x + ts - 2, y, 2, ts);
+        }
+    }
+
+    // Moss-growth pass for WALL tiles (neighbour-dependent, drawn over cached base).
+    _drawWallMoss(ctx, x, y, ts, col, row) {
+        const seed  = (col * 17 + row * 11) % 13;
+        const above = row > 0              ? this.tiles[(row - 1) * this.mapW + col]     : TILE.WALL;
+        const below = row < this.mapH - 1  ? this.tiles[(row + 1) * this.mapW + col]     : TILE.WALL;
+        const left  = col > 0              ? this.tiles[row * this.mapW + col - 1]        : TILE.WALL;
+        const right = col < this.mapW - 1  ? this.tiles[row * this.mapW + col + 1]        : TILE.WALL;
+
+        if (below !== TILE.WALL && below !== TILE.ROOF) {
+            ctx.fillStyle = 'rgba(60,45,30,0.5)';
+            ctx.fillRect(x, y + ts - 3, ts, 3);
+            ctx.fillStyle = 'rgba(50,120,30,0.35)';
+            for (let i = 0; i < 3; i++) {
+                const mx = x + ((seed + i * 11) % (ts - 6)) + 1;
+                const mh = ts * (0.06 + ((seed + i) % 3) * 0.02);
+                ctx.beginPath();
+                ctx.ellipse(mx + 3, y + ts - 1, ts * 0.08, mh, 0, Math.PI, 0);
+                ctx.fill();
+            }
+        }
+        if (above !== TILE.WALL && above !== TILE.ROOF) {
+            ctx.fillStyle = 'rgba(45,110,25,0.3)';
+            for (let i = 0; i < 2; i++) {
+                const mx = x + ((seed * 3 + i * 13) % (ts - 4));
+                ctx.beginPath();
+                ctx.ellipse(mx + 2, y + 2, ts * 0.06, ts * 0.04, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        if (left !== TILE.WALL && left !== TILE.ROOF) {
+            ctx.fillStyle = 'rgba(45,110,25,0.25)';
+            ctx.beginPath();
+            ctx.ellipse(x + 2, y + ts * 0.7, ts * 0.04, ts * 0.12, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (right !== TILE.WALL && right !== TILE.ROOF) {
+            ctx.fillStyle = 'rgba(45,110,25,0.25)';
+            ctx.beginPath();
+            ctx.ellipse(x + ts - 2, y + ts * 0.6, ts * 0.04, ts * 0.1, 0, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 
@@ -3740,6 +3905,57 @@ class Village {
         // Warm color wash
         ctx.fillStyle = `rgba(${tintR},${tintG},${tintB},0.05)`;
         ctx.fillRect(0, 0, cw, ch);
+    }
+
+    // === PS1 POST-PROCESS ===
+
+    _applyPS1PostProcess(ctx, cw, ch) {
+        // Generate dither overlay on first call, cache for reuse
+        if (!this._ditherPattern) {
+            const dc = document.createElement('canvas');
+            dc.width = 4; dc.height = 4;
+            const dctx = dc.getContext('2d');
+            // 4x4 Bayer matrix pattern
+            const bayer = [
+                [0, 8, 2, 10],
+                [12, 4, 14, 6],
+                [3, 11, 1, 9],
+                [15, 7, 13, 5]
+            ];
+            const imgData = dctx.createImageData(4, 4);
+            for (let y = 0; y < 4; y++) {
+                for (let x = 0; x < 4; x++) {
+                    const i = (y * 4 + x) * 4;
+                    const v = Math.floor(bayer[y][x] * 16); // 0-255 range
+                    imgData.data[i] = v;
+                    imgData.data[i + 1] = v;
+                    imgData.data[i + 2] = v;
+                    imgData.data[i + 3] = 8; // Very subtle
+                }
+            }
+            dctx.putImageData(imgData, 0, 0);
+            this._ditherPattern = dc;
+        }
+
+        // Scanlines (subtle darkening of every other row)
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.03)';
+        for (let y = 0; y < ch; y += 2) {
+            ctx.fillRect(0, y, cw, 1);
+        }
+        ctx.restore();
+
+        // Dither pattern overlay
+        ctx.save();
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = 0.04;
+        const pattern = ctx.createPattern(this._ditherPattern, 'repeat');
+        if (pattern) {
+            ctx.fillStyle = pattern;
+            ctx.fillRect(0, 0, cw, ch);
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
     }
 
     // === SCREEN TRANSITIONS (FF7-style fade to black) ===
