@@ -14,8 +14,14 @@ class CutsceneScene extends Phaser.Scene {
     this.hasSkipped  = false;
   }
 
+  preload() {
+    AudioManager.preloadMusic(this);
+  }
+
   create() {
     const W = GAME_W, H = GAME_H;
+
+    AudioManager.playMusic(this, 'overworld', 0.4);
 
     this._buildBackground(W, H);
     this._buildParticles(W, H);
