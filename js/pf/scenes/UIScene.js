@@ -50,15 +50,15 @@ class UIScene extends Phaser.Scene {
 
     // Turn indicator (left side)
     this._turnLabel = this.add.text(10, UI_Y + 8, 'TURN 1', {
-      fontSize: '14px', color: '#aabbcc',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '16px', color: '#aabbcc',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
     });
 
     // Phase indicator
     this._phaseLabel = this.add.text(10, UI_Y + 26, 'YOUR TURN', {
-      fontSize: '15px', color: '#4488ff',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '18px', color: '#4488ff',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       stroke: '#000033',
       strokeThickness: 2,
@@ -66,23 +66,23 @@ class UIScene extends Phaser.Scene {
 
     // Unit info area (center)
     this._unitNameTxt = this.add.text(W / 2, UI_Y + 8, '', {
-      fontSize: '16px', color: '#ffffff',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '20px', color: '#ffffff',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 2,
+      strokeThickness: 3,
     }).setOrigin(0.5, 0);
 
     this._unitStatsTxt = this.add.text(W / 2, UI_Y + 30, '', {
-      fontSize: '13px', color: '#ccddf0',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '15px', color: '#ccddf0',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       align: 'center',
     }).setOrigin(0.5, 0);
 
     this._unitHpTxt = this.add.text(W / 2, UI_Y + 50, '', {
-      fontSize: '13px', color: '#88ddaa',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '15px', color: '#88ddaa',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
@@ -92,8 +92,8 @@ class UIScene extends Phaser.Scene {
 
     // Skills / items display
     this._skillsTxt = this.add.text(W / 2, UI_Y + 70, '', {
-      fontSize: '12px', color: '#99aacc',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '14px', color: '#99aacc',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
   }
@@ -107,7 +107,7 @@ class UIScene extends Phaser.Scene {
     const W = GAME_W;
     const btnData = [
       { key: 'atk',   label: '⚔ Attack',  color: 0x882222, hi: 0xcc4444 },
-      { key: 'mag',   label: '✨ Magic',   color: 0x224488, hi: 0x4488cc },
+      { key: 'mag',   label: '⚡ Skill',   color: 0x224488, hi: 0x4488cc },
       { key: 'item',  label: '🎒 Item',    color: 0x226622, hi: 0x44aa44 },
       { key: 'wait',  label: '⏳ Wait',    color: 0x444422, hi: 0x888822 },
     ];
@@ -127,8 +127,8 @@ class UIScene extends Phaser.Scene {
       bg.strokeRoundedRect(x, y, btnW, btnH, 6);
 
       const txt = this.add.text(x + btnW / 2, y + btnH / 2, b.label, {
-        fontSize: '14px', color: '#ffffff',
-        fontFamily: 'Nunito, Courier New, monospace',
+        fontSize: '15px', color: '#ffffff',
+        fontFamily: 'Nunito, Arial, sans-serif',
         fontStyle: 'bold',
         align: 'center',
         stroke: '#000000',
@@ -189,8 +189,8 @@ class UIScene extends Phaser.Scene {
     bg.strokeRoundedRect(x, y, w, h, 8);
 
     const txt = this.add.text(x + w/2, y + h/2, 'END\nTURN', {
-      fontSize: '14px', color: '#88ccff',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '15px', color: '#88ccff',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       align: 'center',
       stroke: '#001133',
@@ -342,9 +342,9 @@ class UIScene extends Phaser.Scene {
     const W = GAME_W;
     this._msgBg  = this.add.graphics().setVisible(false);
     this._msgTxt = this.add.text(W / 2, UI_Y - 22, '', {
-      fontSize: '15px',
+      fontSize: '17px',
       color: '#ffffff',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
@@ -395,15 +395,15 @@ class UIScene extends Phaser.Scene {
       strokeThickness: 2,
     });
     this._dlgText = this.add.text(76, boxY + 34, '', {
-      fontSize: '14px', color: '#ddeeff',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '16px', color: '#ddeeff',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       wordWrap: { width: W - 106 },
       lineSpacing: 5,
     });
     this._dlgPrompt = this.add.text(W - 24, boxY + boxH - 18, '▶ TAP', {
       fontSize: '13px', color: '#aabbcc',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
     }).setOrigin(1, 0.5);
 
@@ -453,7 +453,7 @@ class UIScene extends Phaser.Scene {
 
     const chNum = this.add.text(W/2, GAME_H/2 - 60, `CHAPTER ${chapterId}`, {
       fontSize: '16px', color: '#aabbcc',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       letterSpacing: 5,
       stroke: '#000000',
@@ -470,7 +470,7 @@ class UIScene extends Phaser.Scene {
 
     const chSub = this.add.text(W/2, GAME_H/2 + 24, chap.subtitle, {
       fontSize: '15px', color: '#ccddf0',
-      fontFamily: 'Nunito, Courier New, monospace',
+      fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       align: 'center',
       wordWrap: { width: W - 60 },

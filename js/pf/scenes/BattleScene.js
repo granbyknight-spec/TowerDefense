@@ -497,10 +497,10 @@ class BattleScene extends Phaser.Scene {
 
   _handleAtkTargetTap(col, row) {
     if (!this._atkTiles.some(t => t.col === col && t.row === row)) {
-      this._deselect(); return;
+      this._cancelTargeting(); return;
     }
     const target = this._unitAt(col, row);
-    if (!target || target.team !== 'enemy') { this._deselect(); return; }
+    if (!target || target.team !== 'enemy') { this._cancelTargeting(); return; }
 
     this._executeCombat(this._selected, target, () => {
       const unit = this._selected;
@@ -526,10 +526,10 @@ class BattleScene extends Phaser.Scene {
 
   _handleHealTargetTap(col, row) {
     if (!this._healTiles.some(t => t.col === col && t.row === row)) {
-      this._deselect(); return;
+      this._cancelTargeting(); return;
     }
     const target = this._unitAt(col, row);
-    if (!target || target.team !== 'player') { this._deselect(); return; }
+    if (!target || target.team !== 'player') { this._cancelTargeting(); return; }
 
     this._executeHeal(this._selected, target);
     const unit = this._selected;
@@ -582,6 +582,31 @@ class BattleScene extends Phaser.Scene {
     this._getUI()?.hideActionMenu();
     this._getUI()?.clearUnitInfo();
     this._dimActedUnits();
+  }
+
+  // Cancel targeting (Attack/Heal) and return to unit-selection state with action menu
+  _cancelTargeting() {
+    const unit = this._selected;
+    if (!unit) { this._deselect(); return; }
+    this._atkTiles  = [];
+    this._healTiles = [];
+    this._clearHighlights();
+    if (unit.hasMoved) {
+      // Was in UNIT_MOVED — just restore sel highlight and menu
+      this._drawSelHighlight(unit);
+      this._setState(BS.UNIT_MOVED);
+    } else {
+      // Was in UNIT_SEL — restore move + attack range highlights
+      const movTiles = getReachableTiles(unit, this.mapGrid, this.units);
+      this._moveTiles = movTiles;
+      this._drawMoveHighlights(movTiles);
+      if (!unit.hasActed) {
+        this._drawAtkHighlights(getAttackTiles(unit, this.mapGrid, unit.col, unit.row));
+      }
+      this._drawSelHighlight(unit);
+      this._setState(BS.UNIT_SEL);
+    }
+    this._getUI()?.showActionMenu(unit, this);
   }
 
   _moveSelectedUnit(col, row) {
@@ -714,9 +739,25 @@ class BattleScene extends Phaser.Scene {
       this._setState(BS.TARGET_HEAL);
       this._getUI()?.hideActionMenu();
     } else {
-      // Offensive skill = treat like attack but with skill power
+      // Offensive skill — use the skill's own range, not unit's weapon range
       this._pendingSkill = skill;
-      this.onActionAttack();
+      const skillRange = sk.range || unit.range;
+      const atkTiles = getAttackTiles({ ...unit, range: skillRange }, this.mapGrid, unit.col, unit.row);
+      const hasTarget = atkTiles.some(t => {
+        const u = this._unitAt(t.col, t.row);
+        return u && u.team === 'enemy';
+      });
+      if (!hasTarget) {
+        this._getUI()?.showMessage('No enemies in range!');
+        this._pendingSkill = null;
+        return;
+      }
+      this._atkTiles = atkTiles;
+      this._clearHighlights();
+      this._drawAtkHighlights(atkTiles);
+      this._drawSelHighlight(unit);
+      this._setState(BS.TARGET_ATK);
+      this._getUI()?.hideActionMenu();
     }
   }
 
