@@ -19,6 +19,8 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 360   # 6 hours max — AI Horde queue can be slow
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repo
@@ -37,24 +39,28 @@ jobs:
 
       - name: Generate terrain tiles
         if: inputs.script == 'terrain' || inputs.script == 'all'
+        continue-on-error: true
         env:
           AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
         run: node scripts/generate-terrain.js
 
       - name: Generate character portraits
         if: inputs.script == 'characters' || inputs.script == 'all'
+        continue-on-error: true
         env:
           AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
         run: node scripts/generate-characters.js
 
       - name: Generate battle backgrounds
         if: inputs.script == 'backgrounds' || inputs.script == 'all'
+        continue-on-error: true
         env:
           AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
         run: node scripts/generate-backgrounds.js
 
       - name: Generate enemy sprites
         if: inputs.script == 'enemies' || inputs.script == 'all'
+        continue-on-error: true
         env:
           AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
         run: node scripts/generate-enemies.js
@@ -69,5 +75,5 @@ jobs:
           else
             COUNT=$(git diff --staged --name-only | wc -l)
             git commit -m "Generate AI art assets: ${{ inputs.script }} (${COUNT} files)"
-            git push
+            git push origin HEAD
           fi
