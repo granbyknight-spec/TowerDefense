@@ -86,6 +86,10 @@ class BattleScene extends Phaser.Scene {
       this._recruitables.push(unit);
     });
 
+    // ── Battle stats for win screen ─────────────────────────────────────────
+    this._totalDamageDealt = 0;
+    this._unitsLost        = 0;
+
     // ── Build map and sprites ────────────────────────────────────────────────
     this._buildMap();
     this._buildHighlightLayers();
@@ -840,18 +844,19 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  onActionItem() {
+  onActionItem(itemIndex = 0) {
     const unit = this._selected;
     if (!unit || unit.items.length === 0) {
       this._getUI()?.showMessage('No items!');
       return;
     }
-    // Use first healing item
-    const itemId = unit.items[0];
+    // Use item at the specified index (default 0)
+    const idx    = Math.min(itemIndex, unit.items.length - 1);
+    const itemId = unit.items[idx];
     const item   = ITEMS[itemId];
     if (item && item.heal) {
       const healed = unit.heal(item.heal);
-      unit.items.splice(0, 1);
+      unit.items.splice(idx, 1);
       this._updateHPBar(unit);
       this._floatText(unit.col, unit.row, `+${healed} HP`, PAL.HP_G);
       unit.hasActed = true;
@@ -859,7 +864,7 @@ class BattleScene extends Phaser.Scene {
       this._deselect();
     } else if (item && item.promote && unit.canPromote()) {
       const msg = unit.promote() ? `${unit.name} promoted!` : 'Cannot promote!';
-      unit.items.splice(0, 1);
+      unit.items.splice(idx, 1);
       this._getUI()?.showMessage(msg);
       // Update SVG sprite to promoted form (swap texture key)
       if (unit.sprite && unit.sprite.setTexture) {
@@ -891,7 +896,7 @@ class BattleScene extends Phaser.Scene {
   // COMBAT
   // ==========================================================================
 
-  _executeCombat(attacker, defender, onDone, hitNum = 1, skillName = null) {
+  _executeCombat(attacker, defender, onDone, hitNum = 1, skillName = null, isDouble = false) {
     this._setState(BS.ANIMATING);
     this._clearHighlights();
 
@@ -927,6 +932,7 @@ class BattleScene extends Phaser.Scene {
         alpha: 0.2, duration: 60, yoyo: true, repeat: 2,
         onComplete: () => {
           const died = defender.takeDamage(dmg);
+          this._totalDamageDealt += dmg;
           this._updateHPBar(defender);
           this._floatText(defender.col, defender.row, `-${dmg}`, PAL.HP_R);
 
@@ -946,6 +952,19 @@ class BattleScene extends Phaser.Scene {
 
           // Counter-attack: defender can retaliate if attacker is within defender's weapon range
           const dist = Math.abs(attacker.col - defender.col) + Math.abs(attacker.row - defender.row);
+          // Wrap onDone to check for AGI double-attack after the full sequence resolves
+          const afterSequence = () => {
+            if (!isDouble && !attacker.dead && !defender.dead &&
+                (attacker.agi - defender.agi) >= 4) {
+              this._floatText(attacker.col, attacker.row, '2×', PAL.GOLD);
+              this.time.delayedCall(200, () => {
+                this._executeCombat(attacker, defender, onDone, 1, null, true);
+              });
+            } else {
+              onDone && onDone();
+            }
+          };
+
           const noCounter = this._lastSkillUsed ? (SKILLS[this._lastSkillUsed]?.noCounter || false) : false;
           const canCounter = !noCounter && dist <= defender.range && defender.team === 'enemy';
           if (canCounter) {
@@ -970,7 +989,7 @@ class BattleScene extends Phaser.Scene {
                     if (aDied) {
                       this._killUnit(attacker, onDone);
                     } else {
-                      this._applyPostCombatEffects(attacker, defender, onDone);
+                      this._applyPostCombatEffects(attacker, defender, afterSequence);
                     }
                   },
                 });
@@ -980,10 +999,10 @@ class BattleScene extends Phaser.Scene {
             if (totalHits > 1 && hitNum < totalHits && !defender.dead) {
               // Fire second hit after short delay
               this.time.delayedCall(200, () => {
-                this._executeCombat(attacker, defender, onDone, hitNum + 1, skillName);
+                this._executeCombat(attacker, defender, onDone, hitNum + 1, skillName, isDouble);
               });
             } else {
-              this._applyPostCombatEffects(attacker, defender, onDone);
+              this._applyPostCombatEffects(attacker, defender, afterSequence);
             }
           }
         },
@@ -1083,6 +1102,7 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => {
         this._destroyUnitSprite(unit);
         unit.dead = true;
+        if (unit.team === 'player') this._unitsLost++;
         this._checkEndCondition();
         onDone && onDone();
       },
@@ -1158,8 +1178,8 @@ class BattleScene extends Phaser.Scene {
     this.playerTurn = true;
     this.units.filter(u => !u.dead && u.team === 'player').forEach(u => u.resetTurn());
 
-    // MP recovery — each player unit gains 2 MP at the start of their turn
-    this.units.filter(u => !u.dead && u.team === 'player').forEach(u => { u.recoverMp(2); });
+    // MP recovery — each player unit recovers 20% of max MP at the start of their turn
+    this.units.filter(u => !u.dead && u.team === 'player').forEach(u => { u.recoverMp(Math.max(1, Math.round(u.maxMp * 0.20))); });
     // Refresh UI panel if a unit is currently selected
     if (this._selected) this._getUI()?.showUnitInfo(this._selected);
 
@@ -1262,6 +1282,9 @@ class BattleScene extends Phaser.Scene {
       levelUps:      this._levelUps,
       newUnits:      this._newUnits,
       victoryLines:  victory ? (chapter.victory || []) : [],
+      totalDamage:   this._totalDamageDealt,
+      unitsLost:     this._unitsLost,
+      turns:         this.turnNumber,
     });
   }
 
