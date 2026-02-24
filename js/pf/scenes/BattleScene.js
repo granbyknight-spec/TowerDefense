@@ -212,6 +212,7 @@ class BattleScene extends Phaser.Scene {
         if (this.textures.exists(terrainTexKey)) {
           this.add.image(x + TILE / 2, y + TILE / 2, terrainTexKey)
             .setDisplaySize(TILE, TILE)
+            .setAlpha(0.55)
             .setDepth(-5);
         } else {
           g.fillStyle(td.color, 1);
@@ -333,16 +334,21 @@ class BattleScene extends Phaser.Scene {
     const activeKey = useEnemyPng ? pngKey : sprKey;
     let sprite;
     if (this.textures.exists(activeKey)) {
-      sprite = this.add.image(x, y - 1, activeKey)
-        .setOrigin(0.5)
-        .setScale(sprScale);
+      sprite = this.add.image(x, y - 1, activeKey).setOrigin(0.5);
+      if (useEnemyPng) {
+        // AI-generated PNGs can be any resolution — fit to tile size
+        const fitSize = spriteSize * (unit.isBoss ? 1.15 : 1);
+        sprite.setDisplaySize(fitSize, fitSize);
+      } else {
+        sprite.setScale(sprScale);
+      }
     } else {
       // Fallback to emoji text if texture somehow not loaded
       sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: '22px' }).setOrigin(0.5);
     }
 
     // Boss units get a slightly larger sprite to stand out
-    if (unit.isBoss && sprite.setScale) {
+    if (unit.isBoss && sprite.setScale && !useEnemyPng) {
       sprite.setScale(sprScale * 1.15);
     }
 
