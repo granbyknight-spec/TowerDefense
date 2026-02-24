@@ -1,0 +1,84 @@
+name: Generate AI Art Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: 'Which assets to generate'
+        required: true
+        default: 'terrain'
+        type: choice
+        options:
+          - terrain
+          - characters
+          - backgrounds
+          - enemies
+          - all
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360   # 6 hours max — AI Horde queue can be slow
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create output directories
+        run: |
+          mkdir -p assets/terrain assets/characters assets/backgrounds assets/enemies
+
+      - name: Generate terrain tiles
+        if: inputs.script == 'terrain' || inputs.script == 'all'
+        continue-on-error: true
+        env:
+          AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
+        run: node scripts/generate-terrain.js
+
+      - name: Generate character portraits
+        if: inputs.script == 'characters' || inputs.script == 'all'
+        continue-on-error: true
+        env:
+          AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
+        run: node scripts/generate-characters.js
+
+      - name: Generate battle backgrounds
+        if: inputs.script == 'backgrounds' || inputs.script == 'all'
+        continue-on-error: true
+        env:
+          AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
+        run: node scripts/generate-backgrounds.js
+
+      - name: Generate enemy sprites
+        if: inputs.script == 'enemies' || inputs.script == 'all'
+        continue-on-error: true
+        env:
+          AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
+        run: node scripts/generate-enemies.js
+
+      - name: Commit generated assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/
+          if git diff --staged --quiet; then
+            echo "No new assets generated (all skipped or failed)"
+          else
+            COUNT=$(git diff --staged --name-only | wc -l)
+            git commit -m "Generate AI art assets: ${{ inputs.script }} (${COUNT} files)"
+            # Pull-rebase + push with retry in case parallel jobs cause a push race
+            for i in 1 2 3 4; do
+              git pull --rebase origin HEAD && git push origin HEAD && break
+              echo "Push attempt $i failed, retrying in $((i * 3))s..."
+              sleep $((i * 3))
+            done
+          fi
