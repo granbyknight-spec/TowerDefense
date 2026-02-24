@@ -1,158 +1,184 @@
 #!/usr/bin/env node
 'use strict';
 
-// Download background music tracks from OpenGameArt.org.
+// Download background music from https://github.com/SoundSafari/CC0-1.0-Music
+// All tracks are CC0-1.0 (public domain) — no attribution required.
 //
-// All tracks are released under CC0 / CC-BY 3.0 (see ATTRIBUTION below).
+// Strategy: query the GitHub API to list files in the repo, then pick
+// the best match for each game track by keyword search on the filename.
+// This means the script stays working even as the repo evolves.
+//
 // Run manually:
 //   node scripts/download-music.js
-// Or via the "Generate Audio SFX" GitHub Actions workflow (triggered automatically).
-//
-// ATTRIBUTION (include in your credits / README):
-//   "5 Chiptunes (Adventure)" by Eric Matyas — soundimage.org
-//     CC0 1.0 Universal — no attribution required, but appreciated.
-//   https://opengameart.org/content/5-chiptunes-adventure
+// Or triggered automatically by the "Generate Audio SFX" GitHub Actions workflow.
 
 const https = require('https');
-const http  = require('http');
 const fs    = require('fs');
 const path  = require('path');
-const url   = require('url');
+
+const OUTPUT_DIR = path.join(__dirname, '..', 'assets', 'audio', 'music');
 
 // ---------------------------------------------------------------------------
-// Config — direct OGG download URLs from OpenGameArt CDN
+// What we want — keyword sets in priority order (first match wins)
 // ---------------------------------------------------------------------------
-// To swap a track: replace its `src` with any OGA direct-download URL.
-// OGA direct links follow the pattern:
-//   https://opengameart.org/sites/default/files/<filename>
-// Find them by clicking the filename link on an OGA asset page.
-// ---------------------------------------------------------------------------
-
-const MUSIC_LIST = [
+const TRACKS = [
   {
-    key: 'battle',
     file: 'battle.ogg',
-    src: 'https://opengameart.org/sites/default/files/Chiptune_Adventures-Battle.ogg',
-    title: '5 Chiptunes (Adventure) — Battle',
-    author: 'Eric Matyas / soundimage.org',
-    license: 'CC0',
+    keywords: ['battle', 'combat', 'fight', 'boss', 'action', 'intense', 'war'],
   },
   {
-    key: 'title',
     file: 'title.ogg',
-    src: 'https://opengameart.org/sites/default/files/Chiptune_Adventures-Overworld.ogg',
-    title: '5 Chiptunes (Adventure) — Overworld (used as title)',
-    author: 'Eric Matyas / soundimage.org',
-    license: 'CC0',
+    keywords: ['title', 'menu', 'intro', 'theme', 'main', 'opening'],
   },
   {
-    key: 'overworld',
     file: 'overworld.ogg',
-    src: 'https://opengameart.org/sites/default/files/Chiptune_Adventures-Town.ogg',
-    title: '5 Chiptunes (Adventure) — Town',
-    author: 'Eric Matyas / soundimage.org',
-    license: 'CC0',
+    keywords: ['overworld', 'world', 'town', 'village', 'field', 'explore', 'adventure', 'journey'],
   },
   {
-    key: 'victory',
     file: 'victory.ogg',
-    src: 'https://opengameart.org/sites/default/files/Chiptune_Adventures-Victory.ogg',
-    title: '5 Chiptunes (Adventure) — Victory',
-    author: 'Eric Matyas / soundimage.org',
-    license: 'CC0',
+    keywords: ['victory', 'win', 'fanfare', 'triumph', 'success', 'jingle'],
   },
 ];
 
-const OUTPUT_DIR = path.join(__dirname, '..', 'assets', 'audio', 'music');
+// ---------------------------------------------------------------------------
+// GitHub repo config
+// ---------------------------------------------------------------------------
+const REPO_OWNER = 'SoundSafari';
+const REPO_NAME  = 'CC0-1.0-Music';
+const BRANCH     = 'main';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function download(srcUrl, destPath) {
+function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    const parsed   = url.parse(srcUrl);
-    const protocol = parsed.protocol === 'https:' ? https : http;
-
-    const req = protocol.get(srcUrl, (res) => {
-      // Follow a single redirect (OGA sometimes redirects to CDN)
+    const opts = {
+      headers: {
+        'User-Agent': 'puppy-force-asset-downloader/1.0',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    };
+    const req = https.get(url, opts, (res) => {
       if (res.statusCode === 301 || res.statusCode === 302) {
-        const redirectUrl = res.headers.location;
-        if (!redirectUrl) return reject(new Error('Redirect with no Location header'));
-        return download(redirectUrl, destPath).then(resolve).catch(reject);
+        return httpsGet(res.headers.location).then(resolve).catch(reject);
       }
-
-      if (res.statusCode !== 200) {
-        return reject(new Error(`HTTP ${res.statusCode} for ${srcUrl}`));
-      }
-
-      const contentType = res.headers['content-type'] || '';
-      if (!contentType.includes('audio') && !contentType.includes('octet-stream') && !contentType.includes('ogg')) {
-        // Likely got an HTML error page — surface it clearly
-        const chunks = [];
-        res.on('data', c => chunks.push(c));
-        res.on('end', () => {
-          const body = Buffer.concat(chunks).toString('utf8').slice(0, 200);
-          reject(new Error(`Unexpected content-type "${contentType}". Response: ${body}`));
-        });
-        return;
-      }
-
-      const tmp = destPath + '.tmp';
-      const out = fs.createWriteStream(tmp);
-      res.pipe(out);
-      out.on('finish', () => {
-        out.close(() => {
-          fs.renameSync(tmp, destPath);
-          resolve();
-        });
-      });
-      out.on('error', err => {
-        fs.unlink(tmp, () => reject(err));
-      });
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
     });
-
     req.on('error', reject);
-    req.setTimeout(30000, () => {
-      req.destroy(new Error(`Timeout downloading ${srcUrl}`));
-    });
+    req.setTimeout(30000, () => req.destroy(new Error('Timeout')));
   });
+}
+
+async function listRepoContents(pathInRepo) {
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}?ref=${BRANCH}`;
+  const res = await httpsGet(url);
+  if (res.status !== 200) throw new Error(`GitHub API ${res.status} for ${url}`);
+  return JSON.parse(res.body.toString('utf8'));
+}
+
+async function downloadFile(rawUrl, destPath) {
+  const res = await httpsGet(rawUrl);
+  if (res.status !== 200) throw new Error(`HTTP ${res.status} for ${rawUrl}`);
+  fs.writeFileSync(destPath, res.body);
+}
+
+// ---------------------------------------------------------------------------
+// Score a filename against a keyword list (higher = better match)
+// ---------------------------------------------------------------------------
+function score(filename, keywords) {
+  const lower = filename.toLowerCase();
+  for (let i = 0; i < keywords.length; i++) {
+    if (lower.includes(keywords[i])) return keywords.length - i; // earlier keyword = higher score
+  }
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Walk the repo tree via GitHub API and collect all audio files
+// ---------------------------------------------------------------------------
+async function collectAudioFiles(dirPath = '') {
+  let entries;
+  try {
+    entries = await listRepoContents(dirPath);
+  } catch (e) {
+    console.warn(`  [warn] Could not list ${dirPath}: ${e.message}`);
+    return [];
+  }
+
+  const results = [];
+  for (const entry of entries) {
+    if (entry.type === 'file') {
+      const ext = path.extname(entry.name).toLowerCase();
+      if (['.ogg', '.mp3', '.wav'].includes(ext)) {
+        results.push({
+          name:       entry.name,
+          path:       entry.path,
+          download_url: entry.download_url,
+        });
+      }
+    } else if (entry.type === 'dir') {
+      // Recurse — but skip folders that look like metadata/docs
+      if (!['LICENSE', '.git', 'docs'].includes(entry.name)) {
+        const sub = await collectAudioFiles(entry.path);
+        results.push(...sub);
+      }
+    }
+  }
+  return results;
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
-
 async function main() {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  let ok = 0;
-  let failed = 0;
+  const needed = TRACKS.filter(t => !fs.existsSync(path.join(OUTPUT_DIR, t.file)));
+  if (needed.length === 0) {
+    console.log('All music tracks already downloaded — nothing to do.');
+    return;
+  }
 
-  for (const track of MUSIC_LIST) {
+  console.log(`Scanning ${REPO_OWNER}/${REPO_NAME} for ${needed.length} track(s)...`);
+  const allFiles = await collectAudioFiles('');
+  console.log(`  Found ${allFiles.length} audio files in repo.`);
+
+  let ok = 0, failed = 0;
+
+  for (const track of needed) {
+    // Pick the best-scoring file for this track
+    let best = null, bestScore = 0;
+    for (const f of allFiles) {
+      const s = score(f.name, track.keywords);
+      if (s > bestScore) { bestScore = s; best = f; }
+    }
+
     const dest = path.join(OUTPUT_DIR, track.file);
-
-    if (fs.existsSync(dest)) {
-      console.log(`[${track.key}] Skipping (already exists)`);
-      ok++;
+    if (!best) {
+      console.log(`[${track.file}] ✗ No matching file found (keywords: ${track.keywords.slice(0, 3).join(', ')})`);
+      failed++;
       continue;
     }
 
-    process.stdout.write(`[${track.key}] Downloading "${track.title}"...`);
+    process.stdout.write(`[${track.file}] Downloading "${best.name}"...`);
     try {
-      await download(track.src, dest);
+      await downloadFile(best.download_url, dest);
       console.log(' ✓ Saved');
       ok++;
-    } catch (err) {
-      console.log(` ✗ Error: ${err.message}`);
-      console.log(`         Source URL: ${track.src}`);
-      console.log(`         Update MUSIC_LIST in scripts/download-music.js with a working OGA direct-download link.`);
+      // Remove the used file so we don't pick the same track for two slots
+      allFiles.splice(allFiles.indexOf(best), 1);
+    } catch (e) {
+      console.log(` ✗ Error: ${e.message}`);
       failed++;
     }
   }
 
-  console.log(`\nDone: ${ok} ok, ${failed} failed`);
+  const skipped = TRACKS.length - needed.length;
+  console.log(`\nDone: ${ok} downloaded, ${skipped} skipped (already exist), ${failed} failed`);
   if (failed > 0) process.exit(1);
 }
 
-main();
+main().catch(err => { console.error('Fatal:', err.message); process.exit(1); });
