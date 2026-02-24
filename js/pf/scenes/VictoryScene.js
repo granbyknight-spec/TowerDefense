@@ -8,7 +8,7 @@ class VictoryScene extends Phaser.Scene {
   constructor() { super({ key: 'VictoryScene' }); }
 
   init(data) {
-    this.result       = data.result;     // 'victory' | 'defeat' | 'gameover'
+    this.result       = data.result;     // 'victory' | 'defeat'
     this.chapter      = data.chapter;
     this.saveData     = data.saveData;
     this.newUnits     = data.newUnits || [];
@@ -19,7 +19,6 @@ class VictoryScene extends Phaser.Scene {
   create() {
     const W = GAME_W, H = GAME_H;
     const isVictory = this.result === 'victory';
-    const isGameOver= this.result === 'gameover';
 
     // ── Background ───────────────────────────────────────────────────────────
     const bg = this.add.graphics();

@@ -723,10 +723,26 @@ class BattleScene extends Phaser.Scene {
     this._getUI()?.hideActionMenu();
   }
 
-  onActionMagic() {
+  onActionMagic(skillIndexOrName) {
     const unit = this._selected;
     if (!unit || !unit.skills.length) return;
-    const skill = unit.skills[0]; // use first skill
+
+    // If no specific skill was provided, show the skill selector sub-menu instead
+    if (skillIndexOrName === undefined || skillIndexOrName === null) {
+      this._getUI()?.showSkillMenu(unit, this);
+      return;
+    }
+
+    // Resolve skill by index (number) or name/key (string)
+    let skill;
+    if (typeof skillIndexOrName === 'number') {
+      skill = unit.skills[skillIndexOrName];
+    } else {
+      // Find by skill key (e.g. 'fireball') — must exist in the unit's skill list
+      skill = unit.skills.find(s => s === skillIndexOrName);
+    }
+    if (!skill) return;
+
     const sk = SKILLS[skill];
     if (!sk) return;
 
@@ -987,7 +1003,7 @@ class BattleScene extends Phaser.Scene {
       const nx = defender.col + Math.sign(dx / len);
       const ny = defender.row + Math.sign(dy / len);
       if (nx >= 0 && nx < GCOLS && ny >= 0 && ny < GROWS &&
-          TERRAIN[this.mapGrid[ny][nx]]?.passable !== false &&
+          (TERRAIN[this.mapGrid[ny][nx]]?.movCost ?? 99) < 99 &&
           !this._unitAt(nx, ny)) {
         defender.col = nx;
         defender.row = ny;
@@ -1035,7 +1051,7 @@ class BattleScene extends Phaser.Scene {
 
     // BURN DoT (fireball)
     if (sk.burn && !defender.dead) {
-      defender.burnDamage = (defender.burnDamage || 0) + sk.burn;
+      defender.burnStacks = (defender.burnStacks || 0) + sk.burn;
       this._floatText(defender.col, defender.row, 'Burn!', 0xff4400);
     }
 
@@ -1087,9 +1103,9 @@ class BattleScene extends Phaser.Scene {
     this.units.filter(u => u.team === 'player').forEach(u => { u.guardActive = false; });
 
     // Apply burn DoT to all burning units
-    this.units.filter(u => !u.dead && u.burnDamage > 0).forEach(u => {
-      const bDmg = u.burnDamage;
-      u.burnDamage = 0;
+    this.units.filter(u => !u.dead && u.burnStacks > 0).forEach(u => {
+      const bDmg = u.burnStacks;
+      u.burnStacks--;
       const died = u.takeDamage(bDmg);
       this._updateHPBar(u);
       this._floatText(u.col, u.row, `-${bDmg} Fire`, 0xff4400);
