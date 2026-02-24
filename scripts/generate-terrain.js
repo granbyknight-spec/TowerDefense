@@ -15,36 +15,41 @@ const VARIANTS     = 4;
 
 const MODELS = ['AIO Pixel Art', 'PixelArt XL', 'Anything Diffusion', 'Deliberate'];
 
+// DESIGN GOAL: Terrain tiles are BACKGROUND — they must be flat, muted, and low-detail
+// so player and enemy unit sprites stand out clearly on top of them.
+// Prompts emphasize: solid flat color, minimal internal contrast, subtle uniform texture.
+
 const STYLE_SUFFIX = [
-  'pixel art, retro Shining Force style, 1990s Sega Genesis tactical RPG',
-  '16-bit retro color palette, blocky pixels',
-  'seamless tile, tileable texture, top-down view',
-  'no characters, no units, no border, no text',
-  'masterpiece, best quality'
+  'flat top-down game tile, Fire Emblem GBA style, simple solid fill',
+  'muted desaturated colors, very low contrast, minimal detail',
+  'seamless tileable, no characters, no units, no border, no text',
+  'pixel art, 16-bit SNES tactical RPG tile, clean and simple',
+  'background tile, not foreground art'
 ].join(', ');
 
 const NEGATIVE_PROMPT = [
   'characters, people, animals, units, text, watermark, signature',
-  'border, frame, vignette, edge darkening, outline',
-  'gradient, blur, noise, grain',
-  '3d render, photorealistic, hyperrealistic',
-  'isometric view, side view, perspective',
-  'modern, urban, sci-fi'
+  'border, frame, vignette, outline, edge',
+  'high contrast, busy, complex, detailed, intricate, ornate',
+  '3d render, photorealistic, hyperrealistic, painterly',
+  'isometric, perspective, side view, depth',
+  'modern, urban, sci-fi, bright, vivid, saturated, neon'
 ].join(', ');
 
 const TERRAIN_PROMPTS = {
-  grass:    { core: 'bright green grass plains, short grass blades, scattered tiny wildflowers, light green highlights on blades, dark green shadows, lush summer meadow', extraNeg: 'dark, gloomy, snow, sand, stone, water' },
-  forest:   { core: 'dense forest canopy seen from above, dark green tree tops, circular tree crowns, dappled shadows between trees, mossy ground, deep forest green palette', extraNeg: 'bright, desert, snow, buildings, water' },
-  mountain: { core: 'rocky mountain terrain seen from above, gray and brown stone, angular rock formations, stone rubble patches, earthy brown-gray stone surface', extraNeg: 'green grass, water, sand, buildings, snow only, perspective' },
-  water:    { core: 'deep blue river water, small ripple wave patterns, light blue highlights on water surface, dark navy wave shadows, subtle sparkle reflections, clean river surface', extraNeg: 'shore, land, grass, boats, fish, bridges, brown' },
-  road:     { core: 'dirt path road, packed earth trail, tan and light brown soil, subtle wheel rut marks in dirt, small pebbles scattered on path, warm sandy-brown ground', extraNeg: 'asphalt, modern road, cobblestone, bricks, grass, water, gray' },
-  sand:     { core: 'desert sand terrain, golden sandy surface, small dune ripple patterns, wind-swept sand texture, warm yellow-orange highlights, subtle shadows between dune ridges, dry desert floor', extraNeg: 'water, grass, rocks, cactus, buildings, green, dark' },
-  castle:   { core: 'stone castle floor tile, gray cobblestone courtyard, fortress interior flagstone, smooth cut stone blocks with mortar lines, cool gray palette with slight blue tint', extraNeg: 'exterior walls, towers, sky, grass, sand, warm colors, wood' },
-  village:  { core: 'village ground tile, warm earth-toned packed dirt floor, rustic brown clay soil, small flat stepping stones, worn earth texture, cozy settlement ground', extraNeg: 'buildings, houses, roofs, grass, stone, cobblestone, gray, dark' },
-  snow:     { core: 'snow-covered frozen ground, pure white snow surface, light blue shadows in snow, faint snowflake crystal patterns, icy blue-white palette, wintry battlefield floor', extraNeg: 'grass, dirt, sand, water, rocks, warm colors, brown, green' },
-  bridge:   { core: 'wooden bridge planks seen from directly above, dark brown worn wooden boards, parallel plank grain lines, aged timber bridge surface, narrow gaps between planks', extraNeg: 'water below, rope, stone, metal, grass, gray, bright' },
-  wall:     { core: 'solid stone fortress wall cross-section top-down view, very dark charcoal gray stone, dense impenetrable stone mass, near-black dark gray, thick battlement surface', extraNeg: 'light, bright, colorful, windows, doors, grass, wood, warm colors' },
-  oasis:    { core: 'desert oasis ground tile, lush green vegetation patches on sandy ground, small blue water pool, vivid green palm fronds seen from above, contrast of green and gold sand', extraNeg: 'dark, urban, buildings, rocks, cold, snow, gray' },
+  // Each prompt: flat, muted, low-detail — good background, not foreground
+  grass:    { core: 'flat muted olive green ground tile, simple uniform short grass, very low contrast, subtle dark green texture, dark earthy background, tactical RPG map tile', extraNeg: 'flowers, wildflowers, bright green, vivid, lush, detailed blades' },
+  forest:   { core: 'flat very dark green forest tile, simple dark canopy overhead view, near-black deep green, minimal leaf detail, uniform dark forest floor, shadowy woodland tile', extraNeg: 'bright, detailed trees, individual leaves, flowers, water' },
+  mountain: { core: 'flat dark grey-brown rocky tile, simple uniform stone surface, muted earthy grey, minimal rock detail, subtle cracked stone pattern, dark mountain ground tile', extraNeg: 'bright, green, water, high contrast rock formations, detailed rubble' },
+  water:    { core: 'flat dark navy blue water tile, simple subtle ripple pattern, very low contrast wave lines, deep dark river tile, minimal water detail, muted blue background', extraNeg: 'bright blue, sparkle, reflections, fish, shore, land, light blue' },
+  road:     { core: 'flat muted dark tan road tile, simple packed dirt path, low contrast earthy brown, subtle worn earth texture, dark sandy-brown road tile, uniform ground', extraNeg: 'bright, pebbles, detailed ruts, grass, gray, asphalt, cobblestone' },
+  sand:     { core: 'flat muted dark golden sand tile, simple uniform desert floor, very low contrast, subtle dark sand texture, muted gold-brown background, minimal detail', extraNeg: 'bright, dunes, flowers, cactus, water, vivid yellow, high contrast patterns' },
+  castle:   { core: 'flat dark blue-grey stone tile, simple uniform castle floor, muted cool grey flagstone, very low contrast mortar lines, dark stone courtyard tile', extraNeg: 'bright, warm, towers, walls, sky, elaborate detail, high contrast' },
+  village:  { core: 'flat muted dark terracotta dirt tile, simple uniform packed clay ground, very low contrast, dark earthy brown-red, subtle ground texture, minimal worn earth detail', extraNeg: 'buildings, roofs, cobblestones, bright, grass, ornate, detailed patterns' },
+  snow:     { core: 'flat muted grey-blue snow tile, simple uniform frozen ground, dark icy surface, very low contrast, subtle dark blue snow shadows, no bright white', extraNeg: 'bright white, sparkle, snowflakes, high contrast, vivid, crystal detail' },
+  bridge:   { core: 'flat dark brown wooden plank tile, simple parallel board lines, muted dark timber, very low contrast, subtle wood grain only, dark aged wood bridge tile', extraNeg: 'bright, ropes, nails, water below, high contrast grain, ornate' },
+  wall:     { core: 'flat near-black dark stone tile, simple uniform impenetrable rock, almost solid very dark charcoal, near-black background, minimal subtle texture', extraNeg: 'bright, light, colorful, wood, windows, detailed carving, high contrast' },
+  oasis:    { core: 'flat muted dark teal-green oasis tile, simple dark green vegetation on dark sand, very low contrast, subtle dark green and brown mix, shadowy oasis floor', extraNeg: 'bright vivid, water pool highlight, individual palm fronds, high contrast, flowers' },
 };
 
 function request(method, urlStr, headers, body) {
