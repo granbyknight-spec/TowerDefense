@@ -419,7 +419,7 @@ class BattleScene extends Phaser.Scene {
       this._deselect(); return;
     }
     const target = this._unitAt(col, row);
-    if (!target || target.team === 'player') { this._deselect(); return; }
+    if (!target || target.team !== 'enemy') { this._deselect(); return; }
 
     this._executeCombat(this._selected, target, () => {
       this._selected.hasActed = true;
@@ -577,8 +577,9 @@ class BattleScene extends Phaser.Scene {
     if (!sk) return;
 
     if (sk.targetAlly) {
-      // Heal
-      const healTiles = getAttackTiles(unit, this.mapGrid, unit.col, unit.row);
+      // Heal — use skill's own range rather than unit's weapon range
+      const skillRange = sk.range || unit.range;
+      const healTiles = getAttackTiles({ ...unit, range: skillRange }, this.mapGrid, unit.col, unit.row);
       this._healTiles = healTiles;
       this._clearHighlights();
       this._drawHealHighlights(healTiles);
@@ -650,7 +651,8 @@ class BattleScene extends Phaser.Scene {
     const terrainDef = TERRAIN[this.mapGrid[defender.row][defender.col]]?.def || 0;
     const rawDmg = Math.max(1, attacker.atk - (defender.def + terrainDef));
     const variance = Phaser.Math.Between(0, Math.floor(attacker.atk * 0.15));
-    const dmg = Math.floor(rawDmg * atkBonus) + variance;
+    // Apply Math.max(1) after atkBonus and variance so skills with power < 1 can't produce 0 damage
+    const dmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
 
     // Attack animation
     this._shakeSprite(attacker.sprite, () => {
@@ -677,9 +679,9 @@ class BattleScene extends Phaser.Scene {
             return;
           }
 
-          // Counter-attack: melee defenders that haven't attacked this combat
+          // Counter-attack: defender can retaliate if attacker is within defender's weapon range
           const dist = Math.abs(attacker.col - defender.col) + Math.abs(attacker.row - defender.row);
-          const canCounter = dist === 1 && defender.range === 1 && defender.team === 'enemy';
+          const canCounter = dist <= defender.range && defender.team === 'enemy';
           if (canCounter) {
             const cDef = TERRAIN[this.mapGrid[attacker.row][attacker.col]]?.def || 0;
             const cRaw = Math.max(1, defender.atk - (attacker.def + cDef));
@@ -718,7 +720,9 @@ class BattleScene extends Phaser.Scene {
 
   _executeHeal(healer, target) {
     const sk = SKILLS['heal'];
-    const healAmt = Math.floor(healer.atk * 0.8) + Phaser.Math.Between(2, 6);
+    // Use skill power magnitude to scale heal (power is negative to denote healing)
+    const skillPower = sk ? Math.abs(sk.power) : 1.0;
+    const healAmt = Math.floor(healer.atk * skillPower) + Phaser.Math.Between(2, 6);
     const actual  = target.heal(healAmt);
     this._updateHPBar(target);
     this._floatText(target.col, target.row, `+${actual} HP`, PAL.HP_G);
@@ -756,7 +760,8 @@ class BattleScene extends Phaser.Scene {
     this._getUI()?.showTurnBanner('Enemy Turn', 0xcc2222);
 
     this._enemyQueue = this.units.filter(u => !u.dead && u.team === 'enemy');
-    this.units.filter(u => !u.dead && u.team !== 'enemy').forEach(u => u.resetTurn());
+    // Enemy units need their turn state reset so they can act this turn
+    this._enemyQueue.forEach(u => u.resetTurn());
 
     this.time.delayedCall(800, () => this._processNextEnemy());
   }
@@ -774,10 +779,10 @@ class BattleScene extends Phaser.Scene {
     const action = computeEnemyAction(enemy, this.mapGrid, this.units);
 
     // Move
+    // action.moveTo is already validated by getReachableTiles; follow the full path
     const path = findPath(enemy, action.moveTo.col, action.moveTo.row, this.mapGrid, this.units);
-    const movePath = (path || []).slice(0, enemy.mov + 1);
 
-    this._animateMove(enemy, movePath.length > 0 ? movePath : [action.moveTo], () => {
+    this._animateMove(enemy, path && path.length > 0 ? path : [action.moveTo], () => {
       enemy.col = action.moveTo.col;
       enemy.row = action.moveTo.row;
       enemy.hasMoved = true;
@@ -848,8 +853,10 @@ class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // Victory: boss dead
-    const boss = this.units.find(u => u.id === chapter.bossId || u.isBoss);
+    // Victory: chapter's designated boss is dead (prefer bossId, fall back to any isBoss)
+    const boss = chapter.bossId
+      ? this.units.find(u => u.id === chapter.bossId)
+      : this.units.find(u => u.isBoss);
     if (boss && boss.dead) {
       this._setState(BS.VICTORY);
       this._celebrateVictory();
@@ -953,15 +960,15 @@ class BattleScene extends Phaser.Scene {
   _floatText(col, row, text, color) {
     const { x, y } = this._tileCenter(col, row);
     const t = this.add.text(x, y, text, {
-      fontSize: '13px',
+      fontSize: '17px',
       color: '#' + color.toString(16).padStart(6, '0'),
       stroke: '#000000',
-      strokeThickness: 3,
-      fontFamily: 'Courier New, monospace',
+      strokeThickness: 4,
+      fontFamily: 'Nunito, Courier New, monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5);
     this.tweens.add({
-      targets: t, y: y - 36, alpha: 0, duration: 1100, ease: 'Power1',
+      targets: t, y: y - 44, alpha: 0, duration: 1200, ease: 'Power1',
       onComplete: () => t.destroy(),
     });
   }

@@ -81,19 +81,23 @@ function _ranged(unit, mapGrid, allUnits, players) {
   const reachable = getReachableTiles(unit, mapGrid, allUnits);
   const allTiles  = [{ col: unit.col, row: unit.row }, ...reachable];
 
-  let bestMove = null, bestTarget = null;
+  let bestMove = null, bestTarget = null, bestDist = -1;
 
-  // Prefer tiles that are at range=2 from a player
+  // Prefer tiles that are at range=2 from a player (safe range), then weakest target
   for (const tile of allTiles) {
     const atkTiles = getAttackTiles(unit, mapGrid, tile.col, tile.row);
     for (const atk of atkTiles) {
       const target = players.find(u => u.col === atk.col && u.row === atk.row);
       if (target) {
         const dist = Math.abs(tile.col - target.col) + Math.abs(tile.row - target.row);
-        // Prefer 2-tile distance (safe range)
-        if (!bestMove || dist === 2) {
-          bestMove = tile;
+        // Prefer max-range attack (safest); on tie prefer weakest target
+        const isBetter = !bestMove
+          || dist > bestDist
+          || (dist === bestDist && target.hp < bestTarget.hp);
+        if (isBetter) {
+          bestMove   = tile;
           bestTarget = target;
+          bestDist   = dist;
         }
       }
     }
