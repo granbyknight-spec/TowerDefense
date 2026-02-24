@@ -91,6 +91,7 @@ class BattleScene extends Phaser.Scene {
     this._enemyQueue= [];      // enemies still to act this turn
     this._levelUps  = [];      // collected during battle
     this._newUnits  = [];      // newly recruited
+    this._battleEnded = false; // latch: prevents _endBattle from firing twice
     this.turnNumber = 1;
     this.playerTurn = true;
   }
@@ -1018,6 +1019,7 @@ class BattleScene extends Phaser.Scene {
 
   onEndTurn() {
     if (this._state === BS.ENEMY_TURN || this._state === BS.ANIMATING) return;
+    if (this._state === BS.VICTORY   || this._state === BS.DEFEAT)    return;
     this._deselect();
     this._beginEnemyTurn();
   }
@@ -1468,6 +1470,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   _endBattle(victory) {
+    if (this._battleEnded) return;
+    this._battleEnded = true;
     // Save progress
     if (victory) {
       const completed = this.saveData.completedChapters || [];
