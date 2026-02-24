@@ -14,6 +14,9 @@ class VictoryScene extends Phaser.Scene {
     this.newUnits     = data.newUnits || [];
     this.levelUps     = data.levelUps || [];
     this.victoryLines = data.victoryLines || [];
+    this.totalDamage  = data.totalDamage || 0;
+    this.unitsLost    = data.unitsLost   || 0;
+    this.turns        = data.turns       || 0;
   }
 
   create() {
@@ -183,6 +186,25 @@ class VictoryScene extends Phaser.Scene {
       yOff += 10;
     }
 
+    // Battle stats
+    if (this.totalDamage || this.unitsLost || this.turns) {
+      yOff += 6;
+      const statsLines = [
+        `⚔ Damage dealt: ${this.totalDamage}`,
+        `💀 Allies lost:  ${this.unitsLost}`,
+        `🕐 Turns taken:  ${this.turns}`,
+      ];
+      statsLines.forEach(line => {
+        this.add.text(W/2, yOff, line, {
+          fontSize:'13px', color:'#8899aa',
+          fontFamily:'Nunito, Courier New, monospace',
+          fontStyle:'bold',
+        }).setOrigin(0.5);
+        yOff += 19;
+      });
+      yOff += 6;
+    }
+
     // Buttons
     if (!isFinal) {
       this._btn(W/2, H - 140, '⚔  NEXT CHAPTER', 0x1a4422, 0x33bb55, () => {
@@ -245,6 +267,24 @@ class VictoryScene extends Phaser.Scene {
       align:'center',
       stroke:'#000000', strokeThickness:2,
     }).setOrigin(0.5);
+
+    // Battle stats
+    if (this.totalDamage || this.unitsLost || this.turns) {
+      const statsLines = [
+        `⚔ Damage dealt: ${this.totalDamage}`,
+        `💀 Allies lost:  ${this.unitsLost}`,
+        `🕐 Turns taken:  ${this.turns}`,
+      ];
+      let sY = 362;
+      statsLines.forEach(line => {
+        this.add.text(W/2, sY, line, {
+          fontSize:'13px', color:'#556677',
+          fontFamily:'Nunito, Courier New, monospace',
+          fontStyle:'bold',
+        }).setOrigin(0.5);
+        sY += 19;
+      });
+    }
 
     this._btn(W/2, H - 140, '🔄  RETRY CHAPTER', 0x2a1a00, 0x885500, () => {
       this.scene.start('BattleScene', {
