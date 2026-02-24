@@ -589,8 +589,9 @@ class BattleScene extends Phaser.Scene {
   _cancelTargeting() {
     const unit = this._selected;
     if (!unit) { this._deselect(); return; }
-    this._atkTiles  = [];
-    this._healTiles = [];
+    this._atkTiles    = [];
+    this._healTiles   = [];
+    this._pendingSkill = null;  // discard any queued skill so it doesn't leak to next attack
     this._clearHighlights();
     if (unit.hasMoved) {
       // Was in UNIT_MOVED — just restore sel highlight and menu
@@ -754,10 +755,12 @@ class BattleScene extends Phaser.Scene {
       this._setState(BS.TARGET_HEAL);
       this._getUI()?.hideActionMenu();
     } else {
-      // Offensive skill — use the skill's own range, not unit's weapon range
+      // Offensive skill — use the skill's own range (and minRange if set), not unit's weapon range
       this._pendingSkill = skill;
       const skillRange = sk.range || unit.range;
-      const atkTiles = getAttackTiles({ ...unit, range: skillRange }, this.mapGrid, unit.col, unit.row);
+      const skillOverride = { ...unit, range: skillRange };
+      if (sk.minRange) skillOverride.minRange = sk.minRange;
+      const atkTiles = getAttackTiles(skillOverride, this.mapGrid, unit.col, unit.row);
       const hasTarget = atkTiles.some(t => {
         const u = this._unitAt(t.col, t.row);
         return u && u.team === 'enemy';
@@ -827,15 +830,20 @@ class BattleScene extends Phaser.Scene {
   // COMBAT
   // ==========================================================================
 
-  _executeCombat(attacker, defender, onDone, hitNum = 1) {
+  _executeCombat(attacker, defender, onDone, hitNum = 1, skillName = null) {
     this._setState(BS.ANIMATING);
     this._clearHighlights();
 
+    // On the first hit, consume _pendingSkill; on subsequent hits, reuse the passed-in skillName
+    if (hitNum === 1) {
+      skillName = this._pendingSkill;
+      this._pendingSkill = null;
+    }
+    this._lastSkillUsed = skillName;  // keep updated so noCounter / post-effects always know the skill
+
     // Combat math
-    const atkBonus = this._pendingSkill ? (SKILLS[this._pendingSkill].power || 1) : 1;
-    this._lastSkillUsed = this._pendingSkill;
-    this._pendingSkill = null;
-    const totalHits = (hitNum === 1 && this._lastSkillUsed) ? (SKILLS[this._lastSkillUsed]?.hits || 1) : 1;
+    const atkBonus = skillName ? (SKILLS[skillName].power || 1) : 1;
+    const totalHits = (hitNum === 1 && skillName) ? (SKILLS[skillName]?.hits || 1) : 1;
 
     const terrainDef = TERRAIN[this.mapGrid[defender.row][defender.col]]?.def || 0;
     const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
@@ -905,7 +913,7 @@ class BattleScene extends Phaser.Scene {
             if (totalHits > 1 && hitNum < totalHits && !defender.dead) {
               // Fire second hit after short delay
               this.time.delayedCall(200, () => {
-                this._executeCombat(attacker, defender, onDone, hitNum + 1);
+                this._executeCombat(attacker, defender, onDone, hitNum + 1, skillName);
               });
             } else {
               this._applyPostCombatEffects(attacker, defender, onDone);

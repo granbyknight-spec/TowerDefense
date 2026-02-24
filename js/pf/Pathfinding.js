@@ -148,12 +148,13 @@ function getAttackTiles(unit, mapGrid, fromCol, fromRow) {
   const cols = mapGrid[0].length;
   const col  = (fromCol !== undefined) ? fromCol : unit.col;
   const row  = (fromRow !== undefined) ? fromRow : unit.row;
+  const minDist = unit.minRange || 1;  // support minRange for skills like shoot
   const result = [];
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const dist = Math.abs(c - col) + Math.abs(r - row);
-      if (dist >= 1 && dist <= unit.range) {
+      if (dist >= minDist && dist <= unit.range) {
         result.push({ col: c, row: r });
       }
     }

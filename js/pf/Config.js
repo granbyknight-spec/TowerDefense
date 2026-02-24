@@ -314,7 +314,7 @@ const ITEMS = {
 // Skills
 const SKILLS = {
   slash:    { name:'Slash',    type:'physical', power:0.8, range:1, hits:2,        description:'Strike twice for 80% ATK each hit (two separate rolls)' },
-  shoot:    { name:'Shoot',    type:'physical', power:1.0, range:3, noCounter:true, description:'Long-range shot from 3 tiles away — target cannot retaliate' },
+  shoot:    { name:'Shoot',    type:'physical', power:1.0, range:3, minRange:2, noCounter:true, description:'Long-range shot 2-3 tiles away — target cannot retaliate' },
   dash:     { name:'Dash',     type:'physical', power:1.1, range:2, dive:true,      description:'Leap to strike an enemy 2 tiles away, then reposition adjacent' },
   charge:   { name:'Charge',   type:'physical', power:1.6, range:2, knockback:1, mpCost:3, description:'Powerful charge that pushes target 1 tile away (180% ATK)' },
   guard:    { name:'Guard',    type:'buff',      mpCost:2, defBonus:0.5,             description:'Raise DEF by 50% until next turn' },
