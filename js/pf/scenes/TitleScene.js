@@ -152,7 +152,7 @@ class TitleScene extends Phaser.Scene {
     const zone = this.add.zone(x, y, W_btn, H_btn).setInteractive({ useHandCursor: true });
     zone.on('pointerover',  () => { bg.clear(); bg.fillStyle(colorLight,0.9); bg.fillRoundedRect(x-W_btn/2,y-H_btn/2,W_btn,H_btn,10); });
     zone.on('pointerout',   () => { bg.clear(); bg.fillStyle(colorDark,1); bg.fillRoundedRect(x-W_btn/2,y-H_btn/2,W_btn,H_btn,10); bg.lineStyle(2,colorLight,0.8); bg.strokeRoundedRect(x-W_btn/2,y-H_btn/2,W_btn,H_btn,10); });
-    zone.on('pointerdown',  () => { this.tweens.add({ targets:[bg,txt], scaleX:0.95, scaleY:0.95, duration:80, yoyo:true }); cb(); });
+    zone.on('pointerdown',  () => { this.tweens.add({ targets:[bg,txt], scaleX:0.95, scaleY:0.95, duration:80, yoyo:true }); setTimeout(cb, 120); });
   }
 
   _spawnPaw() {
