@@ -25,6 +25,12 @@ class Unit {
     this.level = s.level || 1;
     this.exp   = s.exp   || 0;
 
+    this.maxMp = def.maxMp || 0;
+    this.mp    = def.maxMp || 0;
+
+    this._skillsAtLevel         = def.skillsAtLevel         || [];
+    this._promotedSkillsAtLevel = def.promotedSkillsAtLevel || [];
+
     this.weapon   = def.weapon || 'sword';
     this.range    = def.range  || 1;
     this.skills   = Array.from(def.skills  || []);
@@ -95,6 +101,14 @@ class Unit {
     this.def   += g.def;
     this.agi   += g.agi;
     if (this.level % 4 === 0) this.mov = Math.min(this.mov + 1, 9);
+
+    // Unlock skills at level milestones
+    const progressionList = this.promoted ? this._promotedSkillsAtLevel : this._skillsAtLevel;
+    progressionList.forEach(entry => {
+      if (entry.level === this.level && !this.skills.includes(entry.skill)) {
+        this.skills.push(entry.skill);
+      }
+    });
   }
 
   canPromote() {
@@ -117,7 +131,22 @@ class Unit {
     this.agi   += b.agi;
     this.level  = 1;
     this.exp    = 0;
+
+    // Unlock promoted level-1 skills immediately
+    this._promotedSkillsAtLevel.forEach(entry => {
+      if (entry.level === 1 && !this.skills.includes(entry.skill)) {
+        this.skills.push(entry.skill);
+      }
+    });
     return true;
+  }
+
+  recoverMp(amount) {
+    this.mp = Math.min(this.mp + amount, this.maxMp);
+  }
+
+  useMp(amount) {
+    this.mp = Math.max(0, this.mp - amount);
   }
 
   // --------------------------------------------------------------------------
@@ -197,6 +226,8 @@ class Unit {
       promoted: this.promoted,
       items: [...this.items],
       skills: [...this.skills],
+      mp: this.mp,
+      maxMp: this.maxMp,
     };
   }
 
@@ -215,6 +246,8 @@ class Unit {
     unit.promoted = saveData.promoted;
     unit.items    = [...(saveData.items || [])];
     unit.skills   = [...(saveData.skills || [])];
+    if (saveData.mp    !== undefined) unit.mp    = saveData.mp;
+    if (saveData.maxMp !== undefined) unit.maxMp = saveData.maxMp;
     return unit;
   }
 }
