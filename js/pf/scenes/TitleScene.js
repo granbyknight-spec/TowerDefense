@@ -18,13 +18,8 @@ class TitleScene extends Phaser.Scene {
     this._paws  = [];
 
     // ── Title music ──────────────────────────────────────────────────────────
+    // AudioManager handles locked Web Audio context internally via 'unlocked' event
     AudioManager.playMusic(this, 'title');
-    // Unlock Web Audio context for browsers that block autoplay
-    this.input.once('pointerdown', () => {
-      if (this.sound.context && this.sound.context.state === 'suspended') {
-        this.sound.context.resume();
-      }
-    });
 
     // ── Background gradient ──────────────────────────────────────────────────
     const bg = this.add.graphics();
@@ -147,6 +142,23 @@ class TitleScene extends Phaser.Scene {
       fontFamily: 'Nunito, Courier New, monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5);
+
+    // ── Mute toggle button (bottom-right corner) ──────────────────────────────
+    const muteBtn = this.add.text(W - 12, H - 12, '🔊 Sound ON', {
+      fontSize: '13px',
+      color: '#aabbcc',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
+      backgroundColor: '#11223388',
+      padding: { x: 6, y: 3 },
+    }).setOrigin(1, 1).setAlpha(0.75).setInteractive({ useHandCursor: true });
+
+    muteBtn.on('pointerover', () => muteBtn.setAlpha(1));
+    muteBtn.on('pointerout',  () => muteBtn.setAlpha(0.75));
+    muteBtn.on('pointerdown', () => {
+      this.sound.mute = !this.sound.mute;
+      muteBtn.setText(this.sound.mute ? '🔇 Sound OFF' : '🔊 Sound ON');
+    });
 
     // ── Floating paw prints animation ────────────────────────────────────────
     this.time.addEvent({

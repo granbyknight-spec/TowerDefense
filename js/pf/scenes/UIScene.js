@@ -30,6 +30,7 @@ class UIScene extends Phaser.Scene {
     this._buildTurnBanner();
     this._buildDialogueBox();
     this._buildEndTurnBtn();
+    this._buildMuteBtn();
     this._buildMessage();
     // Initialize display
     this.clearUnitInfo();
@@ -320,6 +321,60 @@ class UIScene extends Phaser.Scene {
     });
 
     this._endTurnBtn = { bg, txt, zone };
+  }
+
+  // ==========================================================================
+  // MUTE TOGGLE BUTTON
+  // ==========================================================================
+
+  _buildMuteBtn() {
+    const W = GAME_W;
+    // Sit just to the left of the END TURN button, same vertical alignment
+    const w = 36, h = 52;
+    const x = W - 76 - w - 4;   // 4 px gap between mute btn and end-turn btn
+    const y = UI_Y + 12;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x113344, 1);
+    bg.fillRoundedRect(x, y, w, h, 8);
+    bg.lineStyle(1, 0x2266aa, 0.9);
+    bg.strokeRoundedRect(x, y, w, h, 8);
+
+    // Label reflects current mute state (default: not muted)
+    const isMuted = () => {
+      const bs = this.scene.get('BattleScene');
+      return bs ? bs.sound.mute : false;
+    };
+
+    const txt = this.add.text(x + w / 2, y + h / 2, isMuted() ? '🔇' : '🔊', {
+      fontSize: '18px',
+    }).setOrigin(0.5);
+
+    const zone = this.add.zone(x + w / 2, y + h / 2, w, h)
+      .setInteractive({ useHandCursor: true });
+
+    zone.on('pointerover', () => {
+      bg.clear();
+      bg.fillStyle(0x2255aa, 1);
+      bg.fillRoundedRect(x, y, w, h, 8);
+    });
+    zone.on('pointerout', () => {
+      bg.clear();
+      bg.fillStyle(0x113344, 1);
+      bg.fillRoundedRect(x, y, w, h, 8);
+      bg.lineStyle(1, 0x2266aa, 0.9);
+      bg.strokeRoundedRect(x, y, w, h, 8);
+    });
+    zone.on('pointerdown', () => {
+      const bs = this.scene.get('BattleScene');
+      if (bs) {
+        bs.sound.mute = !bs.sound.mute;
+        txt.setText(bs.sound.mute ? '🔇' : '🔊');
+      }
+      this.tweens.add({ targets: txt, scaleX: 0.85, scaleY: 0.85, duration: 80, yoyo: true });
+    });
+
+    this._muteBtn = { bg, txt, zone };
   }
 
   // ==========================================================================

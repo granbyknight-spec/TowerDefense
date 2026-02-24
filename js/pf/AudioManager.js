@@ -57,8 +57,10 @@ class AudioManager {
 
   // Play a looping music track. Replaces the currently playing track.
   // Skips gracefully if the audio key is not loaded.
+  // Defers playback until after the first user gesture if the Web Audio
+  // context is still suspended (browser autoplay policy).
   static playMusic(scene, key, volume = 0.5) {
-    console.log('[AudioManager] playMusic called', key, 'exists:', scene.cache && scene.cache.audio && scene.cache.audio.exists(key));
+    console.log('[AudioManager] playMusic called', key, 'exists:', scene.cache && scene.cache.audio && scene.cache.audio.exists(key), 'locked:', scene.sound && scene.sound.locked);
     // Avoid restarting the same track if it is already playing
     if (AudioManager._currentMusicKey === key && AudioManager._currentMusic && AudioManager._currentMusic.isPlaying) {
       return;
@@ -70,6 +72,15 @@ class AudioManager {
     // Guard: audio not loaded yet
     if (!scene.cache || !scene.cache.audio || !scene.cache.audio.exists(key)) return;
 
+    // If Web Audio context is still locked (browser autoplay policy), wait for unlock
+    if (scene.sound.locked) {
+      scene.sound.once('unlocked', () => AudioManager._startTrack(scene, key, volume));
+    } else {
+      AudioManager._startTrack(scene, key, volume);
+    }
+  }
+
+  static _startTrack(scene, key, volume) {
     try {
       const music = scene.sound.add(key, { loop: true, volume });
       music.play();
