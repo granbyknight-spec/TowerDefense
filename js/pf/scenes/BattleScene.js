@@ -739,16 +739,26 @@ class BattleScene extends Phaser.Scene {
 
   _selectUnit(unit) {
     this._selected = unit;
-    const tiles = getReachableTiles(unit, this.mapGrid, this.units);
-    this._moveTiles = tiles;
     this._clearHighlights();
-    this._drawMoveHighlights(tiles);
-    // Show attack-range preview from current position (red overlay)
-    if (!unit.hasActed) {
-      this._drawAtkHighlights(getAttackTiles(unit, this.mapGrid, unit.col, unit.row));
+
+    if (unit.hasMoved) {
+      // Unit already moved this turn — go straight to UNIT_MOVED (no move tiles)
+      this._moveTiles = [];
+      this._drawSelHighlight(unit);
+      this._setState(BS.UNIT_MOVED);
+    } else {
+      // Unit has not moved yet — show movement + attack-range highlights
+      const tiles = getReachableTiles(unit, this.mapGrid, this.units);
+      this._moveTiles = tiles;
+      this._drawMoveHighlights(tiles);
+      // Show attack-range preview from current position (red overlay)
+      if (!unit.hasActed) {
+        this._drawAtkHighlights(getAttackTiles(unit, this.mapGrid, unit.col, unit.row));
+      }
+      this._drawSelHighlight(unit);
+      this._setState(BS.UNIT_SEL);
     }
-    this._drawSelHighlight(unit);
-    this._setState(BS.UNIT_SEL);
+
     this._getUI()?.showUnitInfo(unit);
     this._getUI()?.showActionMenu(unit, this);  // action menu visible immediately
     this._dimActedUnits();
