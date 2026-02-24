@@ -35,6 +35,32 @@ class BattleScene extends Phaser.Scene {
     } catch (e) {
       // silently skip if the file doesn't exist
     }
+    // Enemy portrait/sprite PNG overrides (graceful — fall back to SVG if missing)
+    // File naming convention: assets/enemies/<lowercase_id>_v1.png
+    const ENEMY_PNG_IDS = [
+      'SCOUT_CAT',
+      'ALLEY_CAT',
+      'SIAMESE_ASSASSIN',
+      'PERSIAN_SORCERER',
+      'TIGER_GENERAL',
+      'LYNX_RANGER',
+      'SNOW_LEOPARD',
+      'RIVER_PANTHER',
+      'SAND_CAT_KING',
+      'PERSIAN_QUEEN',
+      'CAT_EMPEROR',
+    ];
+    ENEMY_PNG_IDS.forEach(id => {
+      const pngKey = `enemy_png_${id}`;
+      if (!this.textures.exists(pngKey)) {
+        const fileName = id.toLowerCase() + '_v1.png';
+        try {
+          this.load.image(pngKey, `assets/enemies/${fileName}`);
+        } catch (e) {
+          // silently skip — SVG fallback will be used
+        }
+      }
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -284,9 +310,13 @@ class BattleScene extends Phaser.Scene {
     const sprScale   = spriteSize / 64;
 
     const sprKey = getSpriteKey(unit);
+    // For enemy units, prefer the PNG sprite override over the SVG if it loaded
+    const pngKey = `enemy_png_${unit.id}`;
+    const useEnemyPng = unit.team === 'enemy' && this.textures.exists(pngKey);
+    const activeKey = useEnemyPng ? pngKey : sprKey;
     let sprite;
-    if (this.textures.exists(sprKey)) {
-      sprite = this.add.image(x, y - 1, sprKey)
+    if (this.textures.exists(activeKey)) {
+      sprite = this.add.image(x, y - 1, activeKey)
         .setOrigin(0.5)
         .setScale(sprScale);
     } else {
