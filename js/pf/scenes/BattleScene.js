@@ -38,6 +38,7 @@ class BattleScene extends Phaser.Scene {
     this._healTiles = [];      // heal-range tiles
     this._preMovPos   = null;    // {col,row} before move for undo
     this._pendingSkill= null;    // offensive skill queued before attack target
+    this._lastSkillUsed = null;  // skill used in last _executeCombat call
     this._dlgQueue  = [];        // dialogue lines
     this._dlgIndex  = 0;
     this._enemyQueue= [];      // enemies still to act this turn
@@ -727,6 +728,20 @@ class BattleScene extends Phaser.Scene {
     const skill = unit.skills[0]; // use first skill
     const sk = SKILLS[skill];
     if (!sk) return;
+
+    // Instant buff — no targeting needed
+    if (sk.type === 'buff') {
+      if (skill === 'guard') {
+        unit.guardActive = true;
+        unit.hasActed = true;
+        this._getUI()?.showMessage(`${unit.name} raises their guard!`);
+        this._getUI()?.hideActionMenu();
+        this._setState(BS.IDLE);
+        this._clearHighlights();
+        this._deselect();
+      }
+      return;
+    }
 
     if (sk.targetAlly) {
       // Heal — use skill's own range rather than unit's weapon range

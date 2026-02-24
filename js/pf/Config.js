@@ -283,11 +283,11 @@ const ITEMS = {
 
 // Skills
 const SKILLS = {
-  slash:    { name:'Slash',    type:'physical', power:1.0, range:1, description:'Strike adjacent enemy for 100% ATK damage' },
-  shoot:    { name:'Shoot',    type:'physical', power:0.9, range:2, description:'Ranged arrow attack for 90% ATK damage' },
-  dash:     { name:'Dash',     type:'physical', power:1.0, range:1, description:'Strike adjacent enemy for 100% ATK damage' },
-  charge:   { name:'Charge',   type:'physical', power:1.8, range:2, mpCost:3, description:'Powerful leap attack from 2 tiles for 180% ATK damage' },
-  guard:    { name:'Guard',    type:'buff',      mpCost:2,           description:'Raise DEF by 50% for 1 turn' },
-  heal:     { name:'Heal',     type:'magic',     power:-1.2, range:2, mpCost:3, targetAlly:true, description:'Restore ally HP within 2 tiles (120% MagATK)' },
-  fireball: { name:'Fireball', type:'magic',     power:1.3,  range:2, mpCost:4, description:'Fire magic attack for 130% MagATK damage' },
+  slash:    { name:'Slash',    type:'physical', power:0.8, range:1, hits:2,        description:'Strike twice for 80% ATK each hit (two separate rolls)' },
+  shoot:    { name:'Shoot',    type:'physical', power:1.0, range:3, noCounter:true, description:'Long-range shot from 3 tiles away — target cannot retaliate' },
+  dash:     { name:'Dash',     type:'physical', power:1.1, range:2, dive:true,      description:'Leap to strike an enemy 2 tiles away, then reposition adjacent' },
+  charge:   { name:'Charge',   type:'physical', power:1.6, range:2, knockback:1, mpCost:3, description:'Powerful charge that pushes target 1 tile away (180% ATK)' },
+  guard:    { name:'Guard',    type:'buff',      mpCost:2, defBonus:0.5,             description:'Raise DEF by 50% until next turn' },
+  heal:     { name:'Heal',     type:'magic',     power:-1.2, range:2, mpCost:3, targetAlly:true, description:'Restore ally HP within 2 tiles (120% ATK)' },
+  fireball: { name:'Fireball', type:'magic',     power:1.3, range:2, mpCost:4, splash:0.6, burn:3, description:'Fire blast: full damage + splash to adjacent enemies + 3 burn DoT' },
 };
