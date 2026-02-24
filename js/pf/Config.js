@@ -72,6 +72,9 @@ const HERO_DEFS = {
     items:['herb'],
     promotedData:{ name:'Dog Paladin', emoji:'🦮', unitClass:'Paladin',
       bonus:{ hp:8, atk:4, def:4, mov:1, agi:1 } },
+    maxMp: 10,
+    skillsAtLevel: [{ level: 5, skill: 'slash' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'guard' }],
     expReward:30, chapter:1,
   },
 
@@ -84,6 +87,9 @@ const HERO_DEFS = {
     items:['herb'],
     promotedData:{ name:'Corgi Cleric', emoji:'🐕', unitClass:'Cleric',
       bonus:{ hp:6, atk:2, def:3, mov:1, agi:2 } },
+    maxMp: 12,
+    skillsAtLevel: [{ level: 5, skill: 'guard' }],
+    promotedSkillsAtLevel: [{ level: 10, skill: 'healall' }],
     expReward:30, chapter:1,
   },
 
@@ -96,6 +102,9 @@ const HERO_DEFS = {
     items:[],
     promotedData:{ name:'Lab Hero', emoji:'🦮', unitClass:'Hero',
       bonus:{ hp:8, atk:4, def:3, mov:1, agi:2 } },
+    maxMp: 8,
+    skillsAtLevel: [{ level: 5, skill: 'slash' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'charge' }],
     expReward:30, chapter:1,
   },
 
@@ -108,6 +117,9 @@ const HERO_DEFS = {
     items:[],
     promotedData:{ name:'Beagle Ranger', emoji:'🐩', unitClass:'Ranger',
       bonus:{ hp:6, atk:4, def:2, mov:1, agi:2 } },
+    maxMp: 8,
+    skillsAtLevel: [{ level: 5, skill: 'guard' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'fireball' }],
     expReward:35, chapter:2,
   },
 
@@ -120,6 +132,9 @@ const HERO_DEFS = {
     items:['herb'],
     promotedData:{ name:'Poodle Wizard', emoji:'🐾', unitClass:'Wizard',
       bonus:{ hp:5, atk:5, def:2, mov:1, agi:2 } },
+    maxMp: 14,
+    skillsAtLevel: [{ level: 5, skill: 'guard' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'heal' }],
     expReward:35, chapter:1,
   },
 
@@ -132,6 +147,9 @@ const HERO_DEFS = {
     items:['bread'],
     promotedData:{ name:'Bulldog General', emoji:'🐕‍🦺', unitClass:'General',
       bonus:{ hp:10, atk:3, def:5, mov:0, agi:1 } },
+    maxMp: 6,
+    skillsAtLevel: [{ level: 5, skill: 'slash' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'charge' }],
     expReward:40, chapter:3,
   },
 
@@ -144,6 +162,9 @@ const HERO_DEFS = {
     items:[],
     promotedData:{ name:'Husky Champion', emoji:'🐺', unitClass:'Champion',
       bonus:{ hp:8, atk:4, def:3, mov:1, agi:2 } },
+    maxMp: 8,
+    skillsAtLevel: [{ level: 5, skill: 'dash' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'slash' }],
     expReward:35, chapter:1,
   },
 
@@ -152,10 +173,13 @@ const HERO_DEFS = {
     unitClass:'Thief', team:'player',
     baseStats:{ maxHp:16, atk:11, def:5, mov:6, agi:12, level:1, exp:0 },
     growth:{ hp:2, atk:2, def:1, agi:3 },
-    weapon:'dagger', range:1, skills:['steal'],
+    weapon:'dagger', range:1, skills:['shoot'],
     items:[],
     promotedData:{ name:'Terrier Ninja', emoji:'🦊', unitClass:'Ninja',
       bonus:{ hp:5, atk:3, def:2, mov:1, agi:3 } },
+    maxMp: 10,
+    skillsAtLevel: [{ level: 5, skill: 'dash' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'slash' }],
     expReward:35, chapter:1,
   },
 };
@@ -172,6 +196,9 @@ const ALLY_DEFS = {
     specialMovement:['Water','Bridge'],
     promotedData:{ name:'Otter Admiral', emoji:'🦦', unitClass:'Admiral',
       bonus:{ hp:6, atk:3, def:2, mov:1, agi:2 } },
+    maxMp: 8,
+    skillsAtLevel: [{ level: 5, skill: 'slash' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'charge' }],
     expReward:40, chapter:4,
   },
   FOX_SCOUT: {
@@ -184,6 +211,9 @@ const ALLY_DEFS = {
     specialMovement:['Sand'],
     promotedData:{ name:'Desert Fox', emoji:'🦊', unitClass:'Desert Fox',
       bonus:{ hp:5, atk:3, def:2, mov:1, agi:3 } },
+    maxMp: 8,
+    skillsAtLevel: [{ level: 5, skill: 'guard' }],
+    promotedSkillsAtLevel: [{ level: 1, skill: 'fireball' }],
     expReward:40, chapter:5,
   },
 };
@@ -290,4 +320,5 @@ const SKILLS = {
   guard:    { name:'Guard',    type:'buff',      mpCost:2, defBonus:0.5,             description:'Raise DEF by 50% until next turn' },
   heal:     { name:'Heal',     type:'magic',     power:-1.2, range:2, mpCost:3, targetAlly:true, description:'Restore ally HP within 2 tiles (120% ATK)' },
   fireball: { name:'Fireball', type:'magic',     power:1.3, range:2, mpCost:4, splash:0.6, burn:3, description:'Fire blast: full damage + splash to adjacent enemies + 3 burn DoT' },
+  healall:  { name:'Heal All',  type:'magic', power:-0.7, range:3, mpCost:6, aoe:true, targetAlly:true, description:'Restore HP to all allies within 3 tiles (70% ATK)' },
 };
