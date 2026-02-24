@@ -61,6 +61,17 @@ class BattleScene extends Phaser.Scene {
         }
       }
     });
+    // Terrain tile PNGs (graceful — fall back to colored graphics if missing)
+    TERRAIN.forEach((td, i) => {
+      const key = `terrain_${i}`;
+      if (!this.textures.exists(key)) {
+        try {
+          this.load.image(key, `assets/terrain/${td.name.toLowerCase()}_v1.png`);
+        } catch (e) {
+          // silently skip — colored rectangle fallback used in _buildMap
+        }
+      }
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -186,7 +197,7 @@ class BattleScene extends Phaser.Scene {
   // ==========================================================================
 
   _buildMap() {
-    this._tileGfx = this.add.graphics();
+    this._tileGfx = this.add.graphics().setDepth(-4); // above terrain PNG images (-5)
     const g = this._tileGfx;
 
     for (let row = 0; row < GROWS; row++) {
@@ -196,11 +207,20 @@ class BattleScene extends Phaser.Scene {
         const x   = GRID_X + col * TILE;
         const y   = GRID_Y + row * TILE;
 
-        // Base tile
-        g.fillStyle(td.color, 1);
-        g.fillRect(x, y, TILE, TILE);
+        // Base tile — use PNG if loaded, otherwise colored rectangle
+        const terrainTexKey = `terrain_${tid}`;
+        if (this.textures.exists(terrainTexKey)) {
+          this.add.image(x + TILE / 2, y + TILE / 2, terrainTexKey)
+            .setDisplaySize(TILE, TILE)
+            .setDepth(-5);
+        } else {
+          g.fillStyle(td.color, 1);
+          g.fillRect(x, y, TILE, TILE);
+          // Terrain detail icons (only needed for graphic fallback)
+          this._drawTerrainDetail(g, tid, x, y);
+        }
 
-        // Highlight top-left edge (lighter)
+        // Highlight top-left edge (lighter) — drawn over PNG or graphic
         g.fillStyle(td.hi, 0.4);
         g.fillRect(x, y, TILE, 2);
         g.fillRect(x, y, 2, TILE);
@@ -209,9 +229,6 @@ class BattleScene extends Phaser.Scene {
         g.fillStyle(0x000000, 0.25);
         g.fillRect(x + TILE - 2, y, 2, TILE);
         g.fillRect(x, y + TILE - 2, TILE, 2);
-
-        // Terrain detail icons
-        this._drawTerrainDetail(g, tid, x, y);
       }
     }
   }
