@@ -116,6 +116,15 @@ class TitleScene extends Phaser.Scene {
       this.scene.restart();
     });
 
+    // ── Debug: preview cutscene ─────────────────────────────────────────────
+    this._makeSmallDebugBtn(W / 2, H - 58, '🎬 Preview Cutscene [Debug]', () => {
+      this.scene.start('CutsceneScene', {
+        currentChap: 1,
+        chapter: 2,
+        saveData: SaveManager.newGame(),
+      });
+    });
+
     // ── Version & credits ────────────────────────────────────────────────────
     this.add.text(W / 2, H - 30, 'v1.0  ·  7 Chapters  ·  Dogs vs Cats', {
       fontSize: '13px', color: '#556677',
@@ -175,5 +184,25 @@ class TitleScene extends Phaser.Scene {
     g.fillStyle(0x080818, 1);
     g.fillTriangle(x - 16, y + 20, x, y - 20, x + 16, y + 20);
     g.fillTriangle(x - 12, y + 8,  x, y - 32, x + 12, y + 8);
+  }
+
+  _makeSmallDebugBtn(x, y, label, cb) {
+    const W_btn = 210, H_btn = 24;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x111122, 0.85);
+    bg.fillRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 5);
+    bg.lineStyle(1, 0x334455, 0.6);
+    bg.strokeRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 5);
+
+    const txt = this.add.text(x, y, label, {
+      fontSize: '11px', color: '#556677',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const zone = this.add.zone(x, y, W_btn, H_btn).setInteractive({ useHandCursor: true });
+    zone.on('pointerover',  () => txt.setColor('#8899bb'));
+    zone.on('pointerout',   () => txt.setColor('#556677'));
+    zone.on('pointerdown',  () => { setTimeout(cb, 80); });
   }
 }

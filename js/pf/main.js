@@ -37,6 +37,7 @@ const config = {
     BattleScene,
     UIScene,
     VictoryScene,
+    CutsceneScene,
   ],
 
   // Disable default right-click menu

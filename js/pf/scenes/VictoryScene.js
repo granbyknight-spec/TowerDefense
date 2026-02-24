@@ -187,9 +187,10 @@ class VictoryScene extends Phaser.Scene {
     // Buttons
     if (!isFinal) {
       this._btn(W/2, H - 140, '⚔  NEXT CHAPTER', 0x1a4422, 0x33bb55, () => {
-        this.scene.start('BattleScene', {
-          chapter: this.chapter + 1,
-          saveData: this.saveData,
+        this.scene.start('CutsceneScene', {
+          currentChap: this.chapter,
+          chapter:     this.chapter + 1,
+          saveData:    this.saveData,
         });
       });
     } else {
