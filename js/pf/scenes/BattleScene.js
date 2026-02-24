@@ -1067,12 +1067,14 @@ class BattleScene extends Phaser.Scene {
     }
 
     this.scene.stop('UIScene');
+    const chapter = CHAPTERS[this.chapterId - 1];
     this.scene.start('VictoryScene', {
-      result:   victory ? 'victory' : 'defeat',
-      chapter:  this.chapterId,
-      saveData: this.saveData,
-      levelUps: this._levelUps,
-      newUnits: this._newUnits,
+      result:        victory ? 'victory' : 'defeat',
+      chapter:       this.chapterId,
+      saveData:      this.saveData,
+      levelUps:      this._levelUps,
+      newUnits:      this._newUnits,
+      victoryLines:  victory ? (chapter.victory || []) : [],
     });
   }
 

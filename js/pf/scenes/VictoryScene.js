@@ -8,11 +8,12 @@ class VictoryScene extends Phaser.Scene {
   constructor() { super({ key: 'VictoryScene' }); }
 
   init(data) {
-    this.result     = data.result;     // 'victory' | 'defeat' | 'gameover'
-    this.chapter    = data.chapter;
-    this.saveData   = data.saveData;
-    this.newUnits   = data.newUnits || [];
-    this.levelUps   = data.levelUps || [];
+    this.result       = data.result;     // 'victory' | 'defeat' | 'gameover'
+    this.chapter      = data.chapter;
+    this.saveData     = data.saveData;
+    this.newUnits     = data.newUnits || [];
+    this.levelUps     = data.levelUps || [];
+    this.victoryLines = data.victoryLines || [];
   }
 
   create() {
@@ -30,13 +31,69 @@ class VictoryScene extends Phaser.Scene {
     bg.fillRect(0, 0, W, H);
 
     if (isVictory) {
-      this._showVictory();
+      this._showVictoryDialogue();
     } else {
       this._showDefeat();
     }
   }
 
-  _showVictory() {
+  _showVictoryDialogue() {
+    if (this.victoryLines.length === 0) { this._buildVictoryContent(); return; }
+    const W = this.scale.width, H = this.scale.height;
+    const lines = this.victoryLines;
+    let idx = 0;
+
+    // Dialogue box
+    const boxH = 110, boxY = H - boxH - 10;
+    const dBg = this.add.graphics();
+    dBg.fillStyle(0x0a1a2e, 0.95);
+    dBg.fillRoundedRect(10, boxY, W - 20, boxH, 10);
+    dBg.lineStyle(2, 0x4488cc, 0.8);
+    dBg.strokeRoundedRect(10, boxY, W - 20, boxH, 10);
+
+    const portrait = this.add.text(36, boxY + 14, '', { fontSize: '36px' });
+    const speaker  = this.add.text(76, boxY + 12, '', {
+      fontSize: '16px', color: '#f8d030',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+      stroke: '#000', strokeThickness: 2,
+    });
+    const dlgText  = this.add.text(76, boxY + 34, '', {
+      fontSize: '15px', color: '#ddeeff',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+      wordWrap: { width: W - 106 }, lineSpacing: 5,
+    });
+    const tapHint  = this.add.text(W - 24, boxY + boxH - 16, '▶ TAP', {
+      fontSize: '12px', color: '#aabbcc',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(1, 0.5);
+    this.tweens.add({ targets: tapHint, alpha: { from: 0.3, to: 1 }, duration: 600, yoyo: true, repeat: -1 });
+
+    const showLine = (i) => {
+      const line = lines[i];
+      portrait.setText(line.portrait || '');
+      speaker.setText(line.speaker || '');
+      dlgText.setText(line.text || '');
+    };
+    showLine(0);
+
+    const advance = () => {
+      idx++;
+      if (idx >= lines.length) {
+        // Done — destroy dialogue elements and show stats
+        [dBg, portrait, speaker, dlgText, tapHint].forEach(o => o.destroy());
+        tapZone.destroy();
+        this._buildVictoryContent();
+        return;
+      }
+      showLine(idx);
+    };
+
+    const tapZone = this.add.zone(W / 2, boxY + boxH / 2, W, boxH)
+      .setInteractive({ useHandCursor: true });
+    tapZone.on('pointerdown', advance);
+  }
+
+  _buildVictoryContent() {
     const W = GAME_W, H = GAME_H;
     const chap = CHAPTERS[this.chapter - 1];
     const isFinal = this.chapter === 7;
