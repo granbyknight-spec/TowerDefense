@@ -116,12 +116,10 @@ const CHAPTERS = [
     enemies: [
       { defId:'SCOUT_CAT',       col:1, row:0, level:2 },
       { defId:'SCOUT_CAT',       col:8, row:0, level:2 },
-      { defId:'SIAMESE_ASSASSIN',col:0, row:3, level:2 },
-      { defId:'SIAMESE_ASSASSIN',col:9, row:3, level:2 },
-      { defId:'SCOUT_CAT',       col:0, row:6, level:2 },
-      { defId:'SCOUT_CAT',       col:9, row:6, level:2 },
+      { defId:'SIAMESE_ASSASSIN',col:0, row:3, level:1 },
+      { defId:'SIAMESE_ASSASSIN',col:9, row:3, level:1 },
       { defId:'PERSIAN_SORCERER',col:4, row:1, level:2 },
-      { defId:'LYNX_RANGER',     col:5, row:0, level:4 },
+      { defId:'LYNX_RANGER',     col:5, row:0, level:3 },
     ],
 
     recruitable: [

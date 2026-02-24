@@ -58,6 +58,7 @@ const SaveManager = {
       const def = HERO_DEFS[sd.id] || ALLY_DEFS[sd.id];
       if (!def) continue;
       const unit = Unit.fromSave(sd, def);
+      unit.hp = unit.maxHp;
       units.push(unit);
     }
     return units;
