@@ -28,6 +28,8 @@ const HEROES = [
   { id: 'HUSKY_RIDER',    portrait: 'siberian husky dog cavalry, grey white fur face, pointed husky ears with black tips, blue and brown heterochromia eyes, black nose, blue silver armor, confident smile, dark navy background, bust portrait' },
   { id: 'TERRIER_THIEF',  portrait: 'jack russell terrier dog thief, tan white fur face, v-shaped terrier ears, black nose, black bandit eye mask, red scarf, dagger earring, mischievous grin, dark red background, bust portrait' },
   { id: 'DOG_PALADIN',    portrait: 'golden retriever dog paladin, fluffy golden fur face, floppy ears, black nose, gold full plate armor, white holy wings, ornate helm, noble expression, holy light glow, gold particles background, bust portrait' },
+  { id: 'FOX_SCOUT',     portrait: 'red fox scout, orange and white fox face, pointed fox ears with black tips, amber eyes, black nose, green ranger cloak, leather scout armor, dagger at belt, cunning smirk, dark forest green background, bust portrait' },
+  { id: 'OTTER_ALLY',    portrait: 'brown river otter swimmer, sleek brown fur face, small rounded ears, black nose, blue water-resistant tunic, swim goggles pushed up on forehead, cheerful friendly grin, dark teal river background, bust portrait' },
 ];
 
 function request(method, urlStr, headers, body) {

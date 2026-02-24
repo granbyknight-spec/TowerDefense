@@ -66,6 +66,7 @@ class BattleScene extends Phaser.Scene {
     const PLAYER_PNG_IDS = [
       'PUPPY_KNIGHT', 'CORGI_HEALER', 'LABRADOR_SCOUT', 'BEAGLE_ARCHER',
       'POODLE_MAGE', 'BULLDOG_TANK', 'HUSKY_RIDER', 'TERRIER_THIEF',
+      'FOX_SCOUT', 'OTTER_ALLY', 'DOG_PALADIN',
     ];
     PLAYER_PNG_IDS.forEach(id => {
       const pngKey = `player_png_${id}`;
@@ -163,7 +164,7 @@ class BattleScene extends Phaser.Scene {
       this.add.image(GAME_W / 2, GAME_H / 2, bgKey)
         .setDisplaySize(GAME_W, GAME_H)
         .setDepth(-10)
-        .setAlpha(0.35);
+        .setAlpha(0.18);
     }
 
     // ── Build map and sprites ────────────────────────────────────────────────
@@ -245,19 +246,12 @@ class BattleScene extends Phaser.Scene {
         const x   = GRID_X + col * TILE;
         const y   = GRID_Y + row * TILE;
 
-        // Base tile — use PNG if loaded, otherwise colored rectangle
-        const terrainTexKey = `terrain_${tid}`;
-        if (this.textures.exists(terrainTexKey)) {
-          this.add.image(x + TILE / 2, y + TILE / 2, terrainTexKey)
-            .setDisplaySize(TILE, TILE)
-            .setAlpha(0.15)
-            .setDepth(-5);
-        } else {
-          g.fillStyle(td.color, 1);
-          g.fillRect(x, y, TILE, TILE);
-          // Terrain detail icons (only needed for graphic fallback)
-          this._drawTerrainDetail(g, tid, x, y);
-        }
+        // Base tile — always draw as solid colored rectangle with detail icons.
+        // AI-generated terrain PNGs are full scene images, not isolated tiles,
+        // so we rely entirely on programmatic drawing for clear per-tile visuals.
+        g.fillStyle(td.color, 1);
+        g.fillRect(x, y, TILE, TILE);
+        this._drawTerrainDetail(g, tid, x, y);
 
         // Highlight top-left edge (lighter) — drawn over PNG or graphic
         g.fillStyle(td.hi, 0.4);
@@ -273,60 +267,114 @@ class BattleScene extends Phaser.Scene {
   }
 
   _drawTerrainDetail(g, tid, x, y) {
-    // Small decorative marks on certain terrain types
     const cx = x + TILE / 2, cy = y + TILE / 2;
-    if (tid === T.FOREST) {
-      g.fillStyle(0x1a4010, 0.6);
-      g.fillCircle(cx - 8, cy + 4, 7);
-      g.fillCircle(cx + 5, cy + 4, 6);
-      g.fillCircle(cx - 2, cy - 2, 8);
+    if (tid === T.GRASS) {
+      // Subtle grass tufts
+      g.fillStyle(0x2d5018, 0.4);
+      g.fillCircle(cx - 10, cy + 6,  4);
+      g.fillCircle(cx + 8,  cy - 6,  3);
+      g.fillCircle(cx + 12, cy + 8,  3);
+      g.fillStyle(0x5a9030, 0.3);
+      g.fillCircle(cx - 4,  cy - 8,  3);
+      g.fillCircle(cx + 3,  cy + 12, 3);
+    } else if (tid === T.FOREST) {
+      // Three overlapping tree crowns — clearly "forest"
+      g.fillStyle(0x122e09, 0.85);
+      g.fillCircle(cx - 8, cy + 5, 8);
+      g.fillCircle(cx + 7, cy + 5, 7);
+      g.fillStyle(0x1a4010, 0.9);
+      g.fillCircle(cx - 1, cy - 2, 9);
+      g.fillStyle(0x3a6820, 0.45);
+      g.fillCircle(cx - 3, cy - 5, 5); // highlight
     } else if (tid === T.MOUNTAIN) {
-      g.fillStyle(0x9a8a75, 0.7);
-      g.fillTriangle(cx - 8, cy + 10, cx, cy - 8, cx + 8, cy + 10);
-      g.fillStyle(0xffffff, 0.5);
-      g.fillTriangle(cx - 2, cy - 8, cx, cy - 14, cx + 2, cy - 8);
+      // Two overlapping peaks with snow caps
+      g.fillStyle(0x4a3a2a, 0.9);
+      g.fillTriangle(cx - 14, cy + 12, cx - 4, cy - 6,  cx + 4,  cy + 12);
+      g.fillStyle(0x6a5a48, 0.9);
+      g.fillTriangle(cx,     cy + 12, cx + 10, cy - 8,  cx + 20, cy + 12);
+      g.fillStyle(0xffffff, 0.75);
+      g.fillTriangle(cx - 6, cy - 2,  cx - 4, cy - 9,  cx - 2,  cy - 2);
+      g.fillTriangle(cx + 8, cy - 4,  cx + 10,cy - 11, cx + 12, cy - 4);
     } else if (tid === T.WATER) {
-      g.fillStyle(0x55aaee, 0.35);
-      for (let i = 0; i < 3; i++) {
-        g.fillEllipse(cx - 12 + i * 12, cy + (i % 2 === 0 ? -4 : 4), 14, 5);
-      }
-    } else if (tid === T.VILLAGE) {
-      g.fillStyle(0xa06040, 0.7);
-      g.fillRect(cx - 8, cy - 2, 16, 14);
-      g.fillStyle(0x884422, 0.8);
-      g.fillTriangle(cx - 10, cy - 2, cx, cy - 14, cx + 10, cy - 2);
-    } else if (tid === T.CASTLE) {
-      g.fillStyle(0x666688, 0.7);
-      g.fillRect(cx - 10, cy - 10, 20, 20);
-      g.fillStyle(0x888899, 0.6);
-      g.fillRect(cx - 14, cy - 14, 8, 10);
-      g.fillRect(cx + 6,  cy - 14, 8, 10);
-    } else if (tid === T.SNOW) {
-      g.fillStyle(0xffffff, 0.5);
-      g.fillCircle(cx, cy, 8);
-      g.fillCircle(cx - 10, cy + 5, 5);
-      g.fillCircle(cx + 9, cy + 5, 5);
-    } else if (tid === T.OASIS) {
-      g.fillStyle(0x22aa44, 0.7);
-      g.fillCircle(cx, cy, 10);
-      g.fillStyle(0x55cc66, 0.5);
-      g.fillTriangle(cx - 2, cy - 5, cx, cy - 16, cx + 2, cy - 5);
-      g.fillTriangle(cx - 2, cy - 8, cx + 8, cy - 14, cx + 4, cy - 6);
-      g.fillTriangle(cx + 2, cy - 8, cx - 8, cy - 14, cx - 4, cy - 6);
+      // Distinct wave pattern — clearly impassable water
+      g.fillStyle(0x44aaee, 0.5);
+      g.fillEllipse(cx - 12, cy - 5, 18, 7);
+      g.fillEllipse(cx + 6,  cy + 5, 18, 7);
+      g.fillStyle(0x66ccff, 0.3);
+      g.fillEllipse(cx - 4,  cy - 10, 14, 5);
+      g.fillEllipse(cx + 2,  cy + 10, 14, 5);
+    } else if (tid === T.ROAD) {
+      // Two parallel wheel ruts — clearly a path/road
+      g.fillStyle(0xc09848, 0.45);
+      g.fillRect(cx - 10, y + 2, 6, TILE - 4);
+      g.fillRect(cx + 4,  y + 2, 6, TILE - 4);
     } else if (tid === T.SAND) {
-      g.fillStyle(0xf0cc60, 0.25);
-      g.fillCircle(cx - 5, cy + 5, 6);
-      g.fillCircle(cx + 8, cy - 4, 5);
+      // Ripple lines — desert wind pattern
+      g.fillStyle(0xe8cc70, 0.35);
+      for (let i = 0; i < 4; i++) {
+        g.fillEllipse(cx - 14 + i * 10, cy - 6 + (i % 2) * 12, 14, 4);
+      }
+    } else if (tid === T.CASTLE) {
+      // Staggered brick/mortar grid — stone floor
+      g.lineStyle(1, 0x555568, 0.65);
+      g.lineBetween(x + 2, y + 12, x + TILE - 2, y + 12);
+      g.lineBetween(x + 2, y + 24, x + TILE - 2, y + 24);
+      g.lineBetween(x + 2, y + 36, x + TILE - 2, y + 36);
+      g.lineBetween(cx,      y + 2,  cx,      y + 12);
+      g.lineBetween(cx - 8,  y + 12, cx - 8,  y + 24);
+      g.lineBetween(cx + 8,  y + 24, cx + 8,  y + 36);
+      g.lineBetween(cx,      y + 36, cx,      y + TILE - 2);
+    } else if (tid === T.VILLAGE) {
+      // House silhouette — roof + walls + door
+      g.fillStyle(0xb87050, 0.85);
+      g.fillRect(cx - 8, cy + 1, 16, 11);
+      g.fillStyle(0x884030, 0.9);
+      g.fillTriangle(cx - 11, cy + 2, cx, cy - 10, cx + 11, cy + 2);
+      g.fillStyle(0x553020, 0.8);
+      g.fillRect(cx - 3, cy + 5, 6, 7); // door
+    } else if (tid === T.SNOW) {
+      // Snowflake dot scatter
+      g.fillStyle(0xddeeff, 0.65);
+      [[-10,-8],[6,-10],[-4,4],[10,2],[-8,10],[4,10],[-2,-2]].forEach(([dx,dy]) => {
+        g.fillCircle(cx + dx, cy + dy, 2.5);
+      });
     } else if (tid === T.BRIDGE) {
-      g.fillStyle(0xa07030, 0.8);
-      for (let i = 0; i < 3; i++) {
-        g.fillRect(cx - 18 + i * 12, cy - 4, 8, TILE * 0.3);
+      // Water hint beneath wooden planks — crossing point
+      g.fillStyle(0x2266aa, 0.4);
+      g.fillRect(x, y, TILE, TILE);
+      g.fillStyle(0x9a6828, 0.95);
+      g.fillRect(x + 4, cy - 10, TILE - 8, 6);
+      g.fillRect(x + 4, cy - 3,  TILE - 8, 6);
+      g.fillRect(x + 4, cy + 4,  TILE - 8, 6);
+      g.lineStyle(1, 0x5a3810, 0.6);
+      const pw = Math.floor((TILE - 8) / 4);
+      for (let i = 1; i < 4; i++) {
+        g.lineBetween(x + 4 + i * pw, cy - 10, x + 4 + i * pw, cy + 10);
       }
     } else if (tid === T.WALL) {
-      g.fillStyle(0x555555, 0.7);
-      g.fillRect(cx - TILE/2 + 4, cy - TILE/2 + 4, TILE - 8, TILE - 8);
-      g.lineStyle(1, 0x333333, 0.8);
-      g.strokeRect(cx - TILE/2 + 4, cy - TILE/2 + 4, TILE - 8, TILE - 8);
+      // Solid stone wall — clearly impassable, dark brick pattern
+      g.fillStyle(0x202028, 0.9);
+      g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+      g.lineStyle(1, 0x484858, 0.8);
+      g.lineBetween(x + 2, y + 13, x + TILE - 2, y + 13);
+      g.lineBetween(x + 2, y + 24, x + TILE - 2, y + 24);
+      g.lineBetween(x + 2, y + 35, x + TILE - 2, y + 35);
+      g.lineBetween(cx,      y + 2,  cx,      y + 13);
+      g.lineBetween(cx + 10, y + 13, cx + 10, y + 24);
+      g.lineBetween(cx - 10, y + 24, cx - 10, y + 35);
+      g.lineBetween(cx,      y + 35, cx,      y + TILE - 2);
+    } else if (tid === T.OASIS) {
+      // Bright water pool + palm tree
+      g.fillStyle(0x33cc66, 0.75);
+      g.fillCircle(cx, cy + 4, 10);
+      g.fillStyle(0x55ee88, 0.5);
+      g.fillCircle(cx - 2, cy + 3, 6);
+      g.fillStyle(0x996633, 0.9);
+      g.fillRect(cx - 1, cy - 10, 2, 10); // trunk
+      g.fillStyle(0x33bb33, 0.85);
+      g.fillTriangle(cx,     cy - 10, cx - 10, cy - 17, cx - 1, cy - 6);
+      g.fillTriangle(cx,     cy - 10, cx + 10, cy - 17, cx + 1, cy - 6);
+      g.fillTriangle(cx,     cy - 10, cx + 1,  cy - 18, cx + 4, cy - 6);
     }
   }
 
