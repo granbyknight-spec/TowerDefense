@@ -21,7 +21,7 @@ const SFX_LIST = [
   { name: 'magic_cast',      text: 'magic spell cast, 8-bit chiptune RPG, sparkling energy burst, retro video game',           duration_seconds: 1.2 },
   { name: 'heal',            text: 'healing magic sound effect, sparkle chime, soft glow, retro 8-bit JRPG game',              duration_seconds: 1.5 },
   { name: 'level_up',        text: 'level up fanfare, 8-bit chiptune, joyful ascending arpeggio, retro JRPG victory',         duration_seconds: 2.5 },
-  { name: 'cursor_move',     text: 'menu cursor move blip, short retro 8-bit beep, UI navigation sound',                       duration_seconds: 0.3 },
+  { name: 'cursor_move',     text: 'menu cursor move blip, short retro 8-bit beep, UI navigation sound',                       duration_seconds: 0.5 },
   { name: 'unit_death',      text: 'character defeat sound, retro 8-bit game, low thud with descending tone, sad',             duration_seconds: 1.0 },
   { name: 'burn_crackle',    text: 'fire crackle damage sound, retro 8-bit, short flame burst, burning effect',                duration_seconds: 0.6 },
   { name: 'victory_fanfare', text: 'victory fanfare jingle, 8-bit chiptune, triumphant ascending melody, JRPG win',            duration_seconds: 3.0 },
