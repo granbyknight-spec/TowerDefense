@@ -7,10 +7,18 @@
 class TitleScene extends Phaser.Scene {
   constructor() { super({ key: 'TitleScene' }); }
 
+  preload() {
+    // Audio (graceful — files are optional and may not exist yet)
+    AudioManager.preloadMusic(this);
+  }
+
   create() {
     const W = GAME_W, H = GAME_H;
     this._stars = [];
     this._paws  = [];
+
+    // ── Title music ──────────────────────────────────────────────────────────
+    AudioManager.playMusic(this, 'title');
 
     // ── Background gradient ──────────────────────────────────────────────────
     const bg = this.add.graphics();

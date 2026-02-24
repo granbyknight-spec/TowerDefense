@@ -19,6 +19,11 @@ class VictoryScene extends Phaser.Scene {
     this.turns        = data.turns       || 0;
   }
 
+  preload() {
+    // Audio (graceful — files are optional and may not exist yet)
+    AudioManager.preloadSFX(this);
+  }
+
   create() {
     const W = GAME_W, H = GAME_H;
     const isVictory = this.result === 'victory';
@@ -31,6 +36,15 @@ class VictoryScene extends Phaser.Scene {
       bg.fillGradientStyle(0x1a0a0a, 0x1a0a0a, 0x0a0a0a, 0x0a0a0a, 1);
     }
     bg.fillRect(0, 0, W, H);
+
+    // ── Audio stings ─────────────────────────────────────────────────────────
+    if (isVictory) {
+      AudioManager.stopMusic(this);
+      AudioManager.play(this, 'victory_fanfare');
+    } else {
+      AudioManager.stopMusic(this);
+      AudioManager.play(this, 'defeat_sting');
+    }
 
     if (isVictory) {
       this._showVictoryDialogue();

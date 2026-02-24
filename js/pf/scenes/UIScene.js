@@ -243,6 +243,7 @@ class UIScene extends Phaser.Scene {
         bg.strokeRoundedRect(x, y, btnW, btnH, 6);
       });
       zone.on('pointerdown', () => {
+        AudioManager.play(this, 'cursor_move');
         this.tweens.add({ targets: txt, scaleX:0.9, scaleY:0.9, duration:80, yoyo:true });
         this._onActionBtn(b.key);
       });
@@ -301,6 +302,7 @@ class UIScene extends Phaser.Scene {
     zone.on('pointerover', () => { bg.clear(); bg.fillStyle(0x2255aa, 1); bg.fillRoundedRect(x,y,w,h,8); });
     zone.on('pointerout',  () => { bg.clear(); bg.fillStyle(0x113344, 1); bg.fillRoundedRect(x,y,w,h,8); bg.lineStyle(1,0x2266aa,0.9); bg.strokeRoundedRect(x,y,w,h,8); });
     zone.on('pointerdown', () => {
+      AudioManager.play(this, 'cursor_move');
       this.tweens.add({ targets: [bg,txt], scaleX:0.9, scaleY:0.9, duration:80, yoyo:true });
       this._battle?.onEndTurn();
     });
@@ -564,6 +566,7 @@ class UIScene extends Phaser.Scene {
           bg.strokeRoundedRect(rowX, rowY, rowW, btnH, 6);
         });
         zone.on('pointerdown', () => {
+          AudioManager.play(this, 'cursor_move');
           this.tweens.add({ targets: nameTxt, scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true });
           destroy();
           this._battle.onActionMagic(skillId);
@@ -709,6 +712,7 @@ class UIScene extends Phaser.Scene {
           bg.strokeRoundedRect(rowX, rowY, rowW, btnH, 6);
         });
         zone.on('pointerdown', () => {
+          AudioManager.play(this, 'cursor_move');
           this.tweens.add({ targets: nameTxt, scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true });
           destroy();
           this._battle.onActionItem(idx);
