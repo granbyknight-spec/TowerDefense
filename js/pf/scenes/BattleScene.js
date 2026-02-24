@@ -302,7 +302,7 @@ class BattleScene extends Phaser.Scene {
 
   _buildGridOverlay() {
     const g = this.add.graphics();
-    g.lineStyle(1, 0x000000, 0.15);
+    g.lineStyle(1, 0x000000, 0.28);
     for (let col = 0; col <= GCOLS; col++) {
       g.lineBetween(GRID_X + col*TILE, GRID_Y, GRID_X + col*TILE, GRID_Y + GH);
     }
@@ -491,9 +491,9 @@ class BattleScene extends Phaser.Scene {
     g.clear();
     tiles.forEach(({ col, row }) => {
       const { x, y } = this._tileTL(col, row);
-      g.fillStyle(PAL.MOVE_HL, 0.30);
+      g.fillStyle(PAL.MOVE_HL, 0.35);
       g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
-      g.lineStyle(1, PAL.MOVE_HL, 0.7);
+      g.lineStyle(2, 0x88aaff, 0.9);
       g.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
     });
   }
@@ -503,9 +503,9 @@ class BattleScene extends Phaser.Scene {
     g.clear();
     tiles.forEach(({ col, row }) => {
       const { x, y } = this._tileTL(col, row);
-      g.fillStyle(PAL.ATK_HL, 0.30);
+      g.fillStyle(PAL.ATK_HL, 0.35);
       g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
-      g.lineStyle(1, PAL.ATK_HL, 0.7);
+      g.lineStyle(2, 0xff6666, 0.9);
       g.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
     });
   }
@@ -1322,7 +1322,7 @@ class BattleScene extends Phaser.Scene {
     this.playerTurn = false;
     this.turnNumber++;
     this._setState(BS.ENEMY_TURN);
-    this._getUI()?.showTurnBanner('Enemy Turn', 0xcc2222);
+    this._getUI()?.showTurnBanner('Enemy Turn', 0xff4444);
 
     // Clear guard buffs from previous player turn
     this.units.filter(u => u.team === 'player').forEach(u => { u.guardActive = false; });
@@ -1391,7 +1391,7 @@ class BattleScene extends Phaser.Scene {
 
     this._setState(BS.IDLE);
     this._dimActedUnits();
-    this._getUI()?.showTurnBanner('Your Turn', 0x2255cc);
+    this._getUI()?.showTurnBanner('Your Turn', 0xf8c030);
   }
 
   // ==========================================================================
