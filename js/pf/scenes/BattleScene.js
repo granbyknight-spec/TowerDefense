@@ -250,7 +250,7 @@ class BattleScene extends Phaser.Scene {
         if (this.textures.exists(terrainTexKey)) {
           this.add.image(x + TILE / 2, y + TILE / 2, terrainTexKey)
             .setDisplaySize(TILE, TILE)
-            .setAlpha(0.35)
+            .setAlpha(0.15)
             .setDepth(-5);
         } else {
           g.fillStyle(td.color, 1);
@@ -415,6 +415,9 @@ class BattleScene extends Phaser.Scene {
     const hpBar = this.add.rectangle(x - (TILE - 10) / 2, y + r + 3, TILE - 10, 4, PAL.HP_G, 1);
     hpBar.setOrigin(0, 0.5);
 
+    // ── Drop shadow (rendered below everything else) ─────────────────────────
+    const shadow = this.add.ellipse(x, y + r - 2, TILE - 8, 10, 0x000000, 0.45);
+
     // ── Class-colored ring background ──────────────────────────────────────
     const ringColor = CLASS_RING_COLOR[unit.unitClass] ||
       (unit.team === 'player' ? PAL.PLAYER_GLOW :
@@ -434,13 +437,14 @@ class BattleScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
+    unit.shadow    = shadow;
     unit.spriteBg  = spriteBg;
     unit.sprite    = sprite;
     unit.hpBarBg   = hpBg;
     unit.hpBar     = hpBar;
     unit.badge     = badge;
 
-    this._unitLayer.add([spriteBg, sprite, hpBg, hpBar, badge]);
+    this._unitLayer.add([shadow, spriteBg, sprite, hpBg, hpBar, badge]);
     this._updateHPBar(unit);
 
     // ── Idle bob animation ─────────────────────────────────────────────────
@@ -506,6 +510,7 @@ class BattleScene extends Phaser.Scene {
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
     if (unit.spriteBg) unit.spriteBg.setPosition(x, y);
+    if (unit.shadow) unit.shadow.setPosition(x, y + r - 2);
     unit.sprite.setPosition(x, y - 1);
     unit.hpBarBg.setPosition(x, y + r + 3);
     unit.hpBar.setX(x - (TILE - 10) / 2);
@@ -517,8 +522,8 @@ class BattleScene extends Phaser.Scene {
   _destroyUnitSprite(unit) {
     this._stopIdleBob(unit);
     if (unit._spriteMaskCb) this.events.off('update', unit._spriteMaskCb);
-    [unit._spriteMask, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
-    unit._spriteMask = unit._spriteMaskCb = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
+    [unit._spriteMask, unit.shadow, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
+    unit._spriteMask = unit._spriteMaskCb = unit.shadow = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
   }
 
   // ==========================================================================
