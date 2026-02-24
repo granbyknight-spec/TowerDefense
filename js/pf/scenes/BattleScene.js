@@ -1346,6 +1346,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   _processNextEnemy() {
+    if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
     // Remove dead from queue
     this._enemyQueue = this._enemyQueue.filter(u => !u.dead);
 
@@ -1370,6 +1371,7 @@ class BattleScene extends Phaser.Scene {
 
       if (action.target && !action.target.dead) {
         this._executeCombat(enemy, action.target, () => {
+          if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
           enemy.hasActed = true;
           this.time.delayedCall(200, () => this._processNextEnemy());
         });
