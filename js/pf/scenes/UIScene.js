@@ -96,6 +96,75 @@ class UIScene extends Phaser.Scene {
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
+
+    this._skillsTxt.setInteractive({ useHandCursor: true });
+    this._skillsTxt.on('pointerdown', () => {
+      if (this._selectedUnit) this._showSkillInfo(this._selectedUnit);
+    });
+  }
+
+  _showSkillInfo(unit) {
+    if (!unit || !unit.skills || unit.skills.length === 0) return;
+    const W = GAME_W, H = GAME_H;
+
+    // Dark overlay
+    const overlay = this.add.graphics().setDepth(200);
+    overlay.fillStyle(0x000000, 0.7);
+    overlay.fillRect(0, 0, W, H);
+    overlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, W, H), Phaser.Geom.Rectangle.Contains);
+
+    // Popup box
+    const popW = W - 32, popH = Math.min(unit.skills.length * 90 + 80, H - 80);
+    const popX = 16, popY = (H - popH) / 2;
+    const popBg = this.add.graphics().setDepth(201);
+    popBg.fillStyle(0x0a1a2e, 0.97);
+    popBg.fillRoundedRect(popX, popY, popW, popH, 10);
+    popBg.lineStyle(2, 0x4488cc, 0.8);
+    popBg.strokeRoundedRect(popX, popY, popW, popH, 10);
+
+    const title = this.add.text(W / 2, popY + 16, '⚡ Skill Info', {
+      fontSize: '18px', color: '#f8d030',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setDepth(202);
+
+    const skillTexts = [];
+    unit.skills.forEach((skillId, idx) => {
+      const sk = SKILLS[skillId];
+      if (!sk) return;
+      const sy = popY + 48 + idx * 90;
+      const powerStr = sk.power ? `${Math.round(Math.abs(sk.power) * 100)}% ${sk.type === 'magic' ? 'Mag' : 'ATK'}` : '';
+      const rangeStr = sk.range ? `Range: ${sk.range}` : '';
+      const mpStr   = sk.mpCost ? `MP: ${sk.mpCost}` : 'No MP cost';
+      const statsLine = [powerStr, rangeStr, mpStr].filter(Boolean).join('  •  ');
+
+      const nameT = this.add.text(popX + 16, sy, `${sk.name}`, {
+        fontSize: '16px', color: '#88ccff',
+        fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+      }).setDepth(202);
+      const statsT = this.add.text(popX + 16, sy + 22, statsLine, {
+        fontSize: '13px', color: '#aabbcc',
+        fontFamily: 'Nunito, Arial, sans-serif',
+      }).setDepth(202);
+      const descT = this.add.text(popX + 16, sy + 44, sk.description || '', {
+        fontSize: '13px', color: '#ddeeff',
+        fontFamily: 'Nunito, Arial, sans-serif',
+        wordWrap: { width: popW - 32 },
+      }).setDepth(202);
+      skillTexts.push(nameT, statsT, descT);
+    });
+
+    const closeHint = this.add.text(W / 2, popY + popH - 18, '▶ Tap to close', {
+      fontSize: '12px', color: '#aabbcc',
+      fontFamily: 'Nunito, Arial, sans-serif',
+    }).setOrigin(0.5, 0.5).setDepth(202);
+    this.tweens.add({ targets: closeHint, alpha: { from: 0.4, to: 1 }, duration: 500, yoyo: true, repeat: -1 });
+
+    const destroy = () => {
+      overlay.destroy(); popBg.destroy(); title.destroy(); closeHint.destroy();
+      skillTexts.forEach(t => t.destroy());
+    };
+    overlay.once('pointerdown', destroy);
   }
 
   // ==========================================================================
@@ -302,6 +371,7 @@ class UIScene extends Phaser.Scene {
   // ==========================================================================
 
   showActionMenu(unit, battleScene) {
+    this._selectedUnit = unit;
     this._battle = battleScene;
     this._actionMenu.setVisible(true);
     // Attack and Magic are only available if the unit hasn't acted yet
@@ -414,20 +484,29 @@ class UIScene extends Phaser.Scene {
 
     this._dlgContainer.add([dBg, this._dlgPortrait, this._dlgSpeaker, this._dlgText, this._dlgPrompt]);
 
-    // Dialogue visual zone (visual only - BattleScene handles all input)
-    this._dlgContainer.add([]);
+    // Tap zone — advances dialogue when player taps the dialogue box directly
+    const dlgTapZone = this.add.zone(W / 2, boxY + boxH / 2, W, boxH)
+      .setInteractive({ useHandCursor: true });
+    dlgTapZone.on('pointerdown', () => {
+      this._battle?._advanceDialogue();
+    });
+    this._dlgContainer.add([dlgTapZone]);
   }
 
   showDialogue(line) {
     this._dlgContainer.setVisible(true);
     this._dlgPortrait.setText(line.portrait || '');
     this._dlgSpeaker.setText(line.speaker || '');
-    this._dlgText.setText(line.text || '');
+    // Cancel any in-progress typewriter timer
+    if (this._typewriterTimer) {
+      this._typewriterTimer.remove(false);
+      this._typewriterTimer = null;
+    }
     // Typewriter effect
     const fullText = line.text || '';
     this._dlgText.setText('');
     let i = 0;
-    const timer = this.time.addEvent({
+    this._typewriterTimer = this.time.addEvent({
       delay: 28, repeat: fullText.length - 1,
       callback: () => {
         this._dlgText.setText(fullText.slice(0, ++i));

@@ -283,11 +283,11 @@ const ITEMS = {
 
 // Skills
 const SKILLS = {
-  slash:    { name:'Slash',    type:'physical', power:1.0, range:1, description:'Sword strike' },
-  shoot:    { name:'Shoot',    type:'physical', power:0.9, range:2, description:'Bow attack' },
-  dash:     { name:'Dash',     type:'physical', power:1.0, range:1, description:'Quick strike' },
-  charge:   { name:'Charge',   type:'physical', power:1.8, range:2, mpCost:3, description:'Powerful charge attack from 2 tiles' },
-  guard:    { name:'Guard',    type:'buff',      mpCost:2,           description:'Raise DEF for 1 turn' },
-  heal:     { name:'Heal',     type:'magic',     power:-1.2, range:2, mpCost:3, targetAlly:true, description:'Restore ally HP within 2 tiles' },
-  fireball: { name:'Fireball', type:'magic',     power:1.3,  range:2, mpCost:4, description:'Fire magic attack' },
+  slash:    { name:'Slash',    type:'physical', power:1.0, range:1, description:'Strike adjacent enemy for 100% ATK damage' },
+  shoot:    { name:'Shoot',    type:'physical', power:0.9, range:2, description:'Ranged arrow attack for 90% ATK damage' },
+  dash:     { name:'Dash',     type:'physical', power:1.0, range:1, description:'Strike adjacent enemy for 100% ATK damage' },
+  charge:   { name:'Charge',   type:'physical', power:1.8, range:2, mpCost:3, description:'Powerful leap attack from 2 tiles for 180% ATK damage' },
+  guard:    { name:'Guard',    type:'buff',      mpCost:2,           description:'Raise DEF by 50% for 1 turn' },
+  heal:     { name:'Heal',     type:'magic',     power:-1.2, range:2, mpCost:3, targetAlly:true, description:'Restore ally HP within 2 tiles (120% MagATK)' },
+  fireball: { name:'Fireball', type:'magic',     power:1.3,  range:2, mpCost:4, description:'Fire magic attack for 130% MagATK damage' },
 };

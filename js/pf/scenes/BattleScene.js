@@ -1046,15 +1046,10 @@ class BattleScene extends Phaser.Scene {
   }
 
   _celebrateVictory() {
-    const chapter = CHAPTERS[this.chapterId - 1];
-
-    // Victory dialogue first
-    const victDlg = chapter.victory || [];
-    if (victDlg.length > 0) {
-      this._startDialogue(victDlg, () => this._endBattle(true));
-    } else {
-      this.time.delayedCall(800, () => this._endBattle(true));
-    }
+    // Show a victory message and immediately end the battle —
+    // no in-battle dialogue loop so the screen never gets stuck.
+    this._getUI()?.showMessage('Victory! 🏆');
+    this.time.delayedCall(1500, () => this._endBattle(true));
   }
 
   _endBattle(victory) {
