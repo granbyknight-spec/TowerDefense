@@ -224,31 +224,31 @@ class TitleScene extends Phaser.Scene {
       });
     });
 
-    // ── Debug panel (localhost OR ?debug in URL) ─────────────────────────────
+    // ── Chapter-select panel — always visible TODO: remove before release ─────
+    this.add.text(W / 2, 496, '── DEV: JUMP TO CHAPTER ──', {
+      fontSize: '11px', color: '#bb8800',
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const chapBtnX = [28, 92, 156, 220, 284, 348, 412];
+    for (let ch = 1; ch <= 7; ch++) {
+      this._makeChapterDebugBtn(chapBtnX[ch - 1], 526, ch, () => {
+        const data = _buildDebugSaveData(ch);
+        SaveManager.save(data);
+        this.scene.start('BattleScene', { chapter: ch, saveData: data });
+      });
+    }
+
+    // ── Debug-only extras (localhost / ?debug) ────────────────────────────────
     const _debugOn = window.location.hostname === 'localhost'
                   || window.location.hostname === '127.0.0.1'
                   || new URLSearchParams(window.location.search).has('debug');
     if (_debugOn) {
-      this._makeSmallDebugBtn(W / 2, H - 118, '🎬 Preview Cutscene [Debug]', () => {
+      this._makeSmallDebugBtn(W / 2, 562, '🎬 Preview Cutscene [Debug]', () => {
         this.scene.start('CutsceneScene', {
           currentChap: 1, chapter: 2, saveData: SaveManager.newGame(),
         });
       });
-
-      this.add.text(W / 2, H - 96, '[ JUMP TO CHAPTER ]', {
-        fontSize: '10px', color: '#445566',
-        fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(1);
-
-      const chapBtnX = [28, 92, 156, 220, 284, 348, 412];
-      for (let ch = 1; ch <= 7; ch++) {
-        const cx = chapBtnX[ch - 1];
-        this._makeChapterDebugBtn(cx, H - 74, ch, () => {
-          const data = _buildDebugSaveData(ch);
-          SaveManager.save(data);
-          this.scene.start('BattleScene', { chapter: ch, saveData: data });
-        });
-      }
     }
 
     // ── Version & credits ────────────────────────────────────────────────────
