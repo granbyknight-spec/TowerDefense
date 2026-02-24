@@ -12,6 +12,8 @@ on:
           - enemies          # regular cat enemies only
           - bosses           # boss cats only (bigger, more impressive)
           - all              # all cat enemies + bosses
+          - characters       # player dog hero sprites
+          - characters-all   # all heroes (fighters + mages + archers + support)
       skip_existing:
         description: 'Skip files that already exist'
         required: false
@@ -20,6 +22,14 @@ on:
         options:
           - 'true'
           - 'false'
+      rotate:
+        description: 'Also generate 8-directional views with PixelLab Rotate tool'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   generate:
@@ -45,18 +55,32 @@ jobs:
       - name: Create output directories
         run: mkdir -p assets/enemies
 
-      - name: Generate sprites
+      - name: Create character output directory
+        run: mkdir -p assets/characters
+
+      - name: Generate enemy sprites
+        if: ${{ !startsWith(inputs.sprite_set, 'characters') }}
         env:
           PIXELLAB_SECRET: ${{ secrets.PIXELLAB_API_KEY }}
           SPRITE_SET: ${{ inputs.sprite_set }}
           SKIP_EXISTING: ${{ inputs.skip_existing }}
+          ROTATE: ${{ inputs.rotate }}
         run: node scripts/generate-pixellab-sprites.js
+
+      - name: Generate hero character sprites
+        if: ${{ startsWith(inputs.sprite_set, 'characters') }}
+        env:
+          PIXELLAB_SECRET: ${{ secrets.PIXELLAB_API_KEY }}
+          HERO_SET: all
+          SKIP_EXISTING: ${{ inputs.skip_existing }}
+          ROTATE: ${{ inputs.rotate }}
+        run: node scripts/generate-pixellab-characters.js
 
       - name: Commit generated sprites
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add assets/enemies/
+          git add assets/enemies/ assets/characters/
           if git diff --staged --quiet; then
             echo "No new sprites generated (all skipped or API quota reached)"
           else

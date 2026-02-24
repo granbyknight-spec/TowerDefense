@@ -22,108 +22,131 @@ const path = require('path');
 
 const SPRITE_SET    = process.env.SPRITE_SET    || 'all';
 const SKIP_EXISTING = process.env.SKIP_EXISTING !== 'false';
+// Set ROTATE=true to generate 8 directional views after the base sprite.
+// Directional outputs: assets/enemies/<id>_dir_S.png … _dir_NW.png
+// These are ready for BattleScene to swap in during movement animation.
+const DO_ROTATE     = process.env.ROTATE === 'true';
 const OUT_DIR       = path.join(__dirname, '..', 'assets', 'enemies');
 const VARIANTS      = 4;
 
+// 8 compass directions in PixelLab's output order (starting south, clockwise)
+const DIRECTIONS = ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'];
+
 // ── Shared style tags ───────────────────────────────────────────────────────
+// Visual target: muscular dark fantasy warrior cats — think WoW / FFXIV
+// character art. NOT chibi. Fierce, detailed, imposing.
+
 const STYLE_NORMAL = [
-  'anthropomorphic cat warrior',
-  'isometric pixel art',
-  'Shining Force GBA style',
-  'retro 16-bit Sega Genesis sprite',
-  'chibi proportions',
-  'game overworld sprite',
+  'anthropomorphic cat warrior character',
+  'dark fantasy pixel art game sprite',
+  'muscular athletic build',
+  'fierce expression glowing eyes',
+  'detailed fantasy equipment and armor',
+  'dynamic battle-ready pose',
+  'dramatic pixel art shading',
+  'game character sprite sheet style',
   'transparent background',
-  'clean pixel outlines',
-  'flat shading',
-  '64x64 canvas',
+  'clean bold pixel outlines',
+  '64x64 pixel art',
 ].join(', ');
 
 const STYLE_BOSS = [
-  'anthropomorphic cat boss villain',
-  'isometric pixel art',
-  'Shining Force GBA boss sprite',
-  'retro 16-bit Sega Genesis sprite',
-  'imposing and dramatic',
-  'detailed ornate armor',
-  'glowing magical aura',
-  'dramatic lighting effects',
-  'game overworld boss sprite',
+  'anthropomorphic cat boss villain character',
+  'dark fantasy pixel art game sprite',
+  'massive imposing muscular build',
+  'snarling bared fangs ferocious expression',
+  'glowing malevolent eyes',
+  'highly detailed ornate fantasy armor with engravings',
+  'weapon radiating magical energy aura and light effects',
+  'powerful dynamic commanding stance',
+  'dramatic high contrast lighting with deep shadows',
+  'epic game boss character sprite',
   'transparent background',
-  'clean pixel outlines',
-  'flat shading with highlights',
-  '128x128 canvas',
+  'clean bold pixel outlines',
+  'detailed pixel shading with bright highlights',
+  '128x128 pixel art',
 ].join(', ');
 
 const NEG = [
-  'blurry', 'low quality', 'realistic', 'photorealistic',
-  '3d render', 'human', 'dog', 'wolf', 'multiple characters',
+  'blurry', 'low quality', 'low detail', 'simple', 'flat', 'cute', 'kawaii',
+  'chibi', 'super deformed', 'cartoonish soft style',
+  'realistic', 'photorealistic', '3d render',
+  'human', 'dog', 'wolf', 'multiple characters',
   'text', 'watermark', 'signature', 'background scenery',
   'gradient background', 'noise', 'extra limbs', 'deformed',
 ].join(', ');
 
 // ── Enemy definitions ────────────────────────────────────────────────────────
-// isBoss: true  → generates 128×128, dramatically styled
-// isBoss: false → generates 64×64, standard chibi style
+// Visual inspiration: muscular anthropomorphic cat warriors with rich
+// dark fantasy designs — detailed armor, glowing weapons, fierce poses.
+// isBoss: true  → 128×128, massive build, dramatic magical effects
+// isBoss: false → 64×64, athletic build, strong but not overwhelming
 
 const ENEMIES = [
-  // ── Regular cats ───────────────────────────────────────────────────────────
+  // ── Regular enemies — tough soldiers, not bosses ────────────────────────────
   {
     id: 'SCOUT_CAT',
     isBoss: false,
-    prompt: `orange tabby cat scout warrior, light leather armor, dagger on belt, green slit eyes, red bandana around neck, alert ready stance, ${STYLE_NORMAL}`,
+    prompt: `orange tabby cat scout warrior, lean athletic build, worn leather scouting armor with metal buckles, short dagger in hand, amber slit eyes alert and watchful, red bandana tied around neck, crouching ready stance, tabby stripe markings on fur, scarred muzzle, ${STYLE_NORMAL}`,
   },
   {
     id: 'SIAMESE_ASSASSIN',
     isBoss: false,
-    prompt: `Siamese cat assassin, cream and dark brown fur, blue eyes, black ninja mask, dark leather armor, hidden blade, stealthy crouching pose, shadow cloak trailing behind, ${STYLE_NORMAL}`,
+    prompt: `Siamese cat assassin, slim but muscular build, dark cream and brown fur with Siamese point markings, icy blue glowing eyes, black tactical leather armor, twin curved short blades crackling with blue shadow energy, half-crouching combat-ready pose, dark hood partially concealing face, ${STYLE_NORMAL}`,
   },
   {
     id: 'PERSIAN_SORCERER',
     isBoss: false,
-    prompt: `Persian cat sorcerer mage, wizard robes, magical glowing staff, glowing purple eyes, grey and white fluffy fur, jewel gem on forehead, arcane sparkles, casting pose, ${STYLE_NORMAL}`,
+    prompt: `Persian cat battle mage, athletic robed build, grey and white fluffy thick fur, deep purple glowing eyes, dark arcane battle robes with gold trim, gnarled magical staff topped with glowing purple crystal orb, arcane rune circle at feet, hand raised in casting gesture, ${STYLE_NORMAL}`,
   },
   {
     id: 'TIGER_GENERAL',
     isBoss: false,
-    prompt: `tiger cat general soldier, orange fur with bold black tiger stripes, olive military helmet with red plume, heavy armor, spear in hand, stern commanding expression, authoritative pose, ${STYLE_NORMAL}`,
+    prompt: `tiger cat military general, heavily built muscular soldier, vivid orange fur with bold black tiger stripes, battle-worn heavy plate armor, red war plume on iron helmet, war spear gripped in both hands, battle scars across muzzle, stern commanding fierce expression, ${STYLE_NORMAL}`,
   },
 
-  // ── Boss cats — bigger canvas, elaborate prompts, dramatic effects ──────────
+  // ── Boss cats — massive builds, spectacular weapons, devastating presence ────
   {
     id: 'ALLEY_CAT',
     isBoss: true,
-    prompt: `grey alley cat crime boss fighter, battle-scarred grey fur, deep red scar across left eye, jagged claw gauntlets, dark iron plate armor with gold studs, torn battle cloak, red crown, menacing grin showing fangs, energy crackling from claws, ${STYLE_BOSS}`,
+    // Reference: white armored knight cat from reference image — adapt to grey scarred brawler
+    prompt: `grey battle-hardened alley cat warlord, enormous muscular scarred body, cracked dark iron plate armor with gold rivets and red lining, massive spiked claw gauntlets crackling with red energy, deep claw scar across left eye glowing red, fangs bared in a snarl, hunched forward aggressive brawler stance, torn armored cape, ${STYLE_BOSS}`,
   },
   {
     id: 'LYNX_RANGER',
     isBoss: true,
-    prompt: `lynx ranger captain boss, beige and grey spotted fur, tufted black ear tips, green ranger crown with crossed-arrow emblem, ornate leather ranger armor, large enchanted bow glowing at tips, quiver of glowing arrows, steely focused expression, wind whipping around cloak, ${STYLE_BOSS}`,
+    // Reference: grey archer cat from reference image
+    prompt: `lynx cat master ranger, powerful muscular archer build, pale grey and beige spotted lynx fur, black-tufted ears, piercing golden predator eyes, dark green hardened leather ranger armor with pauldrons, enormous ornate war bow fully drawn with glowing nocked arrow, quiver of enchanted arrows across back, cloak whipping in wind, ${STYLE_BOSS}`,
   },
   {
     id: 'SNOW_LEOPARD',
     isBoss: true,
-    prompt: `snow leopard ice knight boss, white and grey fur covered in dark rosette spots, elaborate ice-crystal crown with five spikes, full silver plate armor etched with frost runes, broadsword held aloft radiating cold blue aura, frost particles swirling, imperious regal pose, ${STYLE_BOSS}`,
+    // Reference: white cat with massive glowing sword from reference image
+    prompt: `snow leopard ice champion, hugely muscular white and grey spotted fur body, elaborate silver plate armor with frost rune engravings and blue crystal accents, massive two-handed greatsword held overhead crackling with white ice-lightning energy, blue-white eyes glowing with cold fury, triumphant roaring battle cry pose, swirling ice and lightning particles, ${STYLE_BOSS}`,
   },
   {
     id: 'RIVER_PANTHER',
     isBoss: true,
-    prompt: `dark navy panther aquatic warlord boss, sleek dark navy and black fur, teal bioluminescent glowing eyes, wave-crest crown, deep-sea aquatic plate armor with wave and scale motifs, twin claw blades dripping water, water droplets and ripple aura surrounding, powerful coiled stance, ${STYLE_BOSS}`,
+    // Reference: black cat with dual blades and blue aura from reference image
+    prompt: `black panther aquatic warlord, powerfully muscular sleek black fur, teal bioluminescent glowing eyes, twin curved aquatic war blades glowing with teal blue water energy, dark scaled deep-sea plate armor with wave crest motifs, water streaming and rippling around body, low crouching combat stance, menacing wide grin showing fangs, ${STYLE_BOSS}`,
   },
   {
     id: 'SAND_CAT_KING',
     isBoss: true,
-    prompt: `sand cat desert pharaoh king boss, sandy golden fur, ornate Egyptian pharaoh double-crown in blue and gold, cobra uraeus with glowing gem on forehead, golden ankh-emblazoned armor, ceremonial khopesh sword radiating solar energy, golden aura and sand vortex effects, commanding pharaoh pose, ${STYLE_BOSS}`,
+    // Desert pharaoh warrior — golden armor, solar energy weapons
+    prompt: `sand cat desert pharaoh warlord, massively built golden-furred cat, ornate Egyptian-style plate armor in gold and lapis blue, double pharaoh war crown with cobra uraeus serpent, large khopesh sword radiating blinding golden solar energy, amber eyes glowing like the sun, commanding arm outstretched, golden light and sand vortex aura, ${STYLE_BOSS}`,
   },
   {
     id: 'PERSIAN_QUEEN',
     isBoss: true,
-    prompt: `white Persian cat sorceress queen boss, creamy white fluffy fur, extravagant gold and jeweled queen crown with pink heart gems, flowing arcane robes of purple and gold, magical staff topped with pulsing pink orb, pink and violet magical energy storm, ruff collar of glowing arcane feathers, imperious outstretched arm casting spell, ${STYLE_BOSS}`,
+    // Reference: old white wizard cat or the green nature mage — regal and terrifying sorceress
+    prompt: `white Persian cat sorceress queen, tall imposing robed figure with muscular presence, pure white thick fluffy fur, elaborate gold and amethyst crown with five tall spires, flowing deep purple arcane battle robes with glowing gold sigils, enormous magical staff with a pulsing violet storm orb, violet and white arcane lightning storm spiraling around her, imperious arm raised commanding the storm, ${STYLE_BOSS}`,
   },
   {
     id: 'CAT_EMPEROR',
     isBoss: true,
-    prompt: `dark purple cat supreme emperor final boss, dark purple fur, enormous ornate dark crown with five massive glowing blood-red gems, glowing malevolent red slit eyes, dark emperor robes with void-pattern trim, dark mageblade sword wreathed in purple void energy, evil triangle insignia on forehead, shadowy black aura radiating chaos, ultimate villain supreme commanding pose, ${STYLE_BOSS}`,
+    // Reference: huge brown berserker cat from reference image — adapt as dark void emperor
+    prompt: `cat emperor supreme final boss, colossal hulking dark purple-black furred muscular body dwarfing all others, enormous ornate void-black crown with five bleeding blood-red gems, malevolent blood-red glowing slit eyes, heavy dark emperor plate armor consumed by shadow runes, massive void greatsword held aloft wreathed in swirling black and purple energy, dark void shadows and corruption aura consuming everything around, evil triangle scar on forehead, earth-shaking power stance, ${STYLE_BOSS}`,
   },
 ];
 
@@ -167,55 +190,111 @@ function pixellabRequest(endpoint, body) {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ── Generate one enemy (VARIANTS variants) ───────────────────────────────────
+// ── Decode PixelLab image response to base64 string ─────────────────────────
+function extractB64(result) {
+  if (result.image && result.image.base64) return result.image.base64;
+  if (result.image && typeof result.image === 'string') return result.image;
+  if (result.base64) return result.base64;
+  return null;
+}
+
+function saveB64(b64, outPath) {
+  const clean = b64.replace(/^data:image\/\w+;base64,/, '');
+  fs.writeFileSync(outPath, Buffer.from(clean, 'base64'));
+}
+
+// ── Generate 8-directional views for a base sprite ──────────────────────────
+async function rotateSprite(baseB64, id, size) {
+  console.log(`  [ROTATE] Requesting 8-directional views (${size}×${size})…`);
+
+  // Check if all directions already exist
+  const allExist = DIRECTIONS.every(dir =>
+    !SKIP_EXISTING || !fs.existsSync(path.join(OUT_DIR, `${id.toLowerCase()}_dir_${dir}.png`))
+      ? false : true
+  );
+  if (allExist) { console.log('  [ROTATE] All directions exist — skipping'); return; }
+
+  try {
+    const result = await pixellabRequest('rotate', {
+      image:        { base64: baseB64 },
+      n_directions: 8,
+      view:         'low top-down',   // isometric projection
+      size:         { width: size, height: size },
+      // 'default' proportions gives solid muscular bodies (not chibi)
+      proportions:  'default',
+    });
+
+    // Response: { images: [ {base64:…}, … ] } — one per direction in DIRECTIONS order
+    const images = result.images || result.frames || [];
+    if (images.length === 0) {
+      console.warn('  [ROTATE] No images in response:', JSON.stringify(result).slice(0, 200));
+      return;
+    }
+
+    for (let i = 0; i < Math.min(images.length, DIRECTIONS.length); i++) {
+      const dir     = DIRECTIONS[i];
+      const outPath = path.join(OUT_DIR, `${id.toLowerCase()}_dir_${dir}.png`);
+      const b64     = extractB64(images[i]) || (typeof images[i] === 'string' ? images[i] : null);
+      if (!b64) { console.warn(`  [ROTATE] No image data for direction ${dir}`); continue; }
+      saveB64(b64, outPath);
+      console.log(`  [ROTATE] Saved ${dir} → ${path.basename(outPath)}`);
+    }
+
+    await sleep(300);
+  } catch (err) {
+    console.error(`  [ROTATE] ERROR — ${err.message}`);
+  }
+}
+
+// ── Generate one enemy (VARIANTS variants + optional 8-dir rotation) ─────────
 async function generateEnemy(enemy) {
   const size  = enemy.isBoss ? 128 : 64;
   const label = enemy.isBoss ? '[BOSS]' : '[cat] ';
   console.log(`\n${label} ${enemy.id}  (${size}×${size}, ${VARIANTS} variants)`);
+
+  let bestB64 = null; // saved for rotate step
 
   for (let v = 1; v <= VARIANTS; v++) {
     const outPath = path.join(OUT_DIR, `${enemy.id.toLowerCase()}_pl_v${v}.png`);
 
     if (SKIP_EXISTING && fs.existsSync(outPath)) {
       console.log(`  v${v}: SKIP (exists)`);
+      // Load existing file as b64 for rotation if needed
+      if (!bestB64 && DO_ROTATE) {
+        bestB64 = fs.readFileSync(outPath).toString('base64');
+      }
       continue;
     }
 
     try {
       console.log(`  v${v}: requesting…`);
       const result = await pixellabRequest('generate-image', {
-        description:    `${enemy.prompt} ### NEG: ${NEG}`,
-        image_size:     { width: size, height: size },
-        no_background:  true,
-        // BitForge pixel art model — best for isometric sprites
+        description:         `${enemy.prompt} ### NEG: ${NEG}`,
+        image_size:          { width: size, height: size },
+        no_background:       true,
         text_guidance_scale: 7.5,
-        // Slight variation seed per variant (PixelLab ignores exact seed but this
-        // documents intent; API uses internal random if seed is omitted)
       });
 
-      // Response: { image: { base64: "…" } } or { image_url: "…" }
-      let b64;
-      if (result.image && result.image.base64) {
-        b64 = result.image.base64;
-      } else if (result.image && typeof result.image === 'string') {
-        b64 = result.image;
-      } else if (result.base64) {
-        b64 = result.base64;
-      } else {
+      const b64 = extractB64(result);
+      if (!b64) {
         console.warn(`  v${v}: unexpected response shape:`, JSON.stringify(result).slice(0, 200));
         continue;
       }
 
-      const clean = b64.replace(/^data:image\/\w+;base64,/, '');
-      fs.writeFileSync(outPath, Buffer.from(clean, 'base64'));
+      saveB64(b64, outPath);
       console.log(`  v${v}: saved → ${path.basename(outPath)}`);
+      if (!bestB64) bestB64 = b64; // keep first successful for rotation
 
-      // Rate-limit: ~200ms between requests
       await sleep(250);
 
     } catch (err) {
       console.error(`  v${v}: ERROR — ${err.message}`);
     }
+  }
+
+  // ── Optional: generate 8 directional views from the best base sprite ────────
+  if (DO_ROTATE && bestB64) {
+    await rotateSprite(bestB64, enemy.id, size);
   }
 }
 
