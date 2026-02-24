@@ -1,7 +1,7 @@
 'use strict';
 // =============================================================================
 // Puppy Force — CutsceneScene.js
-// Animated inter-chapter cutscene with moving emoji characters
+// Animated inter-chapter cutscene with Fire Emblem-style portrait dialogue bars
 // =============================================================================
 
 class CutsceneScene extends Phaser.Scene {
@@ -14,8 +14,58 @@ class CutsceneScene extends Phaser.Scene {
     this.hasSkipped  = false;
   }
 
+  // ---------------------------------------------------------------------------
+  // Improvement 1: Preload portrait PNGs (graceful — same pattern as BattleScene)
   preload() {
     AudioManager.preloadMusic(this);
+
+    // Enemy portrait PNGs — v1 through v4 variants
+    // File naming: assets/enemies/<lowercase_id>_v1.png
+    const ENEMY_PNG_IDS = [
+      'ALLEY_CAT',
+      'SIAMESE_ASSASSIN',
+      'LYNX_RANGER',
+      'SNOW_LEOPARD',
+      'RIVER_PANTHER',
+      'SAND_CAT_KING',
+      'PERSIAN_QUEEN',
+      'CAT_EMPEROR',
+      'TIGER_GENERAL',
+      'PERSIAN_SORCERER',
+      'SCOUT_CAT',
+    ];
+    ENEMY_PNG_IDS.forEach(id => {
+      // Load v1–v4 variants for each enemy
+      for (let v = 1; v <= 4; v++) {
+        const pngKey = v === 1 ? `enemy_png_${id}` : `enemy_png_${id}_v${v}`;
+        if (!this.textures.exists(pngKey)) {
+          try {
+            const fileName = id.toLowerCase() + `_v${v}.png`;
+            this.load.image(pngKey, `assets/enemies/${fileName}`);
+          } catch (e) {
+            // silently skip — emoji fallback will be used
+          }
+        }
+      }
+    });
+
+    // Player portrait PNGs
+    // File naming: assets/characters/<ID>_portrait.png
+    const PLAYER_PNG_IDS = [
+      'PUPPY_KNIGHT', 'CORGI_HEALER', 'LABRADOR_SCOUT', 'BEAGLE_ARCHER',
+      'BULLDOG_TANK', 'POODLE_MAGE', 'HUSKY_RIDER', 'TERRIER_THIEF',
+      'DOG_PALADIN', 'OTTER_ALLY',
+    ];
+    PLAYER_PNG_IDS.forEach(id => {
+      const pngKey = `player_png_${id}`;
+      if (!this.textures.exists(pngKey)) {
+        try {
+          this.load.image(pngKey, `assets/characters/${id}_portrait.png`);
+        } catch (e) {
+          // silently skip — emoji fallback will be used
+        }
+      }
+    });
   }
 
   create() {
@@ -151,33 +201,78 @@ class CutsceneScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------------------
+  // Improvement 2 & 3 & 4: _beatEnter with portrait images, bottom dialogue bar,
+  // villain v2 variant, and villain entrance flash
   _beatEnter(beat, W, H) {
     const isVillain = beat.villain || false;
-    const centerY   = H * 0.42;
 
-    // Starting position (offscreen)
+    // Determine portrait texture keys
+    const baseKey     = SPEAKER_PORTRAIT_KEY[beat.speaker] || null;
+    const isEnemyKey  = baseKey && baseKey.startsWith('enemy_png_');
+
+    // Improvement 3: villain "reveal" — use _v2 variant for the large upper portrait
+    let largeKey = baseKey;
+    if (isEnemyKey && baseKey) {
+      const v2Key = baseKey + '_v2';
+      if (this.textures.exists(v2Key)) {
+        largeKey = v2Key;
+      }
+    }
+
+    // Improvement 4: villain entrance flash + camera shake
+    if (isVillain && isEnemyKey) {
+      const flash = this.add.rectangle(W / 2, H / 2, W, H, 0xffffff)
+        .setAlpha(0)
+        .setDepth(20);
+      this.tweens.add({
+        targets: flash,
+        alpha: 0.5,
+        duration: 150,
+        yoyo: true,
+        hold: 0,
+        ease: 'Linear',
+        onComplete: () => flash.destroy(),
+      });
+      this.cameras.main.shake(200, 0.01);
+    }
+
+    // -------------------------------------------------------------------------
+    // Upper large portrait (slides in from off-screen — kept but reduced in size)
+    const centerY = H * 0.42;
+
     let startX, startY, targetX, targetY;
     if (beat.side === 'top') {
-      startX = W / 2;  startY = -120;
+      startX = W / 2;  startY = -140;
       targetX = W / 2; targetY = centerY - 40;
     } else if (beat.side === 'left') {
-      startX = -100;   startY = centerY;
+      startX = -130;   startY = centerY;
       targetX = W * 0.28; targetY = centerY;
     } else {
-      startX = W + 100; startY = centerY;
+      startX = W + 130; startY = centerY;
       targetX = W * 0.72; targetY = centerY;
     }
 
-    const fontSize = isVillain ? '96px' : '80px';
-    const emoji = this.add.text(startX, startY, beat.portrait, { fontSize }).setOrigin(0.5).setDepth(5);
+    // Try to use portrait PNG for large upper portrait (120x120), else emoji at 52px
+    let largePortraitObj;
+    const hasLargePng = largeKey && this.textures.exists(largeKey);
+    if (hasLargePng) {
+      largePortraitObj = this.add.image(startX, startY, largeKey)
+        .setDisplaySize(120, 120)
+        .setOrigin(0.5)
+        .setDepth(5);
+    } else {
+      largePortraitObj = this.add.text(startX, startY, beat.portrait, {
+        fontSize: '52px',
+      }).setOrigin(0.5).setDepth(5);
+    }
 
     // Slide / drop in
     const ease = beat.side === 'top' ? 'Bounce.out' : 'Power2.out';
-    this.tweens.add({ targets: emoji, x: targetX, y: targetY, duration: 700, ease });
+    this.tweens.add({ targets: largePortraitObj, x: targetX, y: targetY, duration: 700, ease });
 
     // Bounce idle animation
     this.tweens.add({
-      targets: emoji,
+      targets: largePortraitObj,
       y: targetY - (isVillain ? 14 : 8),
       duration: isVillain ? 500 : 700,
       yoyo: true, repeat: -1,
@@ -185,69 +280,95 @@ class CutsceneScene extends Phaser.Scene {
       delay: 750,
     });
 
-    // Speaker name label
-    const nameLabel = this.add.text(targetX, targetY + (fontSize === '96px' ? 58 : 48), beat.speaker, {
-      fontSize: '13px', color: isVillain ? '#ff8888' : '#f8d030',
-      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 2,
-    }).setOrigin(0.5).setAlpha(0).setDepth(5);
-    this.tweens.add({ targets: nameLabel, alpha: 1, duration: 300, delay: 700 });
+    // -------------------------------------------------------------------------
+    // Improvement 2: Fire Emblem bottom dialogue bar
+    // Bar sits at y = H*0.70, height ~110px (above the 44px bottom letterbox)
+    const barY      = H * 0.70;
+    const barH      = 110;
+    const barBgCol  = 0x0a1a2e;
+    const barBorder = isVillain ? 0xdd2222 : 0x4488ff;
 
-    // Speech bubble
-    const bubbleY = isVillain ? targetY + 90 : (beat.side === 'left' ? targetY - 80 : targetY - 80);
-    const bubbleX = isVillain ? W / 2 : (beat.side === 'left' ? W * 0.62 : W * 0.38);
-    const bubble  = this._makeSpeechBubble(bubbleX, bubbleY, beat.text, W - 80, isVillain);
+    // Background panel
+    const barBg = this.add.graphics().setDepth(7);
+    barBg.fillStyle(barBgCol, 0.92);
+    barBg.fillRect(0, barY, W, barH);
+    barBg.lineStyle(2, barBorder, 0.9);
+    barBg.strokeRect(0, barY, W, barH);
 
-    // Typewriter text
-    const textObj = bubble.getData('textObj');
-    if (textObj) {
-      const full = beat.text;
-      textObj.setText('');
-      let ci = 0;
-      const tw = this.time.addEvent({
-        delay: 30, repeat: full.length - 1,
-        callback: () => { textObj.setText(full.slice(0, ++ci)); },
-      });
-      bubble.setData('timer', tw);
+    // --- Portrait thumbnail (left side of bar) ---
+    // v1 key for the bottom bar (always use v1 for consistency)
+    const barPortraitKey = baseKey;
+    const hasBarPng = barPortraitKey && this.textures.exists(barPortraitKey);
+
+    let barPortraitObj = null;
+    if (hasBarPng) {
+      // Circular mask for portrait image
+      const maskShape = this.make.graphics({ x: 16, y: barY + 15, add: false });
+      maskShape.fillStyle(0xffffff);
+      maskShape.fillCircle(40, 40, 40);
+      const mask = maskShape.createGeometryMask();
+
+      barPortraitObj = this.add.image(16 + 40, barY + 15 + 40, barPortraitKey)
+        .setDisplaySize(80, 80)
+        .setOrigin(0.5)
+        .setDepth(8)
+        .setMask(mask);
+    } else {
+      // Fallback: emoji at 36px
+      barPortraitObj = this.add.text(16 + 18, barY + 15 + 18, beat.portrait, {
+        fontSize: '36px',
+      }).setOrigin(0.5).setDepth(8);
     }
 
+    // Speaker name label (bold, gold for ally / red for villain)
+    const nameColor = isVillain ? '#ff8888' : '#f8d030';
+    const nameLabel = this.add.text(108, barY + 12, beat.speaker, {
+      fontSize: '14px',
+      color: nameColor,
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+    }).setDepth(8).setOrigin(0, 0);
+
+    // Dialogue typewriter text
+    const dialogueText = this.add.text(108, barY + 34, '', {
+      fontSize: '13px',
+      color: isVillain ? '#ffcccc' : '#ddeeff',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      wordWrap: { width: W - 120 },
+    }).setDepth(8).setOrigin(0, 0);
+
+    // Typewriter effect
+    const full = beat.text;
+    let ci = 0;
+    this.time.addEvent({
+      delay: 30, repeat: full.length - 1,
+      callback: () => { dialogueText.setText(full.slice(0, ++ci)); },
+    });
+
+    // Fade bar in
+    const barObjects = [barBg, nameLabel, dialogueText];
+    if (barPortraitObj) barObjects.push(barPortraitObj);
+    barObjects.forEach(o => o.setAlpha(0));
+    this.tweens.add({ targets: barObjects, alpha: 1, duration: 300, delay: 400 });
+
+    // -------------------------------------------------------------------------
     // Fade everything out before next beat
     this.time.delayedCall(beat.hold, () => {
+      const allObjects = [largePortraitObj, ...barObjects];
       this.tweens.add({
-        targets: [emoji, nameLabel, bubble],
+        targets: allObjects,
         alpha: 0, duration: 400,
-        onComplete: () => { emoji.destroy(); nameLabel.destroy(); bubble.destroy(); },
+        onComplete: () => {
+          allObjects.forEach(o => { if (o && o.destroy) o.destroy(); });
+        },
       });
     });
   }
 
-  _makeSpeechBubble(cx, cy, text, maxW, isVillain) {
-    const bubbleW = Math.min(maxW, 280), bubbleH = 72;
-    const container = this.add.container(cx, cy).setDepth(6).setAlpha(0);
-
-    const bg = this.add.graphics();
-    const fillCol  = isVillain ? 0x2a0808 : 0x0a1a2e;
-    const rimCol   = isVillain ? 0xcc4444 : 0x4488cc;
-    bg.fillStyle(fillCol, 0.92);
-    bg.fillRoundedRect(-bubbleW / 2, -bubbleH / 2, bubbleW, bubbleH, 8);
-    bg.lineStyle(1.5, rimCol, 0.8);
-    bg.strokeRoundedRect(-bubbleW / 2, -bubbleH / 2, bubbleW, bubbleH, 8);
-
-    const textObj = this.add.text(0, 0, '', {
-      fontSize: '13px',
-      color: isVillain ? '#ffcccc' : '#ddeeff',
-      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-      wordWrap: { width: bubbleW - 20 },
-      align: 'center',
-    }).setOrigin(0.5);
-
-    container.add([bg, textObj]);
-    container.setData('textObj', textObj);
-
-    this.tweens.add({ targets: container, alpha: 1, duration: 300, delay: 600 });
-    return container;
-  }
-
+  // ---------------------------------------------------------------------------
   _beatCaption(beat, W, H) {
     const label = this.add.text(W / 2, H * 0.44, beat.text.toUpperCase(), {
       fontSize: '13px', color: '#aabbcc', letterSpacing: 6,
