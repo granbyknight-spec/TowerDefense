@@ -1,0 +1,70 @@
+name: Generate PixelLab Sprites
+
+on:
+  workflow_dispatch:
+    inputs:
+      sprite_set:
+        description: 'Which sprites to generate'
+        required: true
+        default: 'enemies'
+        type: choice
+        options:
+          - enemies          # regular cat enemies only
+          - bosses           # boss cats only (bigger, more impressive)
+          - all              # all cat enemies + bosses
+      skip_existing:
+        description: 'Skip files that already exist'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PixelLab SDK
+        run: npm install @pixellab-code/pixellab
+
+      - name: Create output directories
+        run: mkdir -p assets/enemies
+
+      - name: Generate sprites
+        env:
+          PIXELLAB_SECRET: ${{ secrets.PIXELLAB_API_KEY }}
+          SPRITE_SET: ${{ inputs.sprite_set }}
+          SKIP_EXISTING: ${{ inputs.skip_existing }}
+        run: node scripts/generate-pixellab-sprites.js
+
+      - name: Commit generated sprites
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/enemies/
+          if git diff --staged --quiet; then
+            echo "No new sprites generated (all skipped or API quota reached)"
+          else
+            COUNT=$(git diff --staged --name-only | wc -l)
+            git commit -m "Generate PixelLab sprites: ${{ inputs.sprite_set }} (${COUNT} files)"
+            for i in 1 2 3 4; do
+              git pull --rebase origin HEAD && git push origin HEAD && break
+              echo "Push attempt $i failed, retrying in $((i * 2))s..."
+              sleep $((i * 2))
+            done
+          fi
