@@ -27,19 +27,19 @@ const REPO_NAME  = 'CC0-1.0-Music';
 // ---------------------------------------------------------------------------
 const TRACKS = [
   {
-    file:     'battle.ogg',
+    file:     'battle.mp3',
     keywords: ['battle', 'combat', 'fight', 'boss', 'action', 'intense', 'war'],
   },
   {
-    file:     'title.ogg',
+    file:     'title.mp3',
     keywords: ['title', 'menu', 'intro', 'theme', 'main', 'opening'],
   },
   {
-    file:     'overworld.ogg',
+    file:     'overworld.mp3',
     keywords: ['overworld', 'world', 'town', 'village', 'field', 'explore', 'adventure', 'journey'],
   },
   {
-    file:     'victory.ogg',
+    file:     'victory.mp3',
     keywords: ['victory', 'win', 'fanfare', 'triumph', 'success', 'jingle'],
   },
 ];
