@@ -109,6 +109,19 @@ class UIScene extends Phaser.Scene {
     this._skillsTxt.on('pointerdown', () => {
       if (this._selectedUnit) this._showSkillInfo(this._selectedUnit);
     });
+
+    // Status effect icons — two pre-created slots, hidden by default
+    this._statusIcon1 = this.add.text(W / 2 - 44, UI_Y + 87, '', {
+      fontSize: '18px',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0).setVisible(false);
+
+    this._statusIcon2 = this.add.text(W / 2 + 16, UI_Y + 87, '', {
+      fontSize: '18px',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0).setVisible(false);
   }
 
   _showSkillInfo(unit) {
@@ -379,6 +392,20 @@ class UIScene extends Phaser.Scene {
     const itemList  = unit.items.map(i => ITEMS[i]?.emoji || '').join('');
     this._skillsTxt?.setText(`${skillList}  ${itemList}`);
 
+    // Status effect icons
+    const icons = [];
+    if (unit.guardActive) icons.push({ icon: '🛡', label: ' Guard', color: '#88aaff' });
+    if (unit.burnStacks > 0) icons.push({ icon: '🔥', label: ` Burn×${unit.burnStacks}`, color: '#ff8844' });
+
+    [this._statusIcon1, this._statusIcon2].forEach((txt, i) => {
+      if (!txt) return;
+      if (icons[i]) {
+        txt.setText(icons[i].icon + icons[i].label).setColor(icons[i].color).setVisible(true);
+      } else {
+        txt.setVisible(false);
+      }
+    });
+
     // Update phase labels
     if (this._battle) {
       this._turnLabel?.setText(`TURN ${this._battle.turnNumber}`);
@@ -394,6 +421,8 @@ class UIScene extends Phaser.Scene {
     this._mpBarBg?.clear();
     this._mpBarFg?.clear();
     this._mpTxt?.setText('').setVisible(false);
+    this._statusIcon1?.setVisible(false);
+    this._statusIcon2?.setVisible(false);
   }
 
   // ==========================================================================
