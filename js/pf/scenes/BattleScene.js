@@ -916,6 +916,73 @@ class BattleScene extends Phaser.Scene {
     });
   }
 
+  _applyPostCombatEffects(attacker, defender, onDone) {
+    const sk = this._lastSkillUsed ? SKILLS[this._lastSkillUsed] : null;
+    if (!sk) { onDone && onDone(); return; }
+
+    // KNOCKBACK (charge)
+    if (sk.knockback && !defender.dead) {
+      const dx = defender.col - attacker.col;
+      const dy = defender.row - attacker.row;
+      const len = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
+      const nx = defender.col + Math.sign(dx / len);
+      const ny = defender.row + Math.sign(dy / len);
+      if (nx >= 0 && nx < GCOLS && ny >= 0 && ny < GROWS &&
+          TERRAIN[this.mapGrid[ny][nx]]?.passable !== false &&
+          !this._unitAt(nx, ny)) {
+        defender.col = nx;
+        defender.row = ny;
+        this._updateSpritePos(defender);
+        this._floatText(nx, ny, '↗ Pushed!', 0xffaa44);
+      }
+    }
+
+    // DIVE REPOSITION (dash) — move attacker adjacent to defender
+    if (sk.dive && !defender.dead) {
+      const dx = defender.col - attacker.col;
+      const dy = defender.row - attacker.row;
+      let nx, ny;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        nx = attacker.col + Math.sign(dx);
+        ny = attacker.row;
+      } else {
+        nx = attacker.col;
+        ny = attacker.row + Math.sign(dy);
+      }
+      if (nx >= 0 && nx < GCOLS && ny >= 0 && ny < GROWS && !this._unitAt(nx, ny)) {
+        attacker.col = nx;
+        attacker.row = ny;
+        this._updateSpritePos(attacker);
+      }
+    }
+
+    // SPLASH (fireball) — hit all enemies adjacent to defender
+    if (sk.splash && !defender.dead) {
+      const splashPower = sk.splash;
+      const adjEnemies = this.units.filter(u =>
+        !u.dead && u.team === 'enemy' && u !== defender &&
+        Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+      );
+      adjEnemies.forEach(u => {
+        const tDef = TERRAIN[this.mapGrid[u.row][u.col]]?.def || 0;
+        const sRaw = Math.max(1, attacker.atk - (u.def + tDef));
+        const sDmg = Math.max(1, Math.floor(sRaw * splashPower));
+        const died = u.takeDamage(sDmg);
+        this._updateHPBar(u);
+        this._floatText(u.col, u.row, `-${sDmg} Fire`, 0xff6600);
+        if (died) this._killUnit(u, () => {});
+      });
+    }
+
+    // BURN DoT (fireball)
+    if (sk.burn && !defender.dead) {
+      defender.burnDamage = (defender.burnDamage || 0) + sk.burn;
+      this._floatText(defender.col, defender.row, 'Burn!', 0xff4400);
+    }
+
+    onDone && onDone();
+  }
+
   _executeHeal(healer, target) {
     const sk = SKILLS['heal'];
     // Use skill power magnitude to scale heal (power is negative to denote healing)
@@ -966,7 +1033,7 @@ class BattleScene extends Phaser.Scene {
       u.burnDamage = 0;
       const died = u.takeDamage(bDmg);
       this._updateHPBar(u);
-      this._floatText(u.col, u.row, `-${bDmg}ð¥`, 0xff4400);
+      this._floatText(u.col, u.row, `-${bDmg} Fire`, 0xff4400);
       if (died) this._killUnit(u, () => {});
     });
 
