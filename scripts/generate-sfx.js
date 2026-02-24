@@ -78,6 +78,9 @@ function generateSfx(text, duration_seconds) {
     });
 
     req.on('error', reject);
+    req.setTimeout(30000, () => {
+      req.destroy(new Error('Request timed out after 30s'));
+    });
     req.write(body);
     req.end();
   });
