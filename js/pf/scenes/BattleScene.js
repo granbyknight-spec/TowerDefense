@@ -330,13 +330,6 @@ class BattleScene extends Phaser.Scene {
     const pngKey = `enemy_png_${unit.id}`;
     const useEnemyPng = unit.team === 'enemy' && this.textures.exists(pngKey);
 
-    // Background circle — drawn before sprite; clips white PNG edges on enemy PNGs
-    if (useEnemyPng) {
-      const bgCircle = this.add.graphics();
-      bgCircle.fillStyle(0x331111, 1);
-      bgCircle.fillCircle(x, y - 1, r + 1);
-      unit._bgCircle = bgCircle;
-    }
     const activeKey = useEnemyPng ? pngKey : sprKey;
     let sprite;
     if (this.textures.exists(activeKey)) {
@@ -345,6 +338,24 @@ class BattleScene extends Phaser.Scene {
         // AI-generated PNGs can be any resolution — fit to tile size
         const fitSize = spriteSize * (unit.isBoss ? 1.15 : 1);
         sprite.setDisplaySize(fitSize, fitSize);
+        // Circular mask so the white PNG background is clipped to a circle.
+        // The mask graphics is not added to the display list — it only defines
+        // the clip region. We redraw it each frame so it follows the sprite.
+        const maskGfx = this.make.graphics({ x: 0, y: 0, add: false });
+        const drawMask = (mx, my) => {
+          maskGfx.clear();
+          maskGfx.fillStyle(0xffffff);
+          maskGfx.fillCircle(mx, my, r);
+        };
+        drawMask(x, y - 1);
+        sprite.setMask(maskGfx.createGeometryMask());
+        const onUpdate = () => {
+          if (sprite.active) drawMask(sprite.x, sprite.y);
+          else this.events.off('update', onUpdate);
+        };
+        this.events.on('update', onUpdate);
+        unit._spriteMask   = maskGfx;
+        unit._spriteMaskCb = onUpdate;
       } else {
         sprite.setScale(sprScale);
       }
@@ -448,7 +459,6 @@ class BattleScene extends Phaser.Scene {
     if (!unit.sprite) return;
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
-    if (unit._bgCircle) unit._bgCircle.setPosition(x, y - 1);
     if (unit.spriteBg) unit.spriteBg.setPosition(x, y);
     unit.sprite.setPosition(x, y - 1);
     unit.hpBarBg.setPosition(x, y + r + 3);
@@ -460,8 +470,9 @@ class BattleScene extends Phaser.Scene {
 
   _destroyUnitSprite(unit) {
     this._stopIdleBob(unit);
-    [unit._bgCircle, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
-    unit._bgCircle = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
+    if (unit._spriteMaskCb) this.events.off('update', unit._spriteMaskCb);
+    [unit._spriteMask, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
+    unit._spriteMask = unit._spriteMaskCb = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
   }
 
   // ==========================================================================

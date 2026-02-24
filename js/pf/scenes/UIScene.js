@@ -113,11 +113,10 @@ class UIScene extends Phaser.Scene {
       fontSize: '30px',
     }).setOrigin(0.5, 0);
 
-    // Portrait image — shown when a portrait texture exists for the selected unit;
-    // overlays the emoji slot (same anchor point, 48×48 px)
-    this._portraitImg = this.add.image(W / 2 - 80, UI_Y + 28, '__DEFAULT')
-      .setDisplaySize(48, 48)
-      .setOrigin(0.5, 0)
+    // Portrait image — shown in the left margin of the panel, clear of stats text
+    this._portraitImg = this.add.image(8, UI_Y + 42, '__DEFAULT')
+      .setDisplaySize(44, 44)
+      .setOrigin(0, 0)
       .setVisible(false);
 
     // Skills / items display
@@ -462,7 +461,7 @@ class UIScene extends Phaser.Scene {
     // Show portrait image if texture exists, otherwise fall back to emoji
     const portraitKey = `portrait_${unit.id}`;
     if (this._portraitImg && this.textures.exists(portraitKey)) {
-      this._portraitImg.setTexture(portraitKey).setDisplaySize(48, 48).setVisible(true);
+      this._portraitImg.setTexture(portraitKey).setDisplaySize(44, 44).setVisible(true);
       this._unitEmojiTxt?.setText('');
     } else {
       this._portraitImg?.setVisible(false);
