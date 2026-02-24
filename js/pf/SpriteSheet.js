@@ -640,17 +640,31 @@ const FALLBACK_SPRITES = {
 // ---------------------------------------------------------------------------
 
 /**
- * Call this in BattleScene.preload() to queue all SVG textures.
+ * Call this in BattleScene.preload() to register all SVG textures.
+ * Uses Phaser canvas textures instead of the file loader so that create()
+ * fires immediately without waiting for SVG image loads (which can hang in
+ * Phaser 3.60 when using load.image() with image/svg+xml data URIs).
+ * Each canvas texture starts transparent and is filled asynchronously via
+ * Image.onload — data-URI images decode in < 10 ms so art is ready well
+ * before the chapter title overlay finishes fading.
  * @param {Phaser.Scene} scene
  */
 function preloadUnitSprites(scene) {
-  // Load individual unit sprites
-  for (const [id, info] of Object.entries(UNIT_SPRITES)) {
-    scene.load.image(info.key, svgToDataURI(info.svg));
-  }
-  // Load fallbacks
-  for (const [team, info] of Object.entries(FALLBACK_SPRITES)) {
-    scene.load.image(info.key, svgToDataURI(info.svg));
+  const allSprites = [
+    ...Object.entries(UNIT_SPRITES),
+    ...Object.entries(FALLBACK_SPRITES),
+  ];
+  for (const [, info] of allSprites) {
+    if (scene.textures.exists(info.key)) continue;
+    const ct  = scene.textures.createCanvas(info.key, 64, 64);
+    const uri = svgToDataURI(info.svg);
+    const img = new Image();
+    img.onload = () => {
+      ct.getContext().drawImage(img, 0, 0, 64, 64);
+      ct.refresh();
+    };
+    img.onerror = () => console.warn('[SpriteSheet] failed to render SVG for', info.key);
+    img.src = uri;
   }
 }
 
