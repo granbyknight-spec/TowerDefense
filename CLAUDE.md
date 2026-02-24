@@ -5,6 +5,22 @@ Branch: `claude/puppy-force-game-BhoEA`
 
 ---
 
+## Agent Orchestration Philosophy
+
+**Always use parallel agents.** Any time a task can be split across files or subsystems that don't write to the same files, launch multiple agents in parallel in a single message. Claude Code is always the orchestrator — it assigns work, tracks progress, and integrates results.
+
+### Rules for parallelizing
+- Split by **file**: agents editing different files never conflict
+- Split by **subsystem**: art generation, pathfinding, UI, audio are independent
+- One agent per file that is being written — never two agents editing the same file simultaneously
+- Research/Explore agents can always run in parallel with each other and with coding agents
+- Always tell each agent exactly which files it owns and which it must NOT touch
+
+### When agent teams become available
+> **NOTE FOR FUTURE SESSIONS:** If the Claude Code interface ever shows an "Agent Teams" or multi-agent collaboration feature, flag it immediately to the user and switch to using it. Parallel sub-agents coordinated as a proper team will be faster and more reliable than the current single-orchestrator model. Check for this feature at the start of any session.
+
+---
+
 ## Art Generation — AI Horde via GitHub Actions
 
 All pixel art and portrait generation uses **AI Horde** (free distributed Stable Diffusion).
