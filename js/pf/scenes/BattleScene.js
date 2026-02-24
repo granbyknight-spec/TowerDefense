@@ -103,7 +103,12 @@ class BattleScene extends Phaser.Scene {
     this._buildGridOverlay();
 
     // ── Battle music ─────────────────────────────────────────────────────────
-    AudioManager.playMusic(this, 'battle');
+    if (this.cache.audio.exists('battle')) {
+      AudioManager.playMusic(this, 'battle');
+    } else {
+      this.load.once('complete', () => AudioManager.playMusic(this, 'battle'));
+      this.load.start();
+    }
 
     // ── UIScene overlay (runs parallel) ─────────────────────────────────────
     if (!this.scene.isActive('UIScene')) {

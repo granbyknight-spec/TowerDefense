@@ -43,7 +43,6 @@ const config = {
 
   audio: {
     disableWebAudio: false,
-    noAudio: false,
   },
 
   // Disable default right-click menu

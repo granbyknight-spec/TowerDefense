@@ -23,7 +23,7 @@ class AudioManager {
       try {
         scene.load.audio(key, path);
       } catch (e) {
-        // File not yet generated — silently skip
+        console.error('[AudioManager] preloadMusic failed for', key, e);
       }
     });
   }
@@ -46,7 +46,7 @@ class AudioManager {
       try {
         scene.load.audio(key, path);
       } catch (e) {
-        // File not yet generated — silently skip
+        console.error('[AudioManager] preloadSFX failed for', key, e);
       }
     });
   }
@@ -58,6 +58,7 @@ class AudioManager {
   // Play a looping music track. Replaces the currently playing track.
   // Skips gracefully if the audio key is not loaded.
   static playMusic(scene, key, volume = 0.5) {
+    console.log('[AudioManager] playMusic called', key, 'exists:', scene.cache && scene.cache.audio && scene.cache.audio.exists(key));
     // Avoid restarting the same track if it is already playing
     if (AudioManager._currentMusicKey === key && AudioManager._currentMusic && AudioManager._currentMusic.isPlaying) {
       return;
@@ -75,7 +76,7 @@ class AudioManager {
       AudioManager._currentMusic    = music;
       AudioManager._currentMusicKey = key;
     } catch (e) {
-      // Silently swallow any Web Audio errors (e.g. context not started)
+      console.error('[AudioManager] playMusic failed for', key, e);
     }
   }
 
@@ -103,7 +104,7 @@ class AudioManager {
     try {
       scene.sound.play(key, { volume });
     } catch (e) {
-      // Silently swallow
+      console.error('[AudioManager] play failed for', key, e);
     }
   }
 }
