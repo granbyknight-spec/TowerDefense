@@ -85,31 +85,49 @@ class TitleScene extends Phaser.Scene {
     // ── Decorative title banner frame ─────────────────────────────────────────
     const bannerY = 210;
     // Dark backing panel
-    this.add.rectangle(W / 2, bannerY, W - 16, 74, 0x06091a, 0.88);
-    // Gold border lines
-    this.add.rectangle(W / 2, bannerY - 36, W - 16, 2, 0xf8d030).setAlpha(0.9);
-    this.add.rectangle(W / 2, bannerY + 36, W - 16, 2, 0xf8d030).setAlpha(0.9);
-    // Corner ornaments
-    this.add.text(16,  bannerY, '✦', { fontSize: '14px', color: '#f8d030', fontFamily: 'serif' }).setOrigin(0.5).setAlpha(0.7);
-    this.add.text(W - 16, bannerY, '✦', { fontSize: '14px', color: '#f8d030', fontFamily: 'serif' }).setOrigin(0.5).setAlpha(0.7);
+    this.add.rectangle(W / 2, bannerY, W - 16, 74, 0x04060f, 0.92);
+    // Double-line gold border — outer thick + inner hairline (SF-style)
+    this.add.rectangle(W / 2, bannerY - 37, W - 16, 3, 0xf8d030).setAlpha(0.95);
+    this.add.rectangle(W / 2, bannerY - 33, W - 16, 1, 0xffeeaa).setAlpha(0.35);
+    this.add.rectangle(W / 2, bannerY + 33, W - 16, 1, 0xffeeaa).setAlpha(0.35);
+    this.add.rectangle(W / 2, bannerY + 37, W - 16, 3, 0xf8d030).setAlpha(0.95);
+    // Corner diamond ornaments
+    this.add.text(14,     bannerY, '✦', { fontSize: '16px', color: '#f8d030', fontFamily: 'serif' }).setOrigin(0.5).setAlpha(0.85);
+    this.add.text(W - 14, bannerY, '✦', { fontSize: '16px', color: '#f8d030', fontFamily: 'serif' }).setOrigin(0.5).setAlpha(0.85);
 
-    // ── Title text (inside banner) ────────────────────────────────────────────
-    // Glow layer
-    const glow = this.add.text(W / 2, bannerY - 8, 'PUPPY FORCE', {
-      fontFamily: 'Nunito, Georgia, serif', fontSize: '48px', fontStyle: 'bold',
-      color: '#4488ff', stroke: '#000044', strokeThickness: 14,
-    }).setOrigin(0.5).setAlpha(0.5);
-    this.tweens.add({ targets: glow, alpha: { from: 0.2, to: 0.6 }, duration: 1500, yoyo: true, repeat: -1 });
+    // ── Title text — 4-layer SF-style depth ──────────────────────────────────
+    const titleY = bannerY - 10;
 
-    this.add.text(W / 2, bannerY - 8, 'PUPPY FORCE', {
-      fontFamily: 'Nunito, Georgia, serif', fontSize: '48px', fontStyle: 'bold',
-      color: '#f8d030', stroke: '#000000', strokeThickness: 5,
+    // Layer 1: pulsing blue-white outer aura
+    const glow = this.add.text(W / 2, titleY, 'PUPPY FORCE', {
+      fontFamily: 'Georgia, serif', fontSize: '50px', fontStyle: 'bold',
+      color: '#88aaff', stroke: '#001166', strokeThickness: 22,
+    }).setOrigin(0.5).setAlpha(0.3);
+    this.tweens.add({ targets: glow, alpha: { from: 0.12, to: 0.45 }, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    // Layer 2: shadow / depth offset (gives the SF carved-stone 3D feel)
+    this.add.text(W / 2 + 4, titleY + 4, 'PUPPY FORCE', {
+      fontFamily: 'Georgia, serif', fontSize: '50px', fontStyle: 'bold',
+      color: '#1a0800', stroke: '#0d0500', strokeThickness: 12,
+    }).setOrigin(0.5).setAlpha(0.85);
+
+    // Layer 3: main title — amber-gold fill, thick dark-amber stroke like SF2
+    this.add.text(W / 2, titleY, 'PUPPY FORCE', {
+      fontFamily: 'Georgia, serif', fontSize: '50px', fontStyle: 'bold',
+      color: '#ffe040', stroke: '#6b2d00', strokeThickness: 10,
+      shadow: { offsetX: 1, offsetY: 2, color: '#000000', blur: 4, stroke: false, fill: true },
     }).setOrigin(0.5);
 
-    // Subtitle
-    this.add.text(W / 2, bannerY + 20, '— A TACTICAL DOG ADVENTURE —', {
-      fontFamily: 'Nunito, Courier New, monospace', fontSize: '13px', fontStyle: 'bold',
-      color: '#99bbdd', stroke: '#000000', strokeThickness: 2,
+    // Layer 4: gloss sheen (faint white shifted up — simulates metallic shine)
+    this.add.text(W / 2, titleY - 2, 'PUPPY FORCE', {
+      fontFamily: 'Georgia, serif', fontSize: '50px', fontStyle: 'bold',
+      color: '#ffffff',
+    }).setOrigin(0.5).setAlpha(0.08);
+
+    // Subtitle — warm gold serif, dark stroke, SF-cohesive palette
+    this.add.text(W / 2, bannerY + 21, '✦  A TACTICAL DOG ADVENTURE  ✦', {
+      fontFamily: 'Georgia, serif', fontSize: '13px', fontStyle: 'bold',
+      color: '#d4a820', stroke: '#1a0800', strokeThickness: 4,
     }).setOrigin(0.5);
 
     // ── Portrait showcase ─────────────────────────────────────────────────────
