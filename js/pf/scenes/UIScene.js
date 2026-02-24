@@ -63,6 +63,11 @@ class UIScene extends Phaser.Scene {
     pg.lineStyle(2, PAL.BORDER, 0.8);
     pg.lineBetween(0, UI_Y, W, UI_Y);
 
+    // Subtle top-border highlight strip (gradient effect)
+    const pgHighlight = this.add.graphics();
+    pgHighlight.fillStyle(0x334466, 0.8);
+    pgHighlight.fillRect(0, UI_Y, W, 2);
+
     // Turn indicator (left side)
     this._turnLabel = this.add.text(10, UI_Y + 8, 'TURN 1', {
       fontSize: '16px', color: '#aabbcc',
@@ -95,7 +100,14 @@ class UIScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5, 0);
 
-    this._unitHpTxt = this.add.text(W / 2, UI_Y + 50, '', {
+    this._unitStats2Txt = this.add.text(W / 2, UI_Y + 46, '', {
+      fontSize: '15px', color: '#ccddf0',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      align: 'center',
+    }).setOrigin(0.5, 0);
+
+    this._unitHpTxt = this.add.text(W / 2, UI_Y + 62, '', {
       fontSize: '15px', color: '#88ddaa',
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
@@ -104,7 +116,7 @@ class UIScene extends Phaser.Scene {
     // MP bar
     this._mpBarBg = this.add.graphics();
     this._mpBarFg = this.add.graphics();
-    this._mpTxt   = this.add.text(W / 2 + 50, UI_Y + 63, '', {
+    this._mpTxt   = this.add.text(W / 2 + 50, UI_Y + 77, '', {
       fontSize: '11px', color: '#88aaff',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(0, 0.5);
@@ -475,7 +487,7 @@ class UIScene extends Phaser.Scene {
     const mpRatio = (unit.maxMp > 0) ? (unit.mp / unit.maxMp) : 0;
     const barW = 80, barH = 6;
     const barX = GAME_W / 2 - barW / 2;
-    const barY = UI_Y + 60;
+    const barY = UI_Y + 74;
 
     this._mpBarBg?.clear();
     this._mpBarFg?.clear();
