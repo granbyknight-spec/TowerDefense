@@ -30,15 +30,15 @@ const CHAPTERS = [
       { speaker: 'Lab Scout',    portrait: '🦮', text: "Reports say they've retreated to the Howling Woods." },
     ],
 
-    // 12 rows x 10 cols
+    // 12 rows x 10 cols  (10=WALL/rock, impassable)
     mapGrid: [
       [0, 0, 0, 4, 0, 0, 4, 0, 0, 0],
       [1, 0, 0, 4, 0, 0, 4, 0, 0, 1],
       [1, 1, 0, 4, 0, 0, 4, 0, 1, 1],
-      [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-      [0, 0, 0, 4, 7, 7, 4, 0, 0, 0],
-      [0, 0, 4, 4, 7, 7, 4, 4, 0, 0],
-      [0, 0, 0, 4, 7, 7, 4, 0, 0, 0],
+      [0,10, 0, 0, 0, 0, 0, 0,10, 0],  // rocky outcrops flanking both sides
+      [10, 0, 0, 4, 7, 7, 4, 0, 0,10], // rocks hug the village walls
+      [10, 0, 4, 4, 7, 7, 4, 4, 0,10], // forcing fights through road corridors
+      [10, 0, 0, 4, 7, 7, 4, 0, 0,10],
       [0, 0, 0, 4, 0, 0, 4, 0, 0, 0],
       [1, 0, 0, 4, 0, 0, 4, 0, 0, 1],
       [1, 1, 0, 0, 0, 0, 0, 0, 1, 1],
@@ -89,14 +89,15 @@ const CHAPTERS = [
       { speaker: 'Puppy Knight',  portrait: '🐶', text: "Welcome, Beagle! We head for Peak Paws next." },
     ],
 
+    // 3=WATER (impassable), 9=BRIDGE (crossable), 10=WALL/rock
     mapGrid: [
       [1, 1, 4, 1, 1, 1, 1, 4, 1, 1],
       [1, 1, 4, 1, 1, 1, 1, 4, 1, 1],
       [1, 1, 4, 4, 4, 4, 4, 4, 1, 1],
       [1, 1, 1, 1, 4, 4, 1, 1, 1, 1],
-      [1, 1, 1, 1, 4, 4, 1, 1, 1, 1],
+      [10, 1, 1, 1, 4, 4, 1, 1, 1,10], // rock walls on flanks block enemy rush
       [1, 1, 4, 4, 4, 4, 4, 4, 1, 1],
-      [1, 1, 4, 1, 1, 1, 1, 4, 1, 1],
+      [3, 3, 9, 3, 3, 3, 3, 9, 3, 3],  // river! bridges at col 2 & 7; archer waits at bridge
       [0, 1, 4, 1, 1, 1, 1, 4, 1, 0],
       [0, 0, 4, 4, 4, 4, 4, 4, 0, 0],
       [0, 0, 0, 0, 4, 4, 0, 0, 0, 0],
@@ -110,7 +111,7 @@ const CHAPTERS = [
       { unitId:'LABRADOR_SCOUT',col:4, row:10 },
       { unitId:'POODLE_MAGE',   col:5, row:10 },
       { unitId:'HUSKY_RIDER',   col:3, row:11 },
-      { unitId:'BEAGLE_ARCHER', col:6, row:11 },
+      // Beagle Archer is captured beyond the river — rescue them at col:2,row:6
     ],
 
     enemies: [

@@ -58,6 +58,40 @@ const PAL = {
   DIM:     0x8899aa,
 };
 
+// Class ring colors — used as the colored border around each unit sprite
+const CLASS_RING_COLOR = {
+  'Knight':   0xf8d030, // gold
+  'Paladin':  0xffd700, // bright gold
+  'Healer':   0x44ff88, // green
+  'Cleric':   0x55ffaa, // light green
+  'Warrior':  0xff6644, // orange-red
+  'Hero':     0xff4422, // red
+  'Mage':     0xcc44ff, // purple
+  'Wizard':   0xdd66ff, // light purple
+  'Archer':   0xff9944, // orange
+  'Ranger':   0xffbb66, // light orange
+  'Cavalry':  0x44bbff, // sky blue
+  'Champion': 0x66ddff, // light sky blue
+  'Thief':    0xaa44cc, // dark purple
+  'Ninja':    0xcc66dd, // medium purple
+  'General':  0xff2222, // bright red
+  'Swimmer':  0x22ccff, // cyan
+  'Admiral':  0x44eeff, // light cyan
+};
+
+// Unicode class icons — shown in the badge below each unit's HP bar
+const CLASS_ICON = {
+  'Knight':   '⚔', 'Paladin':  '⚔',
+  'Healer':   '✚', 'Cleric':   '✚',
+  'Warrior':  '⚡', 'Hero':     '⚡',
+  'Mage':     '✦', 'Wizard':   '✦',
+  'Archer':   '➶', 'Ranger':   '➶',
+  'Cavalry':  '♞', 'Champion': '♞',
+  'Thief':    '◆', 'Ninja':    '◆',
+  'General':  '★',
+  'Swimmer':  '≈', 'Admiral':  '≈',
+};
+
 // =============================================================================
 // HERO DEFINITIONS
 // =============================================================================
@@ -228,56 +262,56 @@ const ENEMY_DEFS = {
     unitClass:'Scout', team:'enemy',
     baseStats:{ maxHp:14, atk:8, def:4, mov:6, agi:9, level:1 },
     growth:{ hp:1, atk:1, def:1, agi:1 },
-    weapon:'dagger', range:1, ai:'aggressive', expReward:20,
+    weapon:'dagger', range:1, ai:'aggressive', expReward:88,  // 1 kill ≈ 1 level in ch1
   },
   ALLEY_CAT: {
     id:'ALLEY_CAT', name:'Alley Cat', emoji:'🐈', isBoss:true,
     unitClass:'Fighter', team:'enemy',
     baseStats:{ maxHp:30, atk:14, def:8, mov:5, agi:7, level:3 },
     growth:{ hp:2, atk:2, def:1, agi:1 },
-    weapon:'claw', range:1, ai:'boss', expReward:80,
+    weapon:'claw', range:1, ai:'boss', expReward:185, // boss kill ≈ 2 levels
   },
   SIAMESE_ASSASSIN: {
     id:'SIAMESE_ASSASSIN', name:'Siamese', emoji:'🐈',
     unitClass:'Assassin', team:'enemy',
     baseStats:{ maxHp:16, atk:14, def:6, mov:6, agi:13, level:2 },
     growth:{ hp:1, atk:2, def:1, agi:2 },
-    weapon:'blade', range:1, ai:'flanker', expReward:30,
+    weapon:'blade', range:1, ai:'flanker', expReward:90,
   },
   PERSIAN_SORCERER: {
     id:'PERSIAN_SORCERER', name:'Persian Sorc', emoji:'😸',
     unitClass:'Mage', team:'enemy',
     baseStats:{ maxHp:14, atk:16, def:4, mov:4, agi:7, level:2 },
     growth:{ hp:1, atk:2, def:0, agi:1 },
-    weapon:'wand', range:2, ai:'ranged', expReward:35,
+    weapon:'wand', range:2, ai:'ranged', expReward:90,
   },
   TIGER_GENERAL: {
     id:'TIGER_GENERAL', name:'Tiger General', emoji:'🐯',
     unitClass:'General', team:'enemy',
     baseStats:{ maxHp:28, atk:13, def:12, mov:4, agi:5, level:3 },
     growth:{ hp:2, atk:1, def:2, agi:0 },
-    weapon:'spear', range:1, ai:'defensive', expReward:50,
+    weapon:'spear', range:1, ai:'defensive', expReward:95,
   },
   LYNX_RANGER: {
     id:'LYNX_RANGER', name:'Lynx Ranger', emoji:'🦁', isBoss:true,
     unitClass:'Ranger', team:'enemy',
     baseStats:{ maxHp:28, atk:15, def:7, mov:5, agi:10, level:4 },
     growth:{ hp:2, atk:2, def:1, agi:1 },
-    weapon:'bow', range:2, ai:'boss', expReward:90,
+    weapon:'bow', range:2, ai:'boss', expReward:160, // boss ~1.5 levels
   },
   SNOW_LEOPARD: {
     id:'SNOW_LEOPARD', name:'Snow Leopard', emoji:'🐆', isBoss:true,
     unitClass:'Knight', team:'enemy',
     baseStats:{ maxHp:34, atk:16, def:11, mov:5, agi:8, level:5 },
     growth:{ hp:3, atk:2, def:2, agi:1 },
-    weapon:'sword', range:1, ai:'boss', expReward:100,
+    weapon:'sword', range:1, ai:'boss', expReward:170,
   },
   RIVER_PANTHER: {
     id:'RIVER_PANTHER', name:'River Panther', emoji:'🐆', isBoss:true,
     unitClass:'Swimmer', team:'enemy',
     baseStats:{ maxHp:36, atk:17, def:10, mov:6, agi:9, level:5 },
     growth:{ hp:3, atk:2, def:1, agi:1 },
-    weapon:'claws', range:1, ai:'boss', expReward:110,
+    weapon:'claws', range:1, ai:'boss', expReward:180,
     specialMovement:['Water'],
   },
   SAND_CAT_KING: {
@@ -285,21 +319,21 @@ const ENEMY_DEFS = {
     unitClass:'King', team:'enemy',
     baseStats:{ maxHp:40, atk:18, def:12, mov:6, agi:10, level:6 },
     growth:{ hp:3, atk:2, def:2, agi:1 },
-    weapon:'blade', range:1, ai:'boss', expReward:120,
+    weapon:'blade', range:1, ai:'boss', expReward:190,
   },
   PERSIAN_QUEEN: {
     id:'PERSIAN_QUEEN', name:'Persian Queen', emoji:'😺', isBoss:true,
     unitClass:'Sorceress', team:'enemy',
     baseStats:{ maxHp:42, atk:22, def:10, mov:5, agi:11, level:7 },
     growth:{ hp:3, atk:3, def:1, agi:1 },
-    weapon:'staff', range:2, ai:'boss', expReward:140,
+    weapon:'staff', range:2, ai:'boss', expReward:200,
   },
   CAT_EMPEROR: {
     id:'CAT_EMPEROR', name:'Cat Emperor', emoji:'👑', isBoss:true,
     unitClass:'Emperor', team:'enemy',
     baseStats:{ maxHp:62, atk:25, def:18, mov:5, agi:12, level:10 },
     growth:{ hp:4, atk:3, def:2, agi:1 },
-    weapon:'mageblade', range:2, ai:'boss', expReward:200,
+    weapon:'mageblade', range:2, ai:'boss', expReward:250, // final boss ≈ 2.5 levels
   },
 };
 

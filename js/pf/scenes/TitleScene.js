@@ -4,6 +4,9 @@
 // Animated title screen with stars and paw prints
 // =============================================================================
 
+// Target character levels for each chapter's debug jump (min level to win)
+const DEBUG_CHAPTER_LEVELS = { 1:1, 2:3, 3:4, 4:5, 5:6, 6:7, 7:9 };
+
 class TitleScene extends Phaser.Scene {
   constructor() { super({ key: 'TitleScene' }); }
 
@@ -125,15 +128,34 @@ class TitleScene extends Phaser.Scene {
       this.scene.restart();
     });
 
-    // ── Debug: preview cutscene (only visible on localhost) ─────────────────
+    // ── Debug panel (only visible on localhost) ──────────────────────────────
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      this._makeSmallDebugBtn(W / 2, H - 58, '🎬 Preview Cutscene [Debug]', () => {
+      // Cutscene preview button — moved up to make room for chapter select row
+      this._makeSmallDebugBtn(W / 2, H - 118, '🎬 Preview Cutscene [Debug]', () => {
         this.scene.start('CutsceneScene', {
           currentChap: 1,
           chapter: 2,
           saveData: SaveManager.newGame(),
         });
       });
+
+      // Chapter jump row label
+      this.add.text(W / 2, H - 96, '[ JUMP TO CHAPTER ]', {
+        fontSize: '10px', color: '#445566',
+        fontFamily: 'Nunito, Courier New, monospace',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(1);
+
+      // Seven chapter buttons spaced across the bottom
+      const chapBtnX = [28, 92, 156, 220, 284, 348, 412];
+      for (let ch = 1; ch <= 7; ch++) {
+        const cx = chapBtnX[ch - 1];
+        this._makeChapterDebugBtn(cx, H - 74, ch, () => {
+          const data = _buildDebugSaveData(ch);
+          SaveManager.save(data);
+          this.scene.start('BattleScene', { chapter: ch, saveData: data });
+        });
+      }
     }
 
     // ── Version & credits ────────────────────────────────────────────────────
@@ -233,6 +255,30 @@ class TitleScene extends Phaser.Scene {
     g.fillTriangle(x - 12, y + 8,  x, y - 32, x + 12, y + 8);
   }
 
+  _makeChapterDebugBtn(x, y, chapNum, cb) {
+    const W_btn = 52, H_btn = 26;
+    const targetLv = DEBUG_CHAPTER_LEVELS[chapNum] || 1;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x112233, 0.9);
+    bg.fillRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 4);
+    bg.lineStyle(1, 0x2255aa, 0.7);
+    bg.strokeRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 4);
+
+    this.add.text(x, y - 4, `Ch${chapNum}`, {
+      fontSize: '10px', color: '#7799cc',
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(1);
+    this.add.text(x, y + 5, `Lv${targetLv}`, {
+      fontSize: '8px', color: '#445566',
+      fontFamily: 'Nunito, Courier New, monospace',
+    }).setOrigin(0.5).setDepth(1);
+
+    const zone = this.add.zone(x, y, W_btn, H_btn).setInteractive({ useHandCursor: true });
+    zone.on('pointerover',  () => { bg.clear(); bg.fillStyle(0x1a3355, 1); bg.fillRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 4); });
+    zone.on('pointerout',   () => { bg.clear(); bg.fillStyle(0x112233, 0.9); bg.fillRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 4); bg.lineStyle(1, 0x2255aa, 0.7); bg.strokeRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 4); });
+    zone.on('pointerdown',  () => { setTimeout(cb, 80); });
+  }
+
   _makeSmallDebugBtn(x, y, label, cb) {
     const W_btn = 210, H_btn = 24;
     const bg = this.add.graphics();
@@ -252,4 +298,27 @@ class TitleScene extends Phaser.Scene {
     zone.on('pointerout',   () => txt.setColor('#556677'));
     zone.on('pointerdown',  () => { setTimeout(cb, 80); });
   }
+}
+
+// Build a save-data object with all heroes leveled to chapter-appropriate level
+function _buildDebugSaveData(chapterNumber) {
+  const data = SaveManager.newGame();
+  const targetLevel = DEBUG_CHAPTER_LEVELS[chapterNumber] || 1;
+
+  // Build roster from ALL hero definitions so later chapters have full party
+  const units = Object.keys(HERO_DEFS).map(id => new Unit(HERO_DEFS[id], 0, 0));
+
+  if (targetLevel > 1) {
+    units.forEach(u => {
+      while (u.level < targetLevel) {
+        u.gainExp(999);
+      }
+      u.hp = u.maxHp;
+    });
+  }
+
+  data.roster = SaveManager.serializeRoster(units);
+  data.currentChapter = chapterNumber;
+  data.completedChapters = Array.from({ length: chapterNumber - 1 }, (_, i) => i + 1);
+  return data;
 }
