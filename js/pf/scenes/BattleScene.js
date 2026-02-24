@@ -527,11 +527,11 @@ class BattleScene extends Phaser.Scene {
     g.clear();
     if (!unit) return;
     const { x, y } = this._tileTL(unit.col, unit.row);
-    g.lineStyle(3, PAL.SEL_HL, 1);
+    g.lineStyle(4, PAL.SEL_HL, 1);
     g.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
     // Animated corner marks
     const sz = 8;
-    g.lineStyle(3, PAL.GOLD, 1);
+    g.lineStyle(4, PAL.GOLD, 1);
     g.lineBetween(x+1, y+1, x+1+sz, y+1);
     g.lineBetween(x+1, y+1, x+1, y+1+sz);
     g.lineBetween(x+TILE-1, y+1, x+TILE-1-sz, y+1);
