@@ -51,12 +51,18 @@ const BRANCH     = 'main';
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Use GITHUB_TOKEN when available (CI provides it; raises rate limit from 60 to 5000/hr)
+const AUTH_HEADER = process.env.GITHUB_TOKEN
+  ? { 'Authorization': `Bearer ${process.env.GITHUB_TOKEN}` }
+  : {};
+
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
     const opts = {
       headers: {
         'User-Agent': 'puppy-force-asset-downloader/1.0',
         'Accept': 'application/vnd.github.v3+json',
+        ...AUTH_HEADER,
       },
     };
     const req = https.get(url, opts, (res) => {
@@ -70,13 +76,6 @@ function httpsGet(url) {
     req.on('error', reject);
     req.setTimeout(30000, () => req.destroy(new Error('Timeout')));
   });
-}
-
-async function listRepoContents(pathInRepo) {
-  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}?ref=${BRANCH}`;
-  const res = await httpsGet(url);
-  if (res.status !== 200) throw new Error(`GitHub API ${res.status} for ${url}`);
-  return JSON.parse(res.body.toString('utf8'));
 }
 
 async function downloadFile(rawUrl, destPath) {
@@ -97,37 +96,38 @@ function score(filename, keywords) {
 }
 
 // ---------------------------------------------------------------------------
-// Walk the repo tree via GitHub API and collect all audio files
+// Fetch the full repo tree in one API call (Git Trees API, recursive)
 // ---------------------------------------------------------------------------
-async function collectAudioFiles(dirPath = '') {
-  let entries;
-  try {
-    entries = await listRepoContents(dirPath);
-  } catch (e) {
-    console.warn(`  [warn] Could not list ${dirPath}: ${e.message}`);
-    return [];
+async function collectAudioFiles() {
+  // Get the HEAD commit SHA first
+  const branchRes = await httpsGet(
+    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/branches/${BRANCH}`
+  );
+  if (branchRes.status !== 200) throw new Error(`GitHub API ${branchRes.status} fetching branch`);
+  const sha = JSON.parse(branchRes.body.toString('utf8')).commit.sha;
+
+  // Fetch the full tree recursively (one request, may be truncated for huge repos)
+  const treeRes = await httpsGet(
+    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/trees/${sha}?recursive=1`
+  );
+  if (treeRes.status !== 200) throw new Error(`GitHub API ${treeRes.status} fetching tree`);
+  const treeData = JSON.parse(treeRes.body.toString('utf8'));
+
+  if (treeData.truncated) {
+    console.warn('  [warn] Tree response was truncated — very large repo; results may be incomplete.');
   }
 
-  const results = [];
-  for (const entry of entries) {
-    if (entry.type === 'file') {
-      const ext = path.extname(entry.name).toLowerCase();
-      if (['.ogg', '.mp3', '.wav'].includes(ext)) {
-        results.push({
-          name:       entry.name,
-          path:       entry.path,
-          download_url: entry.download_url,
-        });
-      }
-    } else if (entry.type === 'dir') {
-      // Recurse — but skip folders that look like metadata/docs
-      if (!['LICENSE', '.git', 'docs'].includes(entry.name)) {
-        const sub = await collectAudioFiles(entry.path);
-        results.push(...sub);
-      }
-    }
-  }
-  return results;
+  const AUDIO_EXTS = new Set(['.ogg', '.mp3', '.wav']);
+  return (treeData.tree || [])
+    .filter(item => item.type === 'blob' && AUDIO_EXTS.has(path.extname(item.path).toLowerCase()))
+    .map(item => {
+      const name = path.basename(item.path);
+      return {
+        name,
+        path: item.path,
+        download_url: `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${item.path}`,
+      };
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ async function main() {
   }
 
   console.log(`Scanning ${REPO_OWNER}/${REPO_NAME} for ${needed.length} track(s)...`);
-  const allFiles = await collectAudioFiles('');
+  const allFiles = await collectAudioFiles();
   console.log(`  Found ${allFiles.length} audio files in repo.`);
 
   let ok = 0, failed = 0;

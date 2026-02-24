@@ -25,7 +25,9 @@ jobs:
         run: |
           mkdir -p assets/audio/sfx assets/audio/music
 
-      - name: Download music from OpenGameArt
+      - name: Download music from SoundSafari/CC0-1.0-Music
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/download-music.js
 
       - name: Generate SFX via ElevenLabs
