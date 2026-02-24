@@ -128,8 +128,11 @@ class TitleScene extends Phaser.Scene {
       this.scene.restart();
     });
 
-    // ── Debug panel (only visible on localhost) ──────────────────────────────
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // ── Debug panel (localhost OR ?debug in URL) ─────────────────────────────
+    const _debugOn = window.location.hostname === 'localhost'
+                  || window.location.hostname === '127.0.0.1'
+                  || new URLSearchParams(window.location.search).has('debug');
+    if (_debugOn) {
       // Cutscene preview button — moved up to make room for chapter select row
       this._makeSmallDebugBtn(W / 2, H - 118, '🎬 Preview Cutscene [Debug]', () => {
         this.scene.start('CutsceneScene', {
