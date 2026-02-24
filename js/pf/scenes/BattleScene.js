@@ -25,6 +25,9 @@ class BattleScene extends Phaser.Scene {
   preload() {
     // Load all unit SVG sprites as Phaser textures (self-contained data URIs)
     preloadUnitSprites(this);
+    // Audio (graceful — files are optional and may not exist yet)
+    AudioManager.preloadMusic(this);
+    AudioManager.preloadSFX(this);
   }
 
   // --------------------------------------------------------------------------
@@ -95,6 +98,9 @@ class BattleScene extends Phaser.Scene {
     this._buildHighlightLayers();
     this._buildUnitSprites();
     this._buildGridOverlay();
+
+    // ── Battle music ─────────────────────────────────────────────────────────
+    AudioManager.playMusic(this, 'battle');
 
     // ── UIScene overlay (runs parallel) ─────────────────────────────────────
     if (!this.scene.isActive('UIScene')) {
@@ -955,6 +961,13 @@ class BattleScene extends Phaser.Scene {
           const died = defender.takeDamage(dmg);
           this._totalDamageDealt += dmg;
           this._updateHPBar(defender);
+          // Play attack SFX based on skill type (magic vs physical)
+          const _sk = skillName ? SKILLS[skillName] : null;
+          if (_sk && _sk.type === 'magic') {
+            AudioManager.play(this, 'magic_cast');
+          } else {
+            AudioManager.play(this, 'attack_slash');
+          }
           const defSprite = defender.sprite;
           if (defSprite && defSprite.setTint) {
             defSprite.setTint(0xff4444);
@@ -1110,6 +1123,7 @@ class BattleScene extends Phaser.Scene {
     const healAmt = Math.floor(healer.atk * skillPower) + Phaser.Math.Between(2, 6);
     const actual  = target.heal(healAmt);
     this._updateHPBar(target);
+    AudioManager.play(this, 'heal');
     const targetSprite = target.sprite;
     if (targetSprite && targetSprite.setTint) {
       targetSprite.setTint(0x44ff88);
@@ -1126,6 +1140,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   _killUnit(unit, onDone) {
+    AudioManager.play(this, 'unit_death');
     this.tweens.add({
       targets: [unit.spriteBg, unit.sprite, unit.hpBar, unit.hpBarBg],
       alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 400,
@@ -1159,6 +1174,7 @@ class BattleScene extends Phaser.Scene {
       u.burnStacks--;
       const died = u.takeDamage(bDmg);
       this._updateHPBar(u);
+      AudioManager.play(this, 'burn_crackle');
       this._floatText(u.col, u.row, `-${bDmg} Fire`, 0xff4400);
       if (died) this._killUnit(u, () => {});
     });
@@ -1325,6 +1341,7 @@ class BattleScene extends Phaser.Scene {
 
   _onLevelUp(unit) {
     this._levelUps.push({ name: unit.name, emoji: unit.emoji, newLevel: unit.level });
+    AudioManager.play(this, 'level_up');
     this._floatText(unit.col, unit.row, `Level Up! Lv${unit.level}`, PAL.GOLD);
     // Golden flash
     this.tweens.add({

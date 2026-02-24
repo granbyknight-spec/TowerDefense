@@ -19,6 +19,8 @@ class UIScene extends Phaser.Scene {
 
   // --------------------------------------------------------------------------
   create() {
+    // Audio (graceful — files are optional and may not exist yet)
+    AudioManager.preloadSFX(this);
     this._buildPanel();
     this._buildActionMenu();
     this._buildTurnBanner();
