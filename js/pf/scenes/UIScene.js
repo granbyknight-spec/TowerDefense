@@ -112,6 +112,14 @@ class UIScene extends Phaser.Scene {
       if (this._selectedUnit) this._showSkillInfo(this._selectedUnit);
     });
 
+    // Veteran battle history line
+    this._unitVetTxt = this.add.text(W / 2, UI_Y + 100, '', {
+      fontSize: '13px', color: '#99aabb',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      align: 'center',
+    }).setOrigin(0.5, 0);
+
     // Status effect icons — two pre-created slots, hidden by default
     this._statusIcon1 = this.add.text(W / 2 - 44, UI_Y + 87, '', {
       fontSize: '18px',
@@ -418,6 +426,16 @@ class UIScene extends Phaser.Scene {
       }
     });
 
+    // Veteran battle history
+    const battles = unit.battlesParticipated || 0;
+    const kills   = unit.killCount || 0;
+    const vetStr  = battles > 0
+      ? `⚔ ${kills} KO · ${battles} battles`
+      : '';
+    this._unitVetTxt?.setText(vetStr);
+    const vetColor = kills >= 10 ? '#ffd700' : kills >= 5 ? '#ff9944' : '#99aabb';
+    this._unitVetTxt?.setStyle({ color: vetColor });
+
     // Update phase labels
     if (this._battle) {
       this._turnLabel?.setText(`TURN ${this._battle.turnNumber}`);
@@ -435,6 +453,7 @@ class UIScene extends Phaser.Scene {
     this._mpTxt?.setText('').setVisible(false);
     this._statusIcon1?.setVisible(false);
     this._statusIcon2?.setVisible(false);
+    this._unitVetTxt?.setText('');
   }
 
   // ==========================================================================

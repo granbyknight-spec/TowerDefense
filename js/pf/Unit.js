@@ -43,6 +43,10 @@ class Unit {
     this.promotedData = def.promotedData || null;
     this.specialMovement = def.specialMovement || [];
 
+    // Battle history (persisted)
+    this.battlesParticipated = s.battlesParticipated || 0;
+    this.killCount           = s.killCount           || 0;
+
     // Turn state
     this.hasMoved  = false;
     this.hasActed  = false;
@@ -228,6 +232,8 @@ class Unit {
       skills: [...this.skills],
       mp: this.mp,
       maxMp: this.maxMp,
+      battlesParticipated: this.battlesParticipated,
+      killCount: this.killCount,
     };
   }
 
@@ -248,6 +254,8 @@ class Unit {
     unit.skills   = [...(saveData.skills || [])];
     if (saveData.mp    !== undefined) unit.mp    = saveData.mp;
     if (saveData.maxMp !== undefined) unit.maxMp = saveData.maxMp;
+    if (saveData.battlesParticipated !== undefined) unit.battlesParticipated = saveData.battlesParticipated;
+    if (saveData.killCount           !== undefined) unit.killCount           = saveData.killCount;
     return unit;
   }
 }
