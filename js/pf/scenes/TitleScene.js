@@ -11,8 +11,16 @@ class TitleScene extends Phaser.Scene {
   constructor() { super({ key: 'TitleScene' }); }
 
   preload() {
-    // Audio (graceful — files are optional and may not exist yet)
     AudioManager.preloadMusic(this);
+    // Background image (may not exist yet — graceful)
+    this.load.image('title_bg', 'assets/backgrounds/chapter_1_v1.png');
+    // Title key art banner (generated via AI Horde — may not exist yet)
+    this.load.image('title_art', 'assets/backgrounds/title_v1.png');
+    // Available portrait PNGs (graceful)
+    ['CORGI_HEALER', 'HUSKY_RIDER', 'PUPPY_KNIGHT', 'LABRADOR_SCOUT',
+     'BEAGLE_ARCHER', 'POODLE_MAGE', 'BULLDOG_TANK', 'TERRIER_THIEF', 'DOG_PALADIN'].forEach(id => {
+      this.load.image('player_png_' + id, 'assets/characters/' + id + '_portrait.png');
+    });
   }
 
   create() {
@@ -21,13 +29,31 @@ class TitleScene extends Phaser.Scene {
     this._paws  = [];
 
     // ── Title music ──────────────────────────────────────────────────────────
-    // AudioManager handles locked Web Audio context internally via 'unlocked' event
     AudioManager.playMusic(this, 'title');
 
-    // ── Background gradient ──────────────────────────────────────────────────
-    const bg = this.add.graphics();
-    bg.fillGradientStyle(0x0a0a1a, 0x0a0a1a, 0x0d1535, 0x0d1535, 1);
-    bg.fillRect(0, 0, W, H);
+    // ── Background: image if loaded, else procedural gradient ───────────────
+    if (this.textures.exists('title_bg') && this.textures.get('title_bg').key !== '__MISSING') {
+      this.add.image(W / 2, H / 2, 'title_bg').setDisplaySize(W, H).setAlpha(0.55);
+    } else {
+      const bg = this.add.graphics();
+      bg.fillGradientStyle(0x0a0a1a, 0x0a0a1a, 0x0d1535, 0x0d1535, 1);
+      bg.fillRect(0, 0, W, H);
+      // Landscape silhouette (only when no background image)
+      const land = this.add.graphics();
+      land.fillStyle(0x050510, 1);
+      land.fillRect(0, H * 0.62, W, H * 0.38);
+      land.fillStyle(0x0a0a20, 1);
+      land.fillEllipse(80, H * 0.62, 220, 80);
+      land.fillEllipse(W - 80, H * 0.62, 200, 70);
+      land.fillEllipse(W / 2, H * 0.60, 300, 90);
+      this._drawHouseSilhouette(land, W / 2 - 60, H * 0.58);
+      this._drawHouseSilhouette(land, W / 2 + 20, H * 0.57);
+      this._drawTreeSilhouette(land, 30, H * 0.59);
+      this._drawTreeSilhouette(land, W - 50, H * 0.59);
+    }
+
+    // Dark vignette overlay (always — keeps text readable over any background)
+    this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.45);
 
     // ── Twinkling stars ──────────────────────────────────────────────────────
     for (let i = 0; i < 60; i++) {
@@ -45,108 +71,175 @@ class TitleScene extends Phaser.Scene {
     }
 
     // ── Moon ─────────────────────────────────────────────────────────────────
-    const moon = this.add.circle(W - 60, 60, 28, 0xfff4cc, 0.9);
-    this.add.circle(W - 48, 55, 24, 0x0d1535, 0.85); // crescent cutout
+    this.add.circle(W - 60, 60, 28, 0xfff4cc, 0.9);
+    this.add.circle(W - 48, 55, 24, 0x0d1535, 0.85);
 
-    // ── Landscape silhouette ─────────────────────────────────────────────────
-    const land = this.add.graphics();
-    land.fillStyle(0x050510, 1);
-    land.fillRect(0, H * 0.62, W, H * 0.38);
-    // Simple hill shapes
-    land.fillStyle(0x0a0a20, 1);
-    land.fillEllipse(80, H * 0.62, 220, 80);
-    land.fillEllipse(W - 80, H * 0.62, 200, 70);
-    land.fillEllipse(W / 2, H * 0.60, 300, 90);
-    // Village silhouette
-    this._drawHouseSilhouette(land, W / 2 - 60, H * 0.58);
-    this._drawHouseSilhouette(land, W / 2 + 20, H * 0.57);
-    this._drawTreeSilhouette(land, 30, H * 0.59);
-    this._drawTreeSilhouette(land, W - 50, H * 0.59);
+    // ── Title key art banner (if available) ──────────────────────────────────
+    const titleArtY = 110;
+    if (this.textures.exists('title_art') && this.textures.get('title_art').key !== '__MISSING') {
+      const art = this.add.image(W / 2, titleArtY, 'title_art').setDisplaySize(W, 200);
+      // Slow horizontal drift
+      this.tweens.add({ targets: art, x: W / 2 + 4, duration: 6000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
 
-    // ── Title ────────────────────────────────────────────────────────────────
+    // ── Decorative title banner frame ─────────────────────────────────────────
+    const bannerY = 210;
+    // Dark backing panel
+    this.add.rectangle(W / 2, bannerY, W - 16, 74, 0x06091a, 0.88);
+    // Gold border lines
+    this.add.rectangle(W / 2, bannerY - 36, W - 16, 2, 0xf8d030).setAlpha(0.9);
+    this.add.rectangle(W / 2, bannerY + 36, W - 16, 2, 0xf8d030).setAlpha(0.9);
+    // Corner ornaments
+    this.add.text(16,  bannerY, '✦', { fontSize: '14px', color: '#f8d030', fontFamily: 'serif' }).setOrigin(0.5).setAlpha(0.7);
+    this.add.text(W - 16, bannerY, '✦', { fontSize: '14px', color: '#f8d030', fontFamily: 'serif' }).setOrigin(0.5).setAlpha(0.7);
+
+    // ── Title text (inside banner) ────────────────────────────────────────────
     // Glow layer
-    const glow = this.add.text(W / 2, 160, 'PUPPY FORCE', {
-      fontFamily: 'Nunito, Georgia, serif',
-      fontSize: '48px',
-      fontStyle: 'bold',
-      color: '#4488ff',
-      stroke: '#000044',
-      strokeThickness: 14,
-      alpha: 0.5,
+    const glow = this.add.text(W / 2, bannerY - 8, 'PUPPY FORCE', {
+      fontFamily: 'Nunito, Georgia, serif', fontSize: '48px', fontStyle: 'bold',
+      color: '#4488ff', stroke: '#000044', strokeThickness: 14,
     }).setOrigin(0.5).setAlpha(0.5);
     this.tweens.add({ targets: glow, alpha: { from: 0.2, to: 0.6 }, duration: 1500, yoyo: true, repeat: -1 });
 
-    const title = this.add.text(W / 2, 160, 'PUPPY FORCE', {
-      fontFamily: 'Nunito, Georgia, serif',
-      fontSize: '48px',
-      fontStyle: 'bold',
-      color: '#f8d030',
-      stroke: '#000000',
-      strokeThickness: 5,
+    this.add.text(W / 2, bannerY - 8, 'PUPPY FORCE', {
+      fontFamily: 'Nunito, Georgia, serif', fontSize: '48px', fontStyle: 'bold',
+      color: '#f8d030', stroke: '#000000', strokeThickness: 5,
     }).setOrigin(0.5);
 
     // Subtitle
-    this.add.text(W / 2, 212, '— A TACTICAL DOG ADVENTURE —', {
-      fontFamily: 'Nunito, Courier New, monospace',
-      fontSize: '15px',
-      fontStyle: 'bold',
-      color: '#99bbdd',
-      stroke: '#000000',
-      strokeThickness: 2,
+    this.add.text(W / 2, bannerY + 20, '— A TACTICAL DOG ADVENTURE —', {
+      fontFamily: 'Nunito, Courier New, monospace', fontSize: '13px', fontStyle: 'bold',
+      color: '#99bbdd', stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5);
 
-    // Hero emojis row
-    const heroes = ['🐶','🐕','🦮','🐩','🐾','🐕‍🦺','🐺','🦊'];
-    heroes.forEach((e, i) => {
-      const x = 30 + i * 54;
-      const t = this.add.text(x, 248, e, { fontSize: '32px' }).setOrigin(0.5);
-      this.tweens.add({
-        targets: t, y: 240, duration: 600,
-        yoyo: true, repeat: -1,
-        delay: i * 120,
+    // ── Portrait showcase ─────────────────────────────────────────────────────
+    // Show whichever hero portrait PNGs are actually loaded, up to 9 slots
+    const portraitIds = ['CORGI_HEALER','HUSKY_RIDER','PUPPY_KNIGHT','LABRADOR_SCOUT',
+                         'BEAGLE_ARCHER','POODLE_MAGE','BULLDOG_TANK','TERRIER_THIEF','DOG_PALADIN'];
+    const portraitColors = {
+      CORGI_HEALER:   0x33bb55, HUSKY_RIDER:    0x4488ff, PUPPY_KNIGHT:   0xf8d030,
+      LABRADOR_SCOUT: 0xff8800, BEAGLE_ARCHER:  0x44ccaa, POODLE_MAGE:    0xaa44ff,
+      BULLDOG_TANK:   0xcc4444, TERRIER_THIEF:  0x888800, DOG_PALADIN:    0xffffff,
+    };
+    const availIds = portraitIds.filter(id =>
+      this.textures.exists('player_png_' + id) &&
+      this.textures.get('player_png_' + id).key !== '__MISSING'
+    );
+    const showcaseY = 270;
+    const slotSize  = 48;
+    const total     = availIds.length;
+    if (total > 0) {
+      const step = Math.min(54, Math.floor((W - 20) / total));
+      const startX = W / 2 - ((total - 1) * step) / 2;
+      availIds.forEach((id, idx) => {
+        const px = startX + idx * step;
+        const borderColor = portraitColors[id] || 0x4488ff;
+        // Border frame
+        this.add.rectangle(px, showcaseY, slotSize + 4, slotSize + 4, borderColor, 0.8);
+        // Portrait image
+        this.add.image(px, showcaseY, 'player_png_' + id).setDisplaySize(slotSize, slotSize);
       });
-    });
-
-    // ── Buttons ──────────────────────────────────────────────────────────────
-    const hasSave = SaveManager.hasSave();
-
-    this._makeBtn(W / 2, 330, '▶  NEW GAME', 0x2255aa, 0x4488ff, () => {
-      const data = SaveManager.newGame();
-      SaveManager.save(data);
-      this.scene.start('BattleScene', { chapter: 1, saveData: data });
-    });
-
-    if (hasSave) {
-      this._makeBtn(W / 2, 400, '📂  CONTINUE', 0x1a4422, 0x33bb55, () => {
-        const data = SaveManager.load();
-        this.scene.start('BattleScene', { chapter: data.currentChapter, saveData: data });
+    } else {
+      // Fallback: bouncing dog emojis
+      const heroes = ['🐶','🐕','🦮','🐩','🐾','🐕‍🦺','🐺','🦊'];
+      heroes.forEach((e, i) => {
+        const x = 30 + i * 54;
+        const t = this.add.text(x, showcaseY, e, { fontSize: '28px' }).setOrigin(0.5);
+        this.tweens.add({ targets: t, y: showcaseY - 8, duration: 600, yoyo: true, repeat: -1, delay: i * 120 });
       });
     }
 
-    this._makeBtn(W / 2, hasSave ? 470 : 400, '🗑  ERASE DATA', 0x442200, 0x884400, () => {
-      SaveManager.deleteSave();
-      this.scene.restart();
+    // ── FE-style menu ─────────────────────────────────────────────────────────
+    const hasSave   = SaveManager.hasSave();
+    const menuItems = [
+      { label: 'NEW GAME',   cb: () => {
+          const data = SaveManager.newGame();
+          SaveManager.save(data);
+          this.scene.start('BattleScene', { chapter: 1, saveData: data });
+        }
+      },
+    ];
+    if (hasSave) {
+      menuItems.push({ label: 'CONTINUE', cb: () => {
+          const data = SaveManager.load();
+          this.scene.start('BattleScene', { chapter: data.currentChapter, saveData: data });
+        }
+      });
+    }
+    menuItems.push({ label: 'ERASE DATA', cb: () => { SaveManager.deleteSave(); this.scene.restart(); } });
+
+    const menuPanelW = 260;
+    const menuItemH  = 44;
+    const menuPanelH = menuItems.length * menuItemH + 24;
+    const menuTopY   = 320;
+    const menuCenterX = W / 2;
+
+    // Dark panel background
+    this.add.rectangle(menuCenterX, menuTopY + menuPanelH / 2, menuPanelW, menuPanelH, 0x000011, 0.78);
+    // Gold border lines top + bottom
+    this.add.rectangle(menuCenterX, menuTopY,                  menuPanelW, 2, 0xf8d030).setAlpha(0.7);
+    this.add.rectangle(menuCenterX, menuTopY + menuPanelH,     menuPanelW, 2, 0xf8d030).setAlpha(0.7);
+
+    menuItems.forEach((item, idx) => {
+      const iy = menuTopY + 12 + menuItemH / 2 + idx * menuItemH;
+      const labelX = menuCenterX - menuPanelW / 2 + 36;
+
+      // Gold cursor triangle (hidden by default)
+      const cursor = this.add.text(menuCenterX - menuPanelW / 2 + 12, iy, '▶', {
+        fontSize: '16px', color: '#f8d030', fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0, 0.5).setAlpha(0);
+
+      // Menu item label text
+      const txt = this.add.text(labelX, iy, item.label, {
+        fontSize: '20px', color: '#ccddee',
+        fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0, 0.5);
+
+      // Invisible hit zone
+      const zone = this.add.zone(menuCenterX, iy, menuPanelW, menuItemH).setInteractive({ useHandCursor: true });
+
+      // Cursor bounce tween (plays while hovered)
+      let cursorTween = null;
+
+      zone.on('pointerover', () => {
+        txt.setColor('#f8d030');
+        txt.setScale(1.04);
+        cursor.setAlpha(1);
+        cursorTween = this.tweens.add({ targets: cursor, x: cursor.x + 4, duration: 300, yoyo: true, repeat: -1 });
+      });
+
+      zone.on('pointerout', () => {
+        txt.setColor('#ccddee');
+        txt.setScale(1);
+        cursor.setAlpha(0);
+        if (cursorTween) { cursorTween.stop(); cursorTween = null; }
+        cursor.setX(menuCenterX - menuPanelW / 2 + 12);
+      });
+
+      zone.on('pointerdown', () => {
+        if (cursorTween) { cursorTween.stop(); }
+        this.tweens.add({ targets: txt, scaleX: 0.92, scaleY: 0.92, duration: 80, yoyo: true });
+        setTimeout(item.cb, 120);
+      });
     });
 
-    // ── Debug panel (only visible on localhost) ──────────────────────────────
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      // Cutscene preview button — moved up to make room for chapter select row
+    // ── Debug panel (localhost OR ?debug in URL) ─────────────────────────────
+    const _debugOn = window.location.hostname === 'localhost'
+                  || window.location.hostname === '127.0.0.1'
+                  || new URLSearchParams(window.location.search).has('debug');
+    if (_debugOn) {
       this._makeSmallDebugBtn(W / 2, H - 118, '🎬 Preview Cutscene [Debug]', () => {
         this.scene.start('CutsceneScene', {
-          currentChap: 1,
-          chapter: 2,
-          saveData: SaveManager.newGame(),
+          currentChap: 1, chapter: 2, saveData: SaveManager.newGame(),
         });
       });
 
-      // Chapter jump row label
       this.add.text(W / 2, H - 96, '[ JUMP TO CHAPTER ]', {
         fontSize: '10px', color: '#445566',
-        fontFamily: 'Nunito, Courier New, monospace',
-        fontStyle: 'bold',
+        fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(1);
 
-      // Seven chapter buttons spaced across the bottom
       const chapBtnX = [28, 92, 156, 220, 284, 348, 412];
       for (let ch = 1; ch <= 7; ch++) {
         const cx = chapBtnX[ch - 1];
@@ -161,40 +254,27 @@ class TitleScene extends Phaser.Scene {
     // ── Version & credits ────────────────────────────────────────────────────
     this.add.text(W / 2, H - 30, 'v1.0  ·  7 Chapters  ·  Dogs vs Cats', {
       fontSize: '13px', color: '#556677',
-      fontFamily: 'Nunito, Courier New, monospace',
-      fontStyle: 'bold',
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    // ── Mute toggle button (bottom-right corner) ──────────────────────────────
+    // ── Mute toggle button ────────────────────────────────────────────────────
     const muteBtn = this.add.text(W - 12, H - 12, '🔊 Sound ON', {
-      fontSize: '13px',
-      color: '#aabbcc',
-      fontFamily: 'Nunito, Courier New, monospace',
-      fontStyle: 'bold',
-      backgroundColor: '#11223388',
-      padding: { x: 6, y: 3 },
+      fontSize: '13px', color: '#aabbcc',
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+      backgroundColor: '#11223388', padding: { x: 6, y: 3 },
     }).setOrigin(1, 1).setAlpha(0.75).setInteractive({ useHandCursor: true });
-
-    muteBtn.on('pointerover', () => muteBtn.setAlpha(1));
-    muteBtn.on('pointerout',  () => muteBtn.setAlpha(0.75));
-    muteBtn.on('pointerdown', () => {
+    muteBtn.on('pointerover',  () => muteBtn.setAlpha(1));
+    muteBtn.on('pointerout',   () => muteBtn.setAlpha(0.75));
+    muteBtn.on('pointerdown',  () => {
       this.sound.mute = !this.sound.mute;
       muteBtn.setText(this.sound.mute ? '🔇 Sound OFF' : '🔊 Sound ON');
     });
 
-    // ── Floating paw prints animation ────────────────────────────────────────
-    this.time.addEvent({
-      delay: 1200, loop: true,
-      callback: this._spawnPaw, callbackScope: this,
-    });
+    // ── Floating paw prints ───────────────────────────────────────────────────
+    this.time.addEvent({ delay: 1200, loop: true, callback: this._spawnPaw, callbackScope: this });
 
-    // ── Chapter select: tap chapter number after continue ────────────────────
-    // (handled via BattleScene start data)
-
-    // ── Visible audio unlock prompt ───────────────────────────────────────────
-    // Guarantees a user-gesture is captured to unlock audio on browsers that
-    // require it (especially mobile Safari and Chrome autoplay policy).
-    const audioPrompt = this.add.text(GAME_W / 2, GAME_H - 40, '🔊 Tap anywhere to enable audio', {
+    // ── Audio unlock prompt ───────────────────────────────────────────────────
+    const audioPrompt = this.add.text(W / 2, H - 40, '🔊 Tap anywhere to enable audio', {
       fontSize: '14px', color: '#aaddff', fontFamily: 'Nunito, monospace',
       backgroundColor: '#00000066', padding: { x: 10, y: 5 },
     }).setOrigin(0.5).setDepth(100);
@@ -202,35 +282,14 @@ class TitleScene extends Phaser.Scene {
     this.input.once('pointerdown', () => {
       audioPrompt.destroy();
       if (this.sound.context && this.sound.context.state === 'suspended') {
-        this.sound.context.resume().then(() => {
-          AudioManager.playMusic(this, 'title');
-        });
+        this.sound.context.resume().then(() => { AudioManager.playMusic(this, 'title'); });
       } else {
         AudioManager.playMusic(this, 'title');
       }
     });
-  }
 
-  _makeBtn(x, y, label, colorDark, colorLight, cb) {
-    const W_btn = 240, H_btn = 48;
-    const bg = this.add.graphics();
-    bg.fillStyle(colorDark, 1);
-    bg.fillRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 10);
-    bg.lineStyle(2, colorLight, 0.8);
-    bg.strokeRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 10);
-
-    const txt = this.add.text(x, y, label, {
-      fontSize: '19px', color: '#ffffff',
-      fontFamily: 'Nunito, Courier New, monospace',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 2,
-    }).setOrigin(0.5);
-
-    const zone = this.add.zone(x, y, W_btn, H_btn).setInteractive({ useHandCursor: true });
-    zone.on('pointerover',  () => { bg.clear(); bg.fillStyle(colorLight,0.9); bg.fillRoundedRect(x-W_btn/2,y-H_btn/2,W_btn,H_btn,10); });
-    zone.on('pointerout',   () => { bg.clear(); bg.fillStyle(colorDark,1); bg.fillRoundedRect(x-W_btn/2,y-H_btn/2,W_btn,H_btn,10); bg.lineStyle(2,colorLight,0.8); bg.strokeRoundedRect(x-W_btn/2,y-H_btn/2,W_btn,H_btn,10); });
-    zone.on('pointerdown',  () => { this.tweens.add({ targets:[bg,txt], scaleX:0.95, scaleY:0.95, duration:80, yoyo:true }); setTimeout(cb, 120); });
+    // ── Fade in from black ────────────────────────────────────────────────────
+    this.cameras.main.fadeIn(600, 0, 0, 0);
   }
 
   _spawnPaw() {
