@@ -37,6 +37,12 @@ const CHAPTERS = [
   { id: 7, file: 'chapter_7', model: 'Anything Diffusion',
     prompt: STYLE + 'epic final boss throne room, vast ancient throne room with towering stone columns, ornate golden throne on raised dais, magical moat channels with glowing water, giant stained-glass windows depicting forests mountains rivers desert, stone floor with mosaic patterns, magical floating lights, dramatic dark purple and gold palette, ethereal light shafts from above, overwhelming grand scale',
     neg: NEG_BASE + ', small scale, mundane, plain, outdoor, photorealistic' },
+  { id: 'title_bg', file: 'title_bg', model: 'Anything Diffusion',
+    prompt: STYLE + 'atmospheric night sky anime landscape, ancient castle silhouette on distant hill, moonlit battlefield clearing, dark rolling hills with pine tree silhouettes, stars and moon, drifting mist near ground, faint camp lights in valley, deep midnight blue and navy palette, very dark and moody, no foreground subjects, simple open composition for text overlay, cinematic wide shot, JRPG title screen atmosphere',
+    neg: NEG_BASE + ', bright day, cheerful, crowded, busy details, foreground clutter, high contrast, cats, dogs, characters' },
+  { id: 'title_art', file: 'title', model: 'Anything Diffusion',
+    prompt: 'kemono, anthro dogs, furry art, group of anime dog warriors assembled for battle, golden retriever knight in armor, corgi healer in white robes, husky cavalry on horseback, beagle archer with bow, poodle mage with staff, chibi-adjacent cel shaded, Fire Emblem GBA character art style, detailed anime RPG heroes, warm epic lighting, dramatic poses, horizontal banner composition, dogs vs cats tactical RPG, vibrant colors, white background',
+    neg: 'nsfw, human face, human ears, human nose, human skin, no fur, cat, feline, realistic, 3d render, blurry, watermark, dark background, text' },
 ];
 
 function request(method, urlStr, headers, body) {
@@ -92,7 +98,11 @@ async function generateChapter(ch) {
   const payload = {
     prompt: ch.prompt + ' ### ' + ch.neg,
     models: [ch.model, 'Anything Diffusion', 'Deliberate'],
-    params: { width: 768, height: 512, steps: 35, cfg_scale: 7, sampler_name: 'k_euler', karras: true, n: 2 },
+    params: { 
+      width:  ch.id === 'title_bg' ? 512 : 768,
+      height: ch.id === 'title_bg' ? 768 : (ch.id === 'title_art' ? 384 : 512),
+      steps: 35, cfg_scale: 7, sampler_name: 'k_euler', karras: true, n: 2
+    },
     nsfw: false, slow_workers: true
   };
 
