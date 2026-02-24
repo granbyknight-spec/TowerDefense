@@ -54,28 +54,33 @@ class TitleScene extends Phaser.Scene {
     // ── Title ────────────────────────────────────────────────────────────────
     // Glow layer
     const glow = this.add.text(W / 2, 160, 'PUPPY FORCE', {
-      fontFamily: 'Georgia, serif',
-      fontSize: '44px',
+      fontFamily: 'Nunito, Georgia, serif',
+      fontSize: '48px',
+      fontStyle: 'bold',
       color: '#4488ff',
       stroke: '#000044',
-      strokeThickness: 12,
+      strokeThickness: 14,
       alpha: 0.5,
     }).setOrigin(0.5).setAlpha(0.5);
     this.tweens.add({ targets: glow, alpha: { from: 0.2, to: 0.6 }, duration: 1500, yoyo: true, repeat: -1 });
 
     const title = this.add.text(W / 2, 160, 'PUPPY FORCE', {
-      fontFamily: 'Georgia, serif',
-      fontSize: '44px',
+      fontFamily: 'Nunito, Georgia, serif',
+      fontSize: '48px',
+      fontStyle: 'bold',
       color: '#f8d030',
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: 5,
     }).setOrigin(0.5);
 
     // Subtitle
-    this.add.text(W / 2, 208, '— A TACTICAL DOG ADVENTURE —', {
-      fontFamily: 'Courier New, monospace',
-      fontSize: '13px',
-      color: '#88aacc',
+    this.add.text(W / 2, 212, '— A TACTICAL DOG ADVENTURE —', {
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontSize: '15px',
+      fontStyle: 'bold',
+      color: '#99bbdd',
+      stroke: '#000000',
+      strokeThickness: 2,
     }).setOrigin(0.5);
 
     // Hero emojis row
@@ -113,7 +118,9 @@ class TitleScene extends Phaser.Scene {
 
     // ── Version & credits ────────────────────────────────────────────────────
     this.add.text(W / 2, H - 30, 'v1.0  ·  7 Chapters  ·  Dogs vs Cats', {
-      fontSize: '10px', color: '#445566',
+      fontSize: '13px', color: '#556677',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
     }).setOrigin(0.5);
 
     // ── Floating paw prints animation ────────────────────────────────────────
@@ -135,9 +142,11 @@ class TitleScene extends Phaser.Scene {
     bg.strokeRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 10);
 
     const txt = this.add.text(x, y, label, {
-      fontSize: '18px', color: '#ffffff',
-      fontFamily: 'Courier New, monospace',
+      fontSize: '19px', color: '#ffffff',
+      fontFamily: 'Nunito, Courier New, monospace',
       fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
     }).setOrigin(0.5);
 
     const zone = this.add.zone(x, y, W_btn, H_btn).setInteractive({ useHandCursor: true });

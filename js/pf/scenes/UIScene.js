@@ -50,43 +50,51 @@ class UIScene extends Phaser.Scene {
 
     // Turn indicator (left side)
     this._turnLabel = this.add.text(10, UI_Y + 8, 'TURN 1', {
-      fontSize: '11px', color: '#8899aa',
-      fontFamily: 'Courier New, monospace',
+      fontSize: '14px', color: '#aabbcc',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
     });
 
     // Phase indicator
-    this._phaseLabel = this.add.text(10, UI_Y + 22, 'YOUR TURN', {
-      fontSize: '12px', color: '#4488ff',
-      fontFamily: 'Courier New, monospace',
+    this._phaseLabel = this.add.text(10, UI_Y + 26, 'YOUR TURN', {
+      fontSize: '15px', color: '#4488ff',
+      fontFamily: 'Nunito, Courier New, monospace',
       fontStyle: 'bold',
+      stroke: '#000033',
+      strokeThickness: 2,
     });
 
     // Unit info area (center)
-    this._unitNameTxt = this.add.text(W / 2, UI_Y + 10, '', {
-      fontSize: '14px', color: '#ffffff',
-      fontFamily: 'Courier New, monospace',
+    this._unitNameTxt = this.add.text(W / 2, UI_Y + 8, '', {
+      fontSize: '16px', color: '#ffffff',
+      fontFamily: 'Nunito, Courier New, monospace',
       fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
     }).setOrigin(0.5, 0);
 
-    this._unitStatsTxt = this.add.text(W / 2, UI_Y + 28, '', {
-      fontSize: '11px', color: '#aabbcc',
-      fontFamily: 'Courier New, monospace',
+    this._unitStatsTxt = this.add.text(W / 2, UI_Y + 30, '', {
+      fontSize: '13px', color: '#ccddf0',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
       align: 'center',
     }).setOrigin(0.5, 0);
 
-    this._unitHpTxt = this.add.text(W / 2, UI_Y + 48, '', {
-      fontSize: '11px', color: '#88ddaa',
-      fontFamily: 'Courier New, monospace',
+    this._unitHpTxt = this.add.text(W / 2, UI_Y + 50, '', {
+      fontSize: '13px', color: '#88ddaa',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
     this._unitEmojiTxt = this.add.text(W / 2 - 80, UI_Y + 28, '', {
-      fontSize: '28px',
+      fontSize: '30px',
     }).setOrigin(0.5, 0);
 
     // Skills / items display
-    this._skillsTxt = this.add.text(W / 2, UI_Y + 68, '', {
-      fontSize: '10px', color: '#7788aa',
-      fontFamily: 'Courier New, monospace',
+    this._skillsTxt = this.add.text(W / 2, UI_Y + 70, '', {
+      fontSize: '12px', color: '#99aacc',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
     }).setOrigin(0.5, 0);
   }
 
@@ -119,10 +127,12 @@ class UIScene extends Phaser.Scene {
       bg.strokeRoundedRect(x, y, btnW, btnH, 6);
 
       const txt = this.add.text(x + btnW / 2, y + btnH / 2, b.label, {
-        fontSize: '12px', color: '#ffffff',
-        fontFamily: 'Courier New, monospace',
+        fontSize: '14px', color: '#ffffff',
+        fontFamily: 'Nunito, Courier New, monospace',
         fontStyle: 'bold',
         align: 'center',
+        stroke: '#000000',
+        strokeThickness: 2,
       }).setOrigin(0.5);
 
       const zone = this.add.zone(x + btnW/2, y + btnH/2, btnW, btnH)
@@ -177,10 +187,12 @@ class UIScene extends Phaser.Scene {
     bg.strokeRoundedRect(x, y, w, h, 8);
 
     const txt = this.add.text(x + w/2, y + h/2, 'END\nTURN', {
-      fontSize: '12px', color: '#88ccff',
-      fontFamily: 'Courier New, monospace',
+      fontSize: '14px', color: '#88ccff',
+      fontFamily: 'Nunito, Courier New, monospace',
       fontStyle: 'bold',
       align: 'center',
+      stroke: '#001133',
+      strokeThickness: 2,
     }).setOrigin(0.5);
 
     const zone = this.add.zone(x + w/2, y + h/2, w, h).setInteractive({ useHandCursor: true });
@@ -202,11 +214,12 @@ class UIScene extends Phaser.Scene {
     const W = GAME_W;
     this._bannerBg = this.add.graphics().setVisible(false);
     this._bannerTxt = this.add.text(W / 2, GAME_H / 2 - 30, '', {
-      fontFamily: 'Georgia, serif',
-      fontSize: '36px',
+      fontFamily: 'Nunito, Georgia, serif',
+      fontSize: '38px',
+      fontStyle: 'bold',
       color: '#ffffff',
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: 5,
     }).setOrigin(0.5).setVisible(false);
   }
 
@@ -320,9 +333,10 @@ class UIScene extends Phaser.Scene {
     const W = GAME_W;
     this._msgBg  = this.add.graphics().setVisible(false);
     this._msgTxt = this.add.text(W / 2, UI_Y - 22, '', {
-      fontSize: '13px',
+      fontSize: '15px',
       color: '#ffffff',
-      fontFamily: 'Courier New, monospace',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setVisible(false);
@@ -365,19 +379,23 @@ class UIScene extends Phaser.Scene {
 
     this._dlgPortrait = this.add.text(28, boxY + 14, '', { fontSize: '38px' });
     this._dlgSpeaker  = this.add.text(76, boxY + 12, '', {
-      fontSize: '14px', color: '#f8d030',
-      fontFamily: 'Georgia, serif',
+      fontSize: '16px', color: '#f8d030',
+      fontFamily: 'Nunito, Georgia, serif',
       fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
     });
     this._dlgText = this.add.text(76, boxY + 34, '', {
-      fontSize: '13px', color: '#ddeeff',
-      fontFamily: 'Courier New, monospace',
+      fontSize: '14px', color: '#ddeeff',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
       wordWrap: { width: W - 106 },
-      lineSpacing: 4,
+      lineSpacing: 5,
     });
     this._dlgPrompt = this.add.text(W - 24, boxY + boxH - 18, '▶ TAP', {
-      fontSize: '11px', color: '#8899aa',
-      fontFamily: 'Courier New, monospace',
+      fontSize: '13px', color: '#aabbcc',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
     }).setOrigin(1, 0.5);
 
     this.tweens.add({
@@ -425,23 +443,30 @@ class UIScene extends Phaser.Scene {
     overlay.fillRect(0, 0, W, GAME_H);
 
     const chNum = this.add.text(W/2, GAME_H/2 - 60, `CHAPTER ${chapterId}`, {
-      fontSize: '14px', color: '#8899aa',
-      fontFamily: 'Courier New, monospace',
-      letterSpacing: 6,
-    }).setOrigin(0.5).setAlpha(0);
-
-    const chTitle = this.add.text(W/2, GAME_H/2 - 30, chap.title, {
-      fontSize: '32px', color: '#f8d030',
-      fontFamily: 'Georgia, serif',
+      fontSize: '16px', color: '#aabbcc',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
+      letterSpacing: 5,
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 2,
     }).setOrigin(0.5).setAlpha(0);
 
-    const chSub = this.add.text(W/2, GAME_H/2 + 20, chap.subtitle, {
-      fontSize: '14px', color: '#aabbcc',
-      fontFamily: 'Courier New, monospace',
+    const chTitle = this.add.text(W/2, GAME_H/2 - 26, chap.title, {
+      fontSize: '34px', color: '#f8d030',
+      fontFamily: 'Nunito, Georgia, serif',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setAlpha(0);
+
+    const chSub = this.add.text(W/2, GAME_H/2 + 24, chap.subtitle, {
+      fontSize: '15px', color: '#ccddf0',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
       align: 'center',
       wordWrap: { width: W - 60 },
+      stroke: '#000000',
+      strokeThickness: 2,
     }).setOrigin(0.5).setAlpha(0);
 
     this.tweens.add({ targets:[chNum,chTitle,chSub], alpha:1, duration:600, stagger:200 });

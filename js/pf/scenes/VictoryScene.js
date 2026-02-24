@@ -61,17 +61,21 @@ class VictoryScene extends Phaser.Scene {
     // Title
     const titleText = isFinal ? '🏆  VICTORY!  🏆' : `Chapter ${this.chapter} Clear!`;
     this.add.text(W / 2, 80, titleText, {
-      fontFamily: 'Georgia, serif',
-      fontSize: isFinal ? '38px' : '32px',
+      fontFamily: 'Nunito, Georgia, serif',
+      fontSize: isFinal ? '42px' : '36px',
+      fontStyle: 'bold',
       color: '#f8d030',
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: 5,
     }).setOrigin(0.5);
 
     // Chapter name
-    this.add.text(W / 2, 126, chap.title, {
-      fontSize: '18px', color: '#88ccff',
-      fontFamily: 'Courier New, monospace',
+    this.add.text(W / 2, 128, chap.title, {
+      fontSize: '20px', color: '#88ccff',
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
     }).setOrigin(0.5);
 
     // Hero emojis
@@ -83,38 +87,44 @@ class VictoryScene extends Phaser.Scene {
     });
 
     // Level up summary
-    let yOff = 218;
+    let yOff = 222;
     if (this.levelUps.length > 0) {
       this.add.text(W/2, yOff, '⬆ Level Ups:', {
-        fontSize:'14px', color:'#ffcc44',
-        fontFamily:'Courier New, monospace',
+        fontSize:'16px', color:'#ffcc44',
+        fontFamily:'Nunito, Courier New, monospace',
+        fontStyle:'bold',
+        stroke:'#000000', strokeThickness:2,
       }).setOrigin(0.5);
-      yOff += 24;
+      yOff += 26;
       this.levelUps.slice(0, 5).forEach(lu => {
         this.add.text(W/2, yOff, `${lu.emoji} ${lu.name}: Lv ${lu.newLevel}`, {
-          fontSize:'13px', color:'#ccddff',
-          fontFamily:'Courier New, monospace',
+          fontSize:'15px', color:'#ccdeff',
+          fontFamily:'Nunito, Courier New, monospace',
+          fontStyle:'bold',
         }).setOrigin(0.5);
-        yOff += 20;
+        yOff += 22;
       });
-      yOff += 8;
+      yOff += 10;
     }
 
     // New recruits
     if (this.newUnits.length > 0) {
       this.add.text(W/2, yOff, '🐾 New Allies:', {
-        fontSize:'14px', color:'#44ff88',
-        fontFamily:'Courier New, monospace',
+        fontSize:'16px', color:'#44ff88',
+        fontFamily:'Nunito, Courier New, monospace',
+        fontStyle:'bold',
+        stroke:'#000000', strokeThickness:2,
       }).setOrigin(0.5);
-      yOff += 24;
+      yOff += 26;
       this.newUnits.forEach(u => {
         this.add.text(W/2, yOff, `${u.emoji}  ${u.name}  joined!`, {
-          fontSize:'13px', color:'#ccffcc',
-          fontFamily:'Courier New, monospace',
+          fontSize:'15px', color:'#ccffcc',
+          fontFamily:'Nunito, Courier New, monospace',
+          fontStyle:'bold',
         }).setOrigin(0.5);
-        yOff += 20;
+        yOff += 22;
       });
-      yOff += 8;
+      yOff += 10;
     }
 
     // Buttons
@@ -127,9 +137,11 @@ class VictoryScene extends Phaser.Scene {
       });
     } else {
       this.add.text(W/2, H - 180, 'ALL 7 CHAPTERS COMPLETE!\nBarkville is saved forever!', {
-        fontSize:'16px', color:'#f8d030',
-        fontFamily:'Georgia, serif',
+        fontSize:'18px', color:'#f8d030',
+        fontFamily:'Nunito, Georgia, serif',
+        fontStyle:'bold',
         align:'center',
+        stroke:'#000000', strokeThickness:3,
       }).setOrigin(0.5);
     }
 
@@ -155,21 +167,26 @@ class VictoryScene extends Phaser.Scene {
     }
 
     this.add.text(W/2, 130, 'DEFEATED...', {
-      fontFamily:'Georgia, serif', fontSize:'42px',
-      color:'#cc3333', stroke:'#000000', strokeThickness:4,
+      fontFamily:'Nunito, Georgia, serif', fontSize:'46px',
+      fontStyle:'bold',
+      color:'#dd3333', stroke:'#000000', strokeThickness:5,
     }).setOrigin(0.5);
 
-    this.add.text(W/2, 186, 'The cats overwhelmed your force...', {
+    this.add.text(W/2, 190, 'The cats overwhelmed your force...', {
+      fontSize:'16px', color:'#99aabb',
+      fontFamily:'Nunito, Courier New, monospace',
+      fontStyle:'bold',
+      stroke:'#000000', strokeThickness:2,
+    }).setOrigin(0.5);
+
+    this.add.text(W/2, 234, '😿🐱🐈😿', { fontSize:'44px' }).setOrigin(0.5);
+
+    this.add.text(W/2, 306, 'Your brave dogs fought with honor.\nTry again and reclaim Barkville!', {
       fontSize:'15px', color:'#8899aa',
-      fontFamily:'Courier New, monospace',
-    }).setOrigin(0.5);
-
-    this.add.text(W/2, 230, '😿🐱🐈😿', { fontSize:'44px' }).setOrigin(0.5);
-
-    this.add.text(W/2, 300, 'Your brave dogs fought with honor.\nTry again and reclaim Barkville!', {
-      fontSize:'14px', color:'#778899',
-      fontFamily:'Courier New, monospace',
+      fontFamily:'Nunito, Courier New, monospace',
+      fontStyle:'bold',
       align:'center',
+      stroke:'#000000', strokeThickness:2,
     }).setOrigin(0.5);
 
     this._btn(W/2, H - 140, '🔄  RETRY CHAPTER', 0x2a1a00, 0x885500, () => {
@@ -193,8 +210,9 @@ class VictoryScene extends Phaser.Scene {
     bg.strokeRoundedRect(x - W_btn/2, y - H_btn/2, W_btn, H_btn, 10);
 
     const txt = this.add.text(x, y, label, {
-      fontSize:'17px', color:'#ffffff',
-      fontFamily:'Courier New, monospace', fontStyle:'bold',
+      fontSize:'19px', color:'#ffffff',
+      fontFamily:'Nunito, Courier New, monospace', fontStyle:'bold',
+      stroke:'#000000', strokeThickness:2,
     }).setOrigin(0.5);
 
     const zone = this.add.zone(x, y, W_btn, H_btn).setInteractive({ useHandCursor: true });
