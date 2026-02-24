@@ -86,6 +86,14 @@ class UIScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
+    // MP bar
+    this._mpBarBg = this.add.graphics();
+    this._mpBarFg = this.add.graphics();
+    this._mpTxt   = this.add.text(W / 2 + 50, UI_Y + 63, '', {
+      fontSize: '11px', color: '#88aaff',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(0, 0.5);
+
     this._unitEmojiTxt = this.add.text(W / 2 - 80, UI_Y + 28, '', {
       fontSize: '30px',
     }).setOrigin(0.5, 0);
@@ -348,6 +356,25 @@ class UIScene extends Phaser.Scene {
     this._unitHpTxt?.setText(`HP: ${unit.hp}/${unit.maxHp}  (${hpPct}%)`)
                     .setStyle({ color: hpColor });
 
+    // MP bar
+    const mpRatio = (unit.maxMp > 0) ? (unit.mp / unit.maxMp) : 0;
+    const barW = 80, barH = 6;
+    const barX = GAME_W / 2 - barW / 2;
+    const barY = UI_Y + 60;
+
+    this._mpBarBg?.clear();
+    this._mpBarFg?.clear();
+
+    if (unit.maxMp > 0) {
+      this._mpBarBg?.fillStyle(0x112244, 0.8);
+      this._mpBarBg?.fillRoundedRect(barX, barY, barW, barH, 3);
+      this._mpBarFg?.fillStyle(0x4488ff, 1);
+      this._mpBarFg?.fillRoundedRect(barX, barY, Math.max(2, barW * mpRatio), barH, 3);
+      this._mpTxt?.setText(`MP ${unit.mp}/${unit.maxMp}`).setVisible(true);
+    } else {
+      this._mpTxt?.setVisible(false);
+    }
+
     const skillList = unit.skills.map(s => SKILLS[s]?.name || s).join(' · ');
     const itemList  = unit.items.map(i => ITEMS[i]?.emoji || '').join('');
     this._skillsTxt?.setText(`${skillList}  ${itemList}`);
@@ -364,6 +391,9 @@ class UIScene extends Phaser.Scene {
     this._unitHpTxt?.setText('');
     this._unitEmojiTxt?.setText('');
     this._skillsTxt?.setText('');
+    this._mpBarBg?.clear();
+    this._mpBarFg?.clear();
+    this._mpTxt?.setText('').setVisible(false);
   }
 
   // ==========================================================================
