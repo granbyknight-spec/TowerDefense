@@ -67,16 +67,39 @@ class VictoryScene extends Phaser.Scene {
     dBg.lineStyle(2, 0x4488cc, 0.8);
     dBg.strokeRoundedRect(10, boxY, W - 20, boxH, 10);
 
-    const portrait = this.add.text(36, boxY + 14, '', { fontSize: '36px' });
-    const speaker  = this.add.text(76, boxY + 12, '', {
+    // Portrait setup — use PNG image if available, else fall back to emoji text
+    const portraitX = 36, portraitY = boxY + 14;
+    const firstLine = lines[0];
+    const firstKey  = (typeof SPEAKER_PORTRAIT_KEY !== 'undefined' && firstLine.speaker)
+                        ? SPEAKER_PORTRAIT_KEY[firstLine.speaker] : undefined;
+    const firstIsPlayer = firstKey && firstKey.startsWith('player_png_');
+
+    // Border rectangle (68×68) behind the portrait image
+    const portraitBorder = this.add.rectangle(
+      portraitX + 32, portraitY + 32,
+      68, 68,
+      firstIsPlayer ? 0x2255cc : 0xcc2222, 0.85
+    );
+
+    let portrait;
+    let portraitIsImage = false;
+    if (firstKey && this.textures.exists(firstKey)) {
+      portrait = this.add.image(portraitX + 32, portraitY + 32, firstKey).setDisplaySize(64, 64);
+      portraitIsImage = true;
+    } else {
+      portraitBorder.setVisible(false);
+      portrait = this.add.text(portraitX, portraitY, firstLine.portrait || '', { fontSize: '36px' });
+    }
+
+    const speaker  = this.add.text(92, boxY + 12, '', {
       fontSize: '16px', color: '#f8d030',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
       stroke: '#000', strokeThickness: 2,
     });
-    const dlgText  = this.add.text(76, boxY + 34, '', {
+    const dlgText  = this.add.text(92, boxY + 34, '', {
       fontSize: '15px', color: '#ddeeff',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-      wordWrap: { width: W - 106 }, lineSpacing: 5,
+      wordWrap: { width: W - 122 }, lineSpacing: 5,
     });
     const tapHint  = this.add.text(W - 24, boxY + boxH - 16, '▶ TAP', {
       fontSize: '12px', color: '#aabbcc',
@@ -86,7 +109,35 @@ class VictoryScene extends Phaser.Scene {
 
     const showLine = (i) => {
       const line = lines[i];
-      portrait.setText(line.portrait || '');
+      const key = (typeof SPEAKER_PORTRAIT_KEY !== 'undefined' && line.speaker)
+                    ? SPEAKER_PORTRAIT_KEY[line.speaker] : undefined;
+      const isPlayer = key && key.startsWith('player_png_');
+
+      if (key && this.textures.exists(key)) {
+        // Show image portrait
+        portraitBorder.setVisible(true);
+        portraitBorder.setFillStyle(isPlayer ? 0x2255cc : 0xcc2222, 0.85);
+        if (portraitIsImage) {
+          portrait.setTexture(key);
+        } else {
+          // Was emoji text — destroy and replace with image
+          portrait.destroy();
+          portrait = this.add.image(portraitX + 32, portraitY + 32, key).setDisplaySize(64, 64);
+          portraitIsImage = true;
+        }
+      } else {
+        // Fall back to emoji text
+        portraitBorder.setVisible(false);
+        if (portraitIsImage) {
+          // Was image — destroy and replace with text
+          portrait.destroy();
+          portrait = this.add.text(portraitX, portraitY, line.portrait || '', { fontSize: '36px' });
+          portraitIsImage = false;
+        } else {
+          portrait.setText(line.portrait || '');
+        }
+      }
+
       speaker.setText(line.speaker || '');
       dlgText.setText(line.text || '');
     };
@@ -96,7 +147,7 @@ class VictoryScene extends Phaser.Scene {
       idx++;
       if (idx >= lines.length) {
         // Done — destroy dialogue elements and show stats
-        [dBg, portrait, speaker, dlgText, tapHint].forEach(o => o.destroy());
+        [dBg, portraitBorder, portrait, speaker, dlgText, tapHint].forEach(o => o.destroy());
         tapZone.destroy();
         this._buildVictoryContent();
         return;
