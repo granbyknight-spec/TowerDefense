@@ -61,20 +61,34 @@ class AudioManager {
   // context is still suspended (browser autoplay policy).
   static playMusic(scene, key, volume = 0.5) {
     console.log('[AudioManager] playMusic called', key, 'exists:', scene.cache && scene.cache.audio && scene.cache.audio.exists(key), 'locked:', scene.sound && scene.sound.locked);
-    // Avoid restarting the same track if it is already playing
     if (AudioManager._currentMusicKey === key && AudioManager._currentMusic && AudioManager._currentMusic.isPlaying) {
       return;
     }
-
-    // Stop whatever is currently playing
     AudioManager.stopMusic(scene);
-
-    // Guard: audio not loaded yet
     if (!scene.cache || !scene.cache.audio || !scene.cache.audio.exists(key)) return;
 
-    // If Web Audio context is still locked (browser autoplay policy), wait for unlock
     if (scene.sound.locked) {
-      scene.sound.once('unlocked', () => AudioManager._startTrack(scene, key, volume));
+      // Store the latest intent — overwrites any earlier pending request
+      AudioManager._pendingKey    = key;
+      AudioManager._pendingVolume = volume;
+      AudioManager._pendingScene  = scene;
+      // Register the unlock handler only once
+      if (!AudioManager._unlockBound) {
+        AudioManager._unlockBound = true;
+        scene.sound.once('unlocked', () => {
+          AudioManager._unlockBound = false;
+          if (AudioManager._pendingKey) {
+            AudioManager._startTrack(
+              AudioManager._pendingScene,
+              AudioManager._pendingKey,
+              AudioManager._pendingVolume
+            );
+            AudioManager._pendingKey    = null;
+            AudioManager._pendingVolume = null;
+            AudioManager._pendingScene  = null;
+          }
+        });
+      }
     } else {
       AudioManager._startTrack(scene, key, volume);
     }
@@ -123,3 +137,7 @@ class AudioManager {
 // Static state — shared across all scenes
 AudioManager._currentMusic    = null;
 AudioManager._currentMusicKey = null;
+AudioManager._pendingKey      = null;
+AudioManager._pendingVolume   = null;
+AudioManager._pendingScene    = null;
+AudioManager._unlockBound     = false;
