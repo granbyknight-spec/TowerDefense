@@ -30,6 +30,15 @@ on:
         options:
           - 'false'
           - 'true'
+      style_mode:
+        description: 'Generate dark fantasy, chibi, or both style variants'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - dark
+          - chibi
 
 jobs:
   generate:
@@ -65,6 +74,7 @@ jobs:
           SPRITE_SET: ${{ inputs.sprite_set }}
           SKIP_EXISTING: ${{ inputs.skip_existing }}
           ROTATE: ${{ inputs.rotate }}
+          STYLE_MODE: ${{ inputs.style_mode }}
         run: node scripts/generate-pixellab-sprites.js
 
       - name: Generate hero character sprites
@@ -74,6 +84,7 @@ jobs:
           HERO_SET: all
           SKIP_EXISTING: ${{ inputs.skip_existing }}
           ROTATE: ${{ inputs.rotate }}
+          STYLE_MODE: ${{ inputs.style_mode }}
         run: node scripts/generate-pixellab-characters.js
 
       - name: Commit generated sprites

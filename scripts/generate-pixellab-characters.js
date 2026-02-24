@@ -33,6 +33,7 @@ const path = require('path');
 const HERO_SET      = process.env.HERO_SET      || 'all';
 const SKIP_EXISTING = process.env.SKIP_EXISTING !== 'false';
 const DO_ROTATE     = process.env.ROTATE === 'true';
+const STYLE_MODE    = process.env.STYLE_MODE || 'both';
 const OUT_DIR       = path.join(__dirname, '..', 'assets', 'characters');
 const VARIANTS      = 3; // 3 variants per hero — keep credit cost reasonable
 
@@ -55,6 +56,17 @@ const STYLE = [
   'strong readable silhouette',
   'transparent background',
   '128x128 pixel canvas',
+].join(', ');
+
+const STYLE_CHIBI = [
+  'anthropomorphic dog character',
+  'cute chibi pixel art RPG game sprite',
+  'super deformed chibi proportions, big head small body',
+  'adorable round eyes, kawaii expression',
+  'colorful fantasy class equipment',
+  'clean bold pixel outlines',
+  'transparent background',
+  '128x128 pixel art',
 ].join(', ');
 
 const NEG = [
@@ -235,39 +247,53 @@ async function generateHero(hero) {
 
   let bestB64 = null;
 
-  for (let v = 1; v <= VARIANTS; v++) {
-    const outPath = path.join(OUT_DIR, `${hero.id.toLowerCase()}_sprite_v${v}.png`);
+  const stylesToGen = [];
+  if (STYLE_MODE === 'dark' || STYLE_MODE === 'both') stylesToGen.push('dark');
+  if (STYLE_MODE === 'chibi' || STYLE_MODE === 'both') stylesToGen.push('chibi');
 
-    if (SKIP_EXISTING && fs.existsSync(outPath)) {
-      console.log(`  v${v}: SKIP (exists)`);
-      if (!bestB64 && DO_ROTATE) {
-        bestB64 = fs.readFileSync(outPath).toString('base64');
-      }
-      continue;
-    }
+  for (const styleMode of stylesToGen) {
+    const suffix   = styleMode === 'chibi' ? '_chibi' : '_sprite';
+    const styleTags = styleMode === 'chibi' ? STYLE_CHIBI : STYLE;
+    const basePrompt = hero.prompt
+      .replace(STYLE, '').trim().replace(/,\s*$/, '');
+    const fullPrompt = styleMode === 'chibi'
+      ? `${basePrompt}, ${styleTags}`
+      : hero.prompt;
 
-    try {
-      console.log(`  v${v}: requesting…`);
-      const result = await pixellabRequest('generate-image', {
-        description:         `${hero.prompt} ### NEG: ${NEG}`,
-        image_size:          { width: 128, height: 128 },
-        no_background:       true,
-        text_guidance_scale: 7.5,
-      });
+    for (let v = 1; v <= VARIANTS; v++) {
+      const outPath = path.join(OUT_DIR, `${hero.id.toLowerCase()}${suffix}_v${v}.png`);
 
-      const b64 = extractB64(result);
-      if (!b64) {
-        console.warn(`  v${v}: unexpected response:`, JSON.stringify(result).slice(0, 200));
+      if (SKIP_EXISTING && fs.existsSync(outPath)) {
+        console.log(`  [${styleMode}] v${v}: SKIP (exists)`);
+        if (!bestB64 && DO_ROTATE && styleMode === 'dark') {
+          bestB64 = fs.readFileSync(outPath).toString('base64');
+        }
         continue;
       }
 
-      saveB64(b64, outPath);
-      console.log(`  v${v}: saved → ${path.basename(outPath)}`);
-      if (!bestB64) bestB64 = b64;
+      try {
+        console.log(`  [${styleMode}] v${v}: requesting…`);
+        const result = await pixellabRequest('generate-image', {
+          description:         `${fullPrompt} ### NEG: ${NEG}`,
+          image_size:          { width: 128, height: 128 },
+          no_background:       true,
+          text_guidance_scale: 7.5,
+        });
 
-      await sleep(300);
-    } catch (err) {
-      console.error(`  v${v}: ERROR — ${err.message}`);
+        const b64 = extractB64(result);
+        if (!b64) {
+          console.warn(`  [${styleMode}] v${v}: unexpected response:`, JSON.stringify(result).slice(0, 200));
+          continue;
+        }
+
+        saveB64(b64, outPath);
+        console.log(`  [${styleMode}] v${v}: saved → ${path.basename(outPath)}`);
+        if (!bestB64 && styleMode === 'dark') bestB64 = b64;
+
+        await sleep(300);
+      } catch (err) {
+        console.error(`  [${styleMode}] v${v}: ERROR — ${err.message}`);
+      }
     }
   }
 

@@ -257,6 +257,30 @@ class TitleScene extends Phaser.Scene {
       });
     }
 
+
+    // ── Inn button (character gallery) ────────────────────────────────────────
+    const innY    = menuTopY + menuPanelH + 28;
+    const innW    = 180;
+    const innH    = 38;
+    const innGfx  = this.add.graphics();
+    const innTxt  = this.add.text(menuCenterX, innY, '🏠  THE INN', {
+      fontSize: '17px', color: '#f8d030',
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5);
+    const innZone = this.add.zone(menuCenterX, innY, innW, innH).setInteractive({ useHandCursor: true });
+
+    const drawInn = (hover) => {
+      innGfx.clear();
+      innGfx.lineStyle(2, 0xf8d030, hover ? 1.0 : 0.55);
+      innGfx.strokeRoundedRect(menuCenterX - innW / 2, innY - innH / 2, innW, innH, 6);
+      if (hover) innGfx.fillStyle(0xf8d030, 0.12), innGfx.fillRoundedRect(menuCenterX - innW / 2, innY - innH / 2, innW, innH, 6);
+    };
+    drawInn(false);
+    innZone.on('pointerover',  () => { drawInn(true);  innTxt.setColor('#ffffff'); });
+    innZone.on('pointerout',   () => { drawInn(false); innTxt.setColor('#f8d030'); });
+    innZone.on('pointerdown',  () => this.scene.start('InnScene'));
+
     // ── Debug-only extras (localhost / ?debug) ────────────────────────────────
     const _debugOn = window.location.hostname === 'localhost'
                   || window.location.hostname === '127.0.0.1'

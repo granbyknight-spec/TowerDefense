@@ -39,6 +39,7 @@ const config = {
     VictoryScene,
     CutsceneScene,
     PrepScene,
+    InnScene,
   ],
 
   audio: {

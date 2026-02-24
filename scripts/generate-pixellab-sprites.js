@@ -26,6 +26,8 @@ const SKIP_EXISTING = process.env.SKIP_EXISTING !== 'false';
 // Directional outputs: assets/enemies/<id>_dir_S.png … _dir_NW.png
 // These are ready for BattleScene to swap in during movement animation.
 const DO_ROTATE     = process.env.ROTATE === 'true';
+// STYLE_MODE: 'dark' | 'chibi' | 'both'  (default: 'both')
+const STYLE_MODE    = process.env.STYLE_MODE || 'both';
 const OUT_DIR       = path.join(__dirname, '..', 'assets', 'enemies');
 const VARIANTS      = 4;
 
@@ -64,6 +66,34 @@ const STYLE_BOSS = [
   'transparent background',
   'clean bold pixel outlines',
   'detailed pixel shading with bright highlights',
+  '128x128 pixel art',
+].join(', ');
+
+// ── Chibi style variants ─────────────────────────────────────────────────────
+// Cute, kawaii, super-deformed proportions — for comparison in the Inn gallery.
+
+const STYLE_NORMAL_CHIBI = [
+  'anthropomorphic cat warrior character',
+  'cute chibi pixel art game sprite',
+  'super deformed chibi proportions, big head small body',
+  'adorable kawaii expression',
+  'colorful fantasy equipment',
+  'friendly cheerful pose',
+  'clean bold pixel outlines',
+  'transparent background',
+  '64x64 pixel art',
+].join(', ');
+
+const STYLE_BOSS_CHIBI = [
+  'anthropomorphic cat boss character',
+  'cute chibi pixel art game sprite',
+  'super deformed chibi big head tiny body',
+  'comically adorable attempting to look fierce',
+  'colorful detailed ornate fantasy armor',
+  'oversized weapon prop',
+  'round sparkly eyes',
+  'clean bold pixel outlines',
+  'transparent background',
   '128x128 pixel art',
 ].join(', ');
 
@@ -254,41 +284,59 @@ async function generateEnemy(enemy) {
 
   let bestB64 = null; // saved for rotate step
 
-  for (let v = 1; v <= VARIANTS; v++) {
-    const outPath = path.join(OUT_DIR, `${enemy.id.toLowerCase()}_pl_v${v}.png`);
+  // Generate for each requested style
+  const stylesToGen = [];
+  if (STYLE_MODE === 'dark' || STYLE_MODE === 'both') stylesToGen.push('dark');
+  if (STYLE_MODE === 'chibi' || STYLE_MODE === 'both') stylesToGen.push('chibi');
 
-    if (SKIP_EXISTING && fs.existsSync(outPath)) {
-      console.log(`  v${v}: SKIP (exists)`);
-      // Load existing file as b64 for rotation if needed
-      if (!bestB64 && DO_ROTATE) {
-        bestB64 = fs.readFileSync(outPath).toString('base64');
-      }
-      continue;
-    }
+  for (const styleMode of stylesToGen) {
+    const suffix  = styleMode === 'chibi' ? '_chibi' : '_pl';
+    const styleTags = styleMode === 'chibi'
+      ? (enemy.isBoss ? STYLE_BOSS_CHIBI : STYLE_NORMAL_CHIBI)
+      : (enemy.isBoss ? STYLE_BOSS       : STYLE_NORMAL);
 
-    try {
-      console.log(`  v${v}: requesting…`);
-      const result = await pixellabRequest('generate-image', {
-        description:         `${enemy.prompt} ### NEG: ${NEG}`,
-        image_size:          { width: size, height: size },
-        no_background:       true,
-        text_guidance_scale: 7.5,
-      });
+    // For chibi, extract base prompt without the dark style suffix already embedded
+    // We use the character-specific part only + the new chibi style
+    const basePrompt = enemy.prompt
+      .replace(STYLE_BOSS, '').replace(STYLE_NORMAL, '').trim().replace(/,\s*$/, '');
+    const fullPrompt = styleMode === 'chibi'
+      ? `${basePrompt}, ${styleTags}`
+      : enemy.prompt;
 
-      const b64 = extractB64(result);
-      if (!b64) {
-        console.warn(`  v${v}: unexpected response shape:`, JSON.stringify(result).slice(0, 200));
+    for (let v = 1; v <= VARIANTS; v++) {
+      const outPath = path.join(OUT_DIR, `${enemy.id.toLowerCase()}${suffix}_v${v}.png`);
+
+      if (SKIP_EXISTING && fs.existsSync(outPath)) {
+        console.log(`  [${styleMode}] v${v}: SKIP (exists)`);
+        if (!bestB64 && DO_ROTATE && styleMode === 'dark') {
+          bestB64 = fs.readFileSync(outPath).toString('base64');
+        }
         continue;
       }
 
-      saveB64(b64, outPath);
-      console.log(`  v${v}: saved → ${path.basename(outPath)}`);
-      if (!bestB64) bestB64 = b64; // keep first successful for rotation
+      try {
+        console.log(`  [${styleMode}] v${v}: requesting…`);
+        const result = await pixellabRequest('generate-image', {
+          description:         `${fullPrompt} ### NEG: ${NEG}`,
+          image_size:          { width: size, height: size },
+          no_background:       true,
+          text_guidance_scale: 7.5,
+        });
 
-      await sleep(250);
+        const b64 = extractB64(result);
+        if (!b64) {
+          console.warn(`  [${styleMode}] v${v}: unexpected response:`, JSON.stringify(result).slice(0, 200));
+          continue;
+        }
 
-    } catch (err) {
-      console.error(`  v${v}: ERROR — ${err.message}`);
+        saveB64(b64, outPath);
+        console.log(`  [${styleMode}] v${v}: saved → ${path.basename(outPath)}`);
+        if (!bestB64 && styleMode === 'dark') bestB64 = b64;
+
+        await sleep(250);
+      } catch (err) {
+        console.error(`  [${styleMode}] v${v}: ERROR — ${err.message}`);
+      }
     }
   }
 
