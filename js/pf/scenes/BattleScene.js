@@ -250,15 +250,13 @@ class BattleScene extends Phaser.Scene {
         g.fillRect(x, y, TILE, TILE);
         this._drawTerrainDetail(g, tid, x, y);
 
-        // Highlight top-left edge (lighter) — drawn over PNG or graphic
-        g.fillStyle(td.hi, 0.4);
-        g.fillRect(x, y, TILE, 2);
-        g.fillRect(x, y, 2, TILE);
-
-        // Dark bottom-right edge
-        g.fillStyle(0x000000, 0.25);
-        g.fillRect(x + TILE - 2, y, 2, TILE);
-        g.fillRect(x, y + TILE - 2, TILE, 2);
+        // Subtle highlight top-left / shadow bottom-right (1px, not overpowering)
+        g.fillStyle(td.hi, 0.3);
+        g.fillRect(x, y, TILE, 1);
+        g.fillRect(x, y, 1, TILE);
+        g.fillStyle(0x000000, 0.15);
+        g.fillRect(x + TILE - 1, y, 1, TILE);
+        g.fillRect(x, y + TILE - 1, TILE, 1);
       }
     }
   }
@@ -385,7 +383,7 @@ class BattleScene extends Phaser.Scene {
 
   _buildGridOverlay() {
     const g = this.add.graphics();
-    g.lineStyle(1, 0x000000, 0.28);
+    g.lineStyle(1, 0x000000, 0.12);
     for (let col = 0; col <= GCOLS; col++) {
       g.lineBetween(GRID_X + col*TILE, GRID_Y, GRID_X + col*TILE, GRID_Y + GH);
     }
