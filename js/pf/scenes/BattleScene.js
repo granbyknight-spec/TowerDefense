@@ -1125,6 +1125,10 @@ class BattleScene extends Phaser.Scene {
 
           if (died) {
             if (attacker.team === 'player') attacker.killCount++;
+            // Kill bonus XP — uses enemy's expReward so 1 kill ≈ 1 level in ch1
+            if (attacker.team === 'player' && defender.expReward) {
+              if (attacker.gainExp(defender.expReward)) this._onLevelUp(attacker);
+            }
             this._killUnit(defender, () => {
               // Counter-attack possible for melee defenders?
               // (no counter if dead)
@@ -1292,7 +1296,7 @@ class BattleScene extends Phaser.Scene {
     }
     this._floatText(target.col, target.row, `+${actual} HP`, PAL.HP_G);
 
-    const expGain = 15;
+    const expGain = 25; // 4 heals ≈ 1 level; keeps pace with combat units
     const leveled = healer.gainExp(expGain);
     if (leveled) this._onLevelUp(healer);
 
