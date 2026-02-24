@@ -169,7 +169,9 @@ class UIScene extends Phaser.Scene {
       case 'item': bs.onActionItem();   break;
       case 'wait': bs.onActionWait();   break;
     }
-    this.hideActionMenu();
+    // Menu visibility is managed entirely by BattleScene action methods —
+    // do NOT auto-hide here, so a failed action (e.g. no targets) keeps the
+    // menu open and the player isn't left with no way to act.
   }
 
   // ==========================================================================
@@ -302,20 +304,27 @@ class UIScene extends Phaser.Scene {
   showActionMenu(unit, battleScene) {
     this._battle = battleScene;
     this._actionMenu.setVisible(true);
-    // Disable magic button if no skills
-    const hasMagic = unit.skills.length > 0;
-    const hasItem  = unit.items.length > 0;
+    // Attack and Magic are only available if the unit hasn't acted yet
+    const canAttack = !unit.hasActed;
+    const hasMagic  = canAttack && unit.skills.length > 0;
+    const hasItem   = unit.items.length > 0;
+
+    const atkBtn = this._actionBtns['atk'];
     const magBtn = this._actionBtns['mag'];
     const itmBtn = this._actionBtns['item'];
+
+    if (atkBtn) {
+      atkBtn.txt.setAlpha(canAttack ? 1 : 0.4);
+      if (canAttack) atkBtn.zone.setInteractive({ useHandCursor: true });
+      else atkBtn.zone.disableInteractive();
+    }
     if (magBtn) {
-      const alpha = hasMagic ? 1 : 0.4;
-      magBtn.txt.setAlpha(alpha);
+      magBtn.txt.setAlpha(hasMagic ? 1 : 0.4);
       if (hasMagic) magBtn.zone.setInteractive({ useHandCursor: true });
       else magBtn.zone.disableInteractive();
     }
     if (itmBtn) {
-      const alpha = hasItem ? 1 : 0.4;
-      itmBtn.txt.setAlpha(alpha);
+      itmBtn.txt.setAlpha(hasItem ? 1 : 0.4);
       if (hasItem) itmBtn.zone.setInteractive({ useHandCursor: true });
       else itmBtn.zone.disableInteractive();
     }

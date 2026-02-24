@@ -451,9 +451,16 @@ class BattleScene extends Phaser.Scene {
 
   _handleIdleTap(col, row) {
     const unit = this._unitAt(col, row);
-    if (unit && unit.team === 'player' && unit.canAct) {
-      this._selectUnit(unit);
-    } else if (unit && unit.team === 'player' && !unit.canAct) {
+    if (!unit || unit.dead) return;
+    if (unit.team === 'player') {
+      // Selectable as long as the unit hasn't both moved AND acted
+      if (!(unit.hasMoved && unit.hasActed)) {
+        this._selectUnit(unit);
+      } else {
+        this._showUnitInfo(unit);
+      }
+    } else {
+      // Tap enemy / neutral — show their stats without selecting
       this._showUnitInfo(unit);
     }
   }
@@ -467,8 +474,8 @@ class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // Tap on another friendly unit: switch selection
-    if (unit && unit.team === 'player' && unit.canAct) {
+    // Tap on another friendly unit (still has something to do): switch selection
+    if (unit && unit.team === 'player' && !unit.dead && !(unit.hasMoved && unit.hasActed)) {
       this._selectUnit(unit);
       return;
     }
@@ -478,13 +485,12 @@ class BattleScene extends Phaser.Scene {
   }
 
   _handleMovedTap(col, row) {
-    // In UNIT_MOVED state, the action menu handles input via UIScene buttons
-    // This handles deselect if tapping elsewhere
     const unit = this._unitAt(col, row);
     if (!unit || unit !== this._selected) {
-      // Could undo move here if tapping original tile
       if (this._preMovPos && col === this._preMovPos.col && row === this._preMovPos.row) {
-        this._undoMove();
+        this._undoMove();  // tap original tile → undo the move
+      } else {
+        this._deselect();  // tap anywhere else → cancel / deselect
       }
     }
   }
@@ -497,9 +503,24 @@ class BattleScene extends Phaser.Scene {
     if (!target || target.team !== 'enemy') { this._deselect(); return; }
 
     this._executeCombat(this._selected, target, () => {
-      this._selected.hasActed = true;
+      const unit = this._selected;
+      if (!unit) return;
+      unit.hasActed = true;
       this._checkEndCondition();
-      this._deselect();
+      // If game ended, do nothing further
+      if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
+      if (!unit.hasMoved && !unit.dead) {
+        // Unit attacked before moving — still allow a move this turn
+        const tiles = getReachableTiles(unit, this.mapGrid, this.units);
+        this._moveTiles = tiles;
+        this._clearHighlights();
+        this._drawMoveHighlights(tiles);
+        this._drawSelHighlight(unit);
+        this._setState(BS.UNIT_SEL);
+        this._getUI()?.showActionMenu(unit, this);  // shows Wait/Item; Attack disabled
+      } else {
+        this._deselect();
+      }
     });
   }
 
@@ -511,9 +532,22 @@ class BattleScene extends Phaser.Scene {
     if (!target || target.team !== 'player') { this._deselect(); return; }
 
     this._executeHeal(this._selected, target);
-    this._selected.hasActed = true;
+    const unit = this._selected;
+    unit.hasActed = true;
     this._checkEndCondition();
-    this._deselect();
+    if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
+    if (!unit.hasMoved && !unit.dead) {
+      // Healed before moving — still allow a move this turn
+      const tiles = getReachableTiles(unit, this.mapGrid, this.units);
+      this._moveTiles = tiles;
+      this._clearHighlights();
+      this._drawMoveHighlights(tiles);
+      this._drawSelHighlight(unit);
+      this._setState(BS.UNIT_SEL);
+      this._getUI()?.showActionMenu(unit, this);
+    } else {
+      this._deselect();
+    }
   }
 
   // ==========================================================================
@@ -526,11 +560,15 @@ class BattleScene extends Phaser.Scene {
     this._moveTiles = tiles;
     this._clearHighlights();
     this._drawMoveHighlights(tiles);
+    // Show attack-range preview from current position (red overlay)
+    if (!unit.hasActed) {
+      this._drawAtkHighlights(getAttackTiles(unit, this.mapGrid, unit.col, unit.row));
+    }
     this._drawSelHighlight(unit);
     this._setState(BS.UNIT_SEL);
     this._getUI()?.showUnitInfo(unit);
+    this._getUI()?.showActionMenu(unit, this);  // action menu visible immediately
     this._dimActedUnits();
-    // Bounce pop on selection
     this._bounceSprite(unit);
   }
 
@@ -549,6 +587,7 @@ class BattleScene extends Phaser.Scene {
   _moveSelectedUnit(col, row) {
     const unit = this._selected;
     this._preMovPos = { col: unit.col, row: unit.row };
+    this._getUI()?.hideActionMenu();  // hide menu while the walk animation plays
 
     const path = findPath(unit, col, row, this.mapGrid, this.units);
     this._animateMove(unit, path || [{ col, row }], () => {
