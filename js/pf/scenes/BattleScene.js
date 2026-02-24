@@ -71,6 +71,9 @@ class BattleScene extends Phaser.Scene {
       this.units.push(saved);
     }
 
+    // ── Track battle participation ───────────────────────────────────────────
+    this.units.filter(u => u.team === 'player').forEach(u => u.battlesParticipated++);
+
     // ── Build enemy units ───────────────────────────────────────────────────
     chapter.enemies.forEach(spawn => {
       const enemy = buildEnemyUnit(spawn, this.units);
@@ -112,12 +115,22 @@ class BattleScene extends Phaser.Scene {
     // ── Input ────────────────────────────────────────────────────────────────
     this.input.on('pointerdown', this._onTap, this);
 
-    // ── Opening dialogue ──────────────────────────────────────────────────────
-    const intro = chapter.intro || [];
+    // ── Opening dialogue → boss intro → IDLE ─────────────────────────────────
+    const intro    = chapter.intro || [];
+    const afterIntro = () => {
+      const bossUnit = chapter.bossId
+        ? this.units.find(u => u.id === chapter.bossId && !u.dead)
+        : this.units.find(u => u.isBoss && !u.dead);
+      if (bossUnit) {
+        this._showBossIntro(bossUnit, () => this._setState(BS.IDLE));
+      } else {
+        this._setState(BS.IDLE);
+      }
+    };
     if (intro.length > 0) {
-      this._startDialogue(intro, () => this._setState(BS.IDLE));
+      this._startDialogue(intro, afterIntro);
     } else {
-      this._setState(BS.IDLE);
+      afterIntro();
     }
   }
 
@@ -635,6 +648,9 @@ class BattleScene extends Phaser.Scene {
       this._updateSpritePos(unit);
       if (unit.team === 'player' && !unit.hasActed) this._startIdleBob(unit);
 
+      // Terrain landing feedback (Shining Force "land effect" display)
+      this._showTerrainLanding(unit);
+
       // Check if recruitable unit is adjacent
       this._checkRecruitment(unit);
 
@@ -890,17 +906,12 @@ class BattleScene extends Phaser.Scene {
       this._checkEndCondition();
       this._deselect();
     } else if (item && item.promote && unit.canPromote()) {
-      const msg = unit.promote() ? `${unit.name} promoted!` : 'Cannot promote!';
       unit.items.splice(idx, 1);
-      this._getUI()?.showMessage(msg);
-      // Update SVG sprite to promoted form (swap texture key)
-      if (unit.sprite && unit.sprite.setTexture) {
-        const newKey = getSpriteKey(unit);
-        unit.sprite.setTexture(newKey);
-      }
-      unit.hasActed = true;
-      this._checkEndCondition();
-      this._deselect();
+      this._runPromotionCeremony(unit, () => {
+        unit.hasActed = true;
+        this._checkEndCondition();
+        this._deselect();
+      });
     }
   }
 
@@ -943,20 +954,53 @@ class BattleScene extends Phaser.Scene {
     // Combat math
     const atkBonus = skillName ? (SKILLS[skillName].power || 1) : 1;
     const totalHits = (hitNum === 1 && skillName) ? (SKILLS[skillName]?.hits || 1) : 1;
+    const isMagicSkill = skillName ? (SKILLS[skillName].type === 'magic') : false;
+
+    // Hit/Miss check — AGI-adjusted; magic is more accurate
+    const agiDiff = attacker.agi - defender.agi;
+    const baseHit  = isMagicSkill ? 95 : 88;
+    const hitChance = Phaser.Math.Clamp(baseHit + agiDiff * 2, 55, 100);
+    const hitRoll   = Phaser.Math.Between(1, 100);
+    const didHit    = hitRoll <= hitChance;
+
+    // Crit check — only on hits; AGI advantage raises crit chance
+    const baseCrit  = isMagicSkill ? 4 : 8;
+    const critChance = Phaser.Math.Clamp(baseCrit + Math.max(0, agiDiff), 2, 30);
+    const critRoll   = Phaser.Math.Between(1, 100);
+    const isCrit     = didHit && (critRoll <= critChance);
 
     const terrainDef = TERRAIN[this.mapGrid[defender.row][defender.col]]?.def || 0;
     const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
     const rawDmg = Math.max(1, attacker.atk - (defender.def + guardBonus + terrainDef));
     const variance = Phaser.Math.Between(0, Math.floor(attacker.atk * 0.15));
     // Apply Math.max(1) after atkBonus and variance so skills with power < 1 can't produce 0 damage
-    const dmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
+    const baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
+    const dmg = isCrit ? Math.floor(baseDmg * 1.5) : baseDmg;
 
     // Attack animation
     this._shakeSprite(attacker.sprite, () => {
+      // On a miss, show EVADE text and bail early
+      if (!didHit) {
+        this._floatText(defender.col, defender.row, 'EVADE!', 0xaaddff, 20);
+        // Still check AGI double-attack after a miss
+        const afterMiss = () => {
+          if (!isDouble && !attacker.dead && !defender.dead &&
+              (attacker.agi - defender.agi) >= 4) {
+            this.time.delayedCall(200, () => {
+              this._executeCombat(attacker, defender, onDone, 1, null, true);
+            });
+          } else {
+            onDone && onDone();
+          }
+        };
+        this.time.delayedCall(500, afterMiss);
+        return;
+      }
+
       // Flash defender
       this.tweens.add({
         targets: [defender.spriteBg, defender.sprite],
-        alpha: 0.2, duration: 60, yoyo: true, repeat: 2,
+        alpha: 0.2, duration: 60, yoyo: true, repeat: isCrit ? 4 : 2,
         onComplete: () => {
           const died = defender.takeDamage(dmg);
           this._totalDamageDealt += dmg;
@@ -970,10 +1014,15 @@ class BattleScene extends Phaser.Scene {
           }
           const defSprite = defender.sprite;
           if (defSprite && defSprite.setTint) {
-            defSprite.setTint(0xff4444);
-            this.time.delayedCall(150, () => defSprite.clearTint());
+            defSprite.setTint(isCrit ? 0xffaa00 : 0xff4444);
+            this.time.delayedCall(isCrit ? 250 : 150, () => defSprite.clearTint());
           }
-          this._floatText(defender.col, defender.row, `-${dmg}`, PAL.HP_R);
+          if (isCrit) {
+            this._floatCritBanner(defender.col, defender.row);
+            this._floatText(defender.col, defender.row, `-${dmg}`, 0xffd700, 26);
+          } else {
+            this._floatText(defender.col, defender.row, `-${dmg}`, PAL.HP_R);
+          }
 
           // EXP gain
           const expGain = 10 + Math.floor(dmg / 2);
@@ -981,6 +1030,7 @@ class BattleScene extends Phaser.Scene {
           if (leveled) this._onLevelUp(attacker);
 
           if (died) {
+            if (attacker.team === 'player') attacker.killCount++;
             this._killUnit(defender, () => {
               // Counter-attack possible for melee defenders?
               // (no counter if dead)
@@ -1010,22 +1060,39 @@ class BattleScene extends Phaser.Scene {
             const cDef = TERRAIN[this.mapGrid[attacker.row][attacker.col]]?.def || 0;
             const cRaw = Math.max(1, defender.atk - (attacker.def + cDef));
             const cVar = Phaser.Math.Between(0, Math.floor(defender.atk * 0.1));
-            const cDmg = cRaw + cVar;
+            // Counter-attack hit/crit check (enemy counters)
+            const cAgiDiff  = defender.agi - attacker.agi;
+            const cHitChance = Phaser.Math.Clamp(85 + cAgiDiff * 2, 55, 100);
+            const cHit       = Phaser.Math.Between(1, 100) <= cHitChance;
+            const cCrit      = cHit && (Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(6 + Math.max(0, cAgiDiff), 2, 25));
+            const cBaseDmg   = cRaw + cVar;
+            const cDmg       = cCrit ? Math.floor(cBaseDmg * 1.5) : cBaseDmg;
 
             this.time.delayedCall(300, () => {
               this._shakeSprite(defender.sprite, () => {
+                if (!cHit) {
+                  this._floatText(attacker.col, attacker.row, 'EVADE!', 0xaaddff, 20);
+                  this.time.delayedCall(400, () => this._applyPostCombatEffects(attacker, defender, afterSequence));
+                  return;
+                }
                 this.tweens.add({
                   targets: [attacker.spriteBg, attacker.sprite],
-                  alpha: 0.2, duration: 60, yoyo: true, repeat: 2,
+                  alpha: 0.2, duration: 60, yoyo: true, repeat: cCrit ? 4 : 2,
                   onComplete: () => {
                     const aDied = attacker.takeDamage(cDmg);
                     this._updateHPBar(attacker);
-                    this._floatText(attacker.col, attacker.row, `-${cDmg}`, 0xff8844);
+                    if (cCrit) {
+                      this._floatCritBanner(attacker.col, attacker.row);
+                      this._floatText(attacker.col, attacker.row, `-${cDmg}`, 0xffd700, 26);
+                    } else {
+                      this._floatText(attacker.col, attacker.row, `-${cDmg}`, 0xff8844);
+                    }
                     const expGain2 = Math.floor(cDmg / 3);
                     const leveled2 = defender.gainExp(expGain2);
                     if (leveled2) this._onLevelUp(defender);
 
                     if (aDied) {
+                      if (defender.team === 'player') defender.killCount++;
                       this._killUnit(attacker, onDone);
                     } else {
                       this._applyPostCombatEffects(attacker, defender, afterSequence);
@@ -1336,6 +1403,150 @@ class BattleScene extends Phaser.Scene {
   }
 
   // ==========================================================================
+  // PROMOTION CEREMONY
+  // ==========================================================================
+
+  _runPromotionCeremony(unit, onDone) {
+    this._setState(BS.ANIMATING);
+    const W = GAME_W, H = GAME_H;
+    const { x: ux, y: uy } = this._tileCenter(unit.col, unit.row);
+
+    // Snapshot stats BEFORE promotion for comparison card
+    const beforeName = unit.name;
+    const beforeEmoji = unit.emoji;
+    const beforeStats = { hp: unit.maxHp, atk: unit.atk, def: unit.def, mov: unit.mov, agi: unit.agi };
+
+    // ── Phase 1: bright white flash + rising gold light rays ──────────────
+    const overlay = this.add.rectangle(W/2, H/2, W, H, 0xffffff, 0).setDepth(50);
+    this.tweens.add({ targets: overlay, alpha: 0.85, duration: 300, yoyo: true, onComplete: () => overlay.destroy() });
+    this.cameras.main.shake(120, 0.012);
+
+    // Gold light-ray particles bursting from unit
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2;
+      const ray = this.add.rectangle(ux, uy, 3, Phaser.Math.Between(20, 60), 0xffd700, 0.9)
+        .setRotation(angle).setDepth(48);
+      this.tweens.add({
+        targets: ray,
+        x: ux + Math.cos(angle) * 80,
+        y: uy + Math.sin(angle) * 80,
+        alpha: 0,
+        scaleY: 0.2,
+        duration: 700,
+        delay: i * 20,
+        ease: 'Power2',
+        onComplete: () => ray.destroy(),
+      });
+    }
+
+    // Sparkle dots
+    for (let i = 0; i < 20; i++) {
+      const dot = this.add.circle(
+        ux + Phaser.Math.Between(-50, 50),
+        uy + Phaser.Math.Between(-50, 50),
+        Phaser.Math.Between(3, 7), 0xffd700, 1
+      ).setDepth(49);
+      this.tweens.add({
+        targets: dot, alpha: 0, y: dot.y - Phaser.Math.Between(30, 70),
+        duration: 800, delay: i * 30,
+        onComplete: () => dot.destroy(),
+      });
+    }
+
+    // ── Phase 2: apply promotion & swap sprite ─────────────────────────────
+    this.time.delayedCall(400, () => {
+      unit.promote();
+      if (unit.sprite && unit.sprite.setTexture) {
+        unit.sprite.setTexture(getSpriteKey(unit));
+      }
+      AudioManager.play(this, 'level_up');
+
+      // Promoted class name banner
+      this._floatText(unit.col, unit.row, `${unit.emoji} ${unit.name}!`, 0xffd700, 20);
+
+      // ── Phase 3: stat comparison card after 700ms ──────────────────────
+      this.time.delayedCall(700, () => {
+        this._showPromotionCard(unit, beforeName, beforeEmoji, beforeStats, () => {
+          this._setState(BS.UNIT_MOVED);
+          onDone && onDone();
+        });
+      });
+    });
+  }
+
+  _showPromotionCard(unit, beforeName, beforeEmoji, beforeStats, onDone) {
+    const W = GAME_W, H = GAME_H;
+    const cardW = 300, cardH = 220, cardX = (W - cardW) / 2, cardY = (H - cardH) / 2 - 20;
+
+    // Semi-transparent dark backdrop
+    const backdrop = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.65).setDepth(55).setInteractive();
+
+    const cardBg = this.add.graphics().setDepth(56);
+    cardBg.fillStyle(0x0a1a2e, 0.98);
+    cardBg.fillRoundedRect(cardX, cardY, cardW, cardH, 12);
+    cardBg.lineStyle(2, 0xffd700, 0.9);
+    cardBg.strokeRoundedRect(cardX, cardY, cardW, cardH, 12);
+
+    const cx = cardX + cardW / 2;
+    // Header
+    this.add.text(cx, cardY + 18, '★  PROMOTION!  ★', {
+      fontSize: '18px', color: '#ffd700', fontStyle: 'bold',
+      fontFamily: 'Nunito, Courier New, monospace',
+      stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(57);
+
+    // Before → After names
+    this.add.text(cx, cardY + 46, `${beforeEmoji} ${beforeName}  →  ${unit.emoji} ${unit.name}`, {
+      fontSize: '13px', color: '#aaddff', fontStyle: 'bold',
+      fontFamily: 'Nunito, Courier New, monospace',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(57);
+
+    // Stat diff rows
+    const stats = [
+      { label: 'HP',  before: beforeStats.hp,  after: unit.maxHp },
+      { label: 'ATK', before: beforeStats.atk, after: unit.atk  },
+      { label: 'DEF', before: beforeStats.def, after: unit.def  },
+      { label: 'MOV', before: beforeStats.mov, after: unit.mov  },
+      { label: 'AGI', before: beforeStats.agi, after: unit.agi  },
+    ];
+    let sy = cardY + 72;
+    stats.forEach(s => {
+      const diff = s.after - s.before;
+      const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+      const diffCol = diff > 0 ? '#44ff88' : (diff < 0 ? '#ff4444' : '#888888');
+      this.add.text(cardX + 28, sy, `${s.label}:  ${s.before}  →  ${s.after}`, {
+        fontSize: '14px', color: '#ccddff', fontStyle: 'bold',
+        fontFamily: 'Nunito, Courier New, monospace',
+        stroke: '#000', strokeThickness: 2,
+      }).setDepth(57);
+      this.add.text(cardX + cardW - 28, sy, diffStr, {
+        fontSize: '14px', color: diffCol, fontStyle: 'bold',
+        fontFamily: 'Nunito, Courier New, monospace',
+        stroke: '#000', strokeThickness: 2,
+      }).setOrigin(1, 0).setDepth(57);
+      sy += 22;
+    });
+
+    // Tap to continue hint
+    const hint = this.add.text(cx, cardY + cardH - 18, '▶ TAP TO CONTINUE', {
+      fontSize: '12px', color: '#aabbcc', fontStyle: 'bold',
+      fontFamily: 'Nunito, Courier New, monospace',
+    }).setOrigin(0.5).setDepth(57);
+    this.tweens.add({ targets: hint, alpha: { from: 0.3, to: 1 }, duration: 600, yoyo: true, repeat: -1 });
+
+    // Tap anywhere on card/backdrop to dismiss
+    backdrop.on('pointerdown', dismiss);
+    const dismiss = () => {
+      backdrop.destroy();
+      cardBg.destroy();
+      // destroy all text objects we added (use depth tag via getAllChildren is harder, so just schedule cleanup)
+      this.time.delayedCall(50, onDone);
+    };
+    backdrop.on('pointerdown', dismiss);
+  }
+
+  // ==========================================================================
   // LEVEL UP
   // ==========================================================================
 
@@ -1386,19 +1597,55 @@ class BattleScene extends Phaser.Scene {
   // VISUAL EFFECTS
   // ==========================================================================
 
-  _floatText(col, row, text, color) {
+  _floatText(col, row, text, color, size = 17) {
     const { x, y } = this._tileCenter(col, row);
     const t = this.add.text(x, y, text, {
-      fontSize: '17px',
+      fontSize: `${size}px`,
       color: '#' + color.toString(16).padStart(6, '0'),
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: size > 20 ? 5 : 4,
       fontFamily: 'Nunito, Courier New, monospace',
       fontStyle: 'bold',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(20);
     this.tweens.add({
-      targets: t, y: y - 44, alpha: 0, duration: 1200, ease: 'Power1',
+      targets: t,
+      y: y - (size > 20 ? 60 : 44),
+      alpha: 0,
+      scaleX: size > 20 ? 1.4 : 1,
+      scaleY: size > 20 ? 1.4 : 1,
+      duration: size > 20 ? 900 : 1200,
+      ease: 'Power1',
       onComplete: () => t.destroy(),
+    });
+  }
+
+  // "★ CRITICAL! ★" screen flash + banner — called in parallel with damage float
+  _floatCritBanner(col, row) {
+    // Quick white flash over the whole scene
+    const flash = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0xffffff, 0.55)
+      .setDepth(30);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+
+    // Screen shake via camera
+    this.cameras.main.shake(180, 0.014);
+
+    // Large "★ CRITICAL! ★" text rising from the tile
+    const { x, y } = this._tileCenter(col, row);
+    const banner = this.add.text(x, y - 10, '★ CRITICAL! ★', {
+      fontSize: '22px',
+      color: '#ffd700',
+      stroke: '#000000',
+      strokeThickness: 6,
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(25);
+    this.tweens.add({
+      targets: banner,
+      y: y - 70,
+      alpha: 0,
+      duration: 1100,
+      ease: 'Power2',
+      onComplete: () => banner.destroy(),
     });
   }
 
@@ -1411,6 +1658,120 @@ class BattleScene extends Phaser.Scene {
       duration: 50, yoyo: true, repeat: 3,
       onComplete: () => { sprite.setX(origX); onDone && onDone(); },
     });
+  }
+
+  // Show terrain name + DEF bonus briefly when a unit lands on a defensive tile
+  _showTerrainLanding(unit) {
+    const tid  = this.mapGrid[unit.row][unit.col];
+    const terr = TERRAIN[tid];
+    if (!terr || terr.def <= 0) return; // only show on tiles with a defense bonus
+
+    const defIcons = ['', '🛡', '🛡🛡', '🛡🛡🛡'];
+    const icon  = defIcons[Math.min(terr.def, 3)];
+    const label = `${terr.name}  ${icon} +${terr.def} DEF`;
+
+    const W = GAME_W;
+    const bannerY = GRID_Y + GROWS * TILE - 22; // just above the UI panel
+    const bg = this.add.graphics().setDepth(18);
+    bg.fillStyle(0x000000, 0.72);
+    bg.fillRoundedRect(GRID_X + 4, bannerY - 14, GW - 8, 24, 6);
+
+    const txt = this.add.text(W / 2, bannerY - 2, label, {
+      fontSize: '14px',
+      color: '#88ddff',
+      stroke: '#000000',
+      strokeThickness: 3,
+      fontFamily: 'Nunito, Courier New, monospace',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(19);
+
+    this.tweens.add({
+      targets: [bg, txt],
+      alpha: 0,
+      duration: 500,
+      delay: 1200,
+      onComplete: () => { bg.destroy(); txt.destroy(); },
+    });
+  }
+
+  // ==========================================================================
+  // BOSS INTRODUCTION
+  // ==========================================================================
+
+  _showBossIntro(bossUnit, onDone) {
+    this._setState(BS.ANIMATING);
+    const W = GAME_W, H = GAME_H;
+
+    // Darken the scene
+    const shade = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0).setDepth(40);
+    this.tweens.add({ targets: shade, alpha: 0.6, duration: 400 });
+
+    // Red glow pulse on the boss sprite
+    if (bossUnit.spriteBg) {
+      this.tweens.add({
+        targets: bossUnit.spriteBg,
+        fillColor: { from: 0x882222, to: 0xff2200 },
+        duration: 300, yoyo: true, repeat: 3,
+      });
+    }
+
+    // Boss frame — slides in from top
+    const frameH = 90, frameY = H / 2 - 45;
+    const frameBg = this.add.graphics().setDepth(42);
+    frameBg.fillStyle(0x1a0000, 0.95);
+    frameBg.fillRect(0, frameY, W, frameH);
+    frameBg.lineStyle(2, 0xff2200, 0.9);
+    frameBg.lineBetween(0, frameY, W, frameY);
+    frameBg.lineBetween(0, frameY + frameH, W, frameY + frameH);
+    frameBg.setY(-frameH);
+    this.tweens.add({ targets: frameBg, y: 0, duration: 350, ease: 'Back.easeOut' });
+
+    // Boss emoji (large)
+    const bossEmoji = this.add.text(W / 2, frameY + frameH / 2 - 18, bossUnit.emoji, {
+      fontSize: '48px',
+    }).setOrigin(0.5).setDepth(43).setAlpha(0);
+
+    // Boss name
+    const bossLabel = this.add.text(W / 2, frameY + frameH / 2 + 20, bossUnit.name.toUpperCase(), {
+      fontSize: '20px', color: '#ff4444',
+      stroke: '#000000', strokeThickness: 5,
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(43).setAlpha(0);
+
+    const bossClass = this.add.text(W / 2, frameY + frameH / 2 + 44,
+      `${bossUnit.unitClass}  ·  LV ${bossUnit.level}`, {
+        fontSize: '13px', color: '#ff9999',
+        stroke: '#000000', strokeThickness: 3,
+        fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(43).setAlpha(0);
+
+    const tagline = this.add.text(W / 2, frameY + 8, '— ENEMY COMMANDER —', {
+      fontSize: '11px', color: '#ff6666',
+      stroke: '#000000', strokeThickness: 2,
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+    }).setOrigin(0.5, 0).setDepth(43).setAlpha(0);
+
+    // Staggered fade-in
+    this.time.delayedCall(300, () => {
+      this.tweens.add({ targets: [bossEmoji, tagline], alpha: 1, duration: 250 });
+      this.time.delayedCall(150, () => {
+        this.tweens.add({ targets: bossLabel, alpha: 1, duration: 250,
+          onComplete: () => this.tweens.add({ targets: bossClass, alpha: 1, duration: 200 }) });
+      });
+    });
+
+    // Dismiss on tap or after 2.5s
+    const allObjs = [shade, frameBg, bossEmoji, bossLabel, bossClass, tagline];
+    const dismiss = () => {
+      tapZone.removeAllListeners();
+      this.tweens.add({
+        targets: allObjs, alpha: 0, duration: 400,
+        onComplete: () => { allObjs.forEach(o => o.destroy()); tapZone.destroy(); onDone && onDone(); },
+      });
+    };
+    const tapZone = this.add.zone(W/2, H/2, W, H).setInteractive().setDepth(44);
+    tapZone.on('pointerdown', dismiss);
+    this.time.delayedCall(2500, () => { if (tapZone.active) dismiss(); });
   }
 
   _healEffect(col, row) {

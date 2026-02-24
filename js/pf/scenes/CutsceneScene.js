@@ -282,7 +282,7 @@ class CutsceneScene extends Phaser.Scene {
     this.tweens.add({
       targets: overlay, alpha: 1, duration: 600,
       onComplete: () => {
-        this.scene.start('BattleScene', {
+        this.scene.start('PrepScene', {
           chapter:  this.nextChapter,
           saveData: this.saveData,
         });

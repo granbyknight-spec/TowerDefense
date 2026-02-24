@@ -45,5 +45,6 @@ jobs:
           else
             COUNT=$(git diff --staged --name-only | wc -l)
             git commit -m "Generate ElevenLabs SFX assets (${COUNT} files)"
+            git pull --rebase origin HEAD
             git push origin HEAD
           fi

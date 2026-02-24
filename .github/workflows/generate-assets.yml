@@ -75,5 +75,7 @@ jobs:
           else
             COUNT=$(git diff --staged --name-only | wc -l)
             git commit -m "Generate AI art assets: ${{ inputs.script }} (${COUNT} files)"
+            # Pull-rebase in case code commits landed while this long-running job was running
+            git pull --rebase origin HEAD
             git push origin HEAD
           fi
