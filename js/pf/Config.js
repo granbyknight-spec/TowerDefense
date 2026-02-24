@@ -24,18 +24,18 @@ const T = {
 };
 
 const TERRAIN = [
-  { name:'Grass',    color:0x5a9e3a, hi:0x6abe44, movCost:1,  def:0 }, // 0
-  { name:'Forest',   color:0x2d6b1a, hi:0x3d8b2a, movCost:2,  def:1 }, // 1
-  { name:'Mountain', color:0x7a6a55, hi:0x9a8a75, movCost:3,  def:2 }, // 2
-  { name:'Water',    color:0x2277cc, hi:0x3399ee, movCost:99, def:0 }, // 3
-  { name:'Road',     color:0xc4a47a, hi:0xe0c090, movCost:1,  def:0 }, // 4
-  { name:'Sand',     color:0xe8c87a, hi:0xf8e08a, movCost:2,  def:0 }, // 5
-  { name:'Castle',   color:0x888888, hi:0xaaaaaa, movCost:1,  def:2 }, // 6
-  { name:'Village',  color:0xd4956a, hi:0xf0b080, movCost:1,  def:0 }, // 7
-  { name:'Snow',     color:0xc8dff0, hi:0xe8f8ff, movCost:2,  def:0 }, // 8
-  { name:'Bridge',   color:0xb47a3a, hi:0xd49a5a, movCost:1,  def:0 }, // 9
-  { name:'Wall',     color:0x444444, hi:0x666666, movCost:99, def:3 }, // 10
-  { name:'Oasis',    color:0x44aa66, hi:0x55cc77, movCost:1,  def:1 }, // 11
+  { name:'Grass',    color:0x3d6b28, hi:0x4d8533, movCost:1,  def:0 }, // 0 — darker olive green
+  { name:'Forest',   color:0x1e4a12, hi:0x2a5e1a, movCost:2,  def:1 }, // 1 — very dark green
+  { name:'Mountain', color:0x5a5248, hi:0x706860, movCost:3,  def:2 }, // 2 — warm dark grey-brown
+  { name:'Water',    color:0x1a5588, hi:0x2266aa, movCost:99, def:0 }, // 3 — deeper navy blue
+  { name:'Road',     color:0x8a7055, hi:0xa08060, movCost:1,  def:0 }, // 4 — dark tan/brown
+  { name:'Sand',     color:0x9a8448, hi:0xb09858, movCost:2,  def:0 }, // 5 — dark muted sand
+  { name:'Castle',   color:0x4a4a5a, hi:0x606070, movCost:1,  def:2 }, // 6 — dark blue-grey stone
+  { name:'Village',  color:0x7a5040, hi:0x8e6050, movCost:1,  def:0 }, // 7 — dark terracotta
+  { name:'Snow',     color:0x7a8f9a, hi:0x8faab8, movCost:2,  def:0 }, // 8 — muted grey-blue (not white)
+  { name:'Bridge',   color:0x6b4a22, hi:0x825a30, movCost:1,  def:0 }, // 9 — dark wood brown
+  { name:'Wall',     color:0x2a2a2a, hi:0x3a3a3a, movCost:99, def:3 }, // 10 — near-black (impassable)
+  { name:'Oasis',    color:0x2a6640, hi:0x347a4e, movCost:1,  def:1 }, // 11 — dark teal-green
 ];
 
 // Palette for nice rendering
