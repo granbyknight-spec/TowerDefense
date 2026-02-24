@@ -61,6 +61,21 @@ class BattleScene extends Phaser.Scene {
         }
       }
     });
+    // Player portrait PNG overrides (assets/characters/<ID>_portrait.png)
+    const PLAYER_PNG_IDS = [
+      'PUPPY_KNIGHT', 'CORGI_HEALER', 'LABRADOR_SCOUT', 'BEAGLE_ARCHER',
+      'POODLE_MAGE', 'BULLDOG_TANK', 'HUSKY_RIDER', 'TERRIER_THIEF',
+    ];
+    PLAYER_PNG_IDS.forEach(id => {
+      const pngKey = `player_png_${id}`;
+      if (!this.textures.exists(pngKey)) {
+        try {
+          this.load.image(pngKey, `assets/characters/${id}_portrait.png`);
+        } catch (e) {
+          // silently skip — SVG fallback will be used
+        }
+      }
+    });
     // Terrain tile PNGs (graceful — fall back to colored graphics if missing)
     TERRAIN.forEach((td, i) => {
       const key = `terrain_${i}`;
@@ -327,21 +342,23 @@ class BattleScene extends Phaser.Scene {
     const sprScale   = spriteSize / 64;
 
     const sprKey = getSpriteKey(unit);
-    // For enemy units, prefer the PNG sprite override over the SVG if it loaded
-    const pngKey = `enemy_png_${unit.id}`;
-    const useEnemyPng = unit.team === 'enemy' && this.textures.exists(pngKey);
+    // Prefer portrait PNG overrides (enemy or player) over SVG sprites
+    const enemyPngKey  = `enemy_png_${unit.id}`;
+    const playerPngKey = `player_png_${unit.id}`;
+    const useEnemyPng  = unit.team === 'enemy'  && this.textures.exists(enemyPngKey);
+    const usePlayerPng = unit.team === 'player' && this.textures.exists(playerPngKey);
+    const usePng       = useEnemyPng || usePlayerPng;
+    const activePngKey = useEnemyPng ? enemyPngKey : usePlayerPng ? playerPngKey : null;
+    const activeKey    = activePngKey || sprKey;
 
-    const activeKey = useEnemyPng ? pngKey : sprKey;
     let sprite;
     if (this.textures.exists(activeKey)) {
       sprite = this.add.image(x, y - 1, activeKey).setOrigin(0.5);
-      if (useEnemyPng) {
+      if (usePng) {
         // AI-generated PNGs can be any resolution — fit to tile size
         const fitSize = spriteSize * (unit.isBoss ? 1.15 : 1);
         sprite.setDisplaySize(fitSize, fitSize);
-        // Circular mask so the white PNG background is clipped to a circle.
-        // The mask graphics is not added to the display list — it only defines
-        // the clip region. We redraw it each frame so it follows the sprite.
+        // Circular mask so the PNG background is clipped to a circle.
         const maskGfx = this.make.graphics({ x: 0, y: 0, add: false });
         const drawMask = (mx, my) => {
           maskGfx.clear();
@@ -366,7 +383,7 @@ class BattleScene extends Phaser.Scene {
     }
 
     // Boss units get a slightly larger sprite to stand out
-    if (unit.isBoss && sprite.setScale && !useEnemyPng) {
+    if (unit.isBoss && sprite.setScale && !usePng) {
       sprite.setScale(sprScale * 1.15);
     }
 
@@ -377,25 +394,32 @@ class BattleScene extends Phaser.Scene {
     const hpBar = this.add.rectangle(x - (TILE - 10) / 2, y + r + 3, TILE - 10, 4, PAL.HP_G, 1);
     hpBar.setOrigin(0, 0.5);
 
-    // ── Class badge label (tiny, below hp bar) ──────────────────────────────
-    // Shows first 3 chars of unit class so player units are distinguishable
+    // ── Class-colored ring background ──────────────────────────────────────
+    const ringColor = CLASS_RING_COLOR[unit.unitClass] ||
+      (unit.team === 'player' ? PAL.PLAYER_GLOW :
+       unit.team === 'neutral' ? 0x44ff88 : PAL.ENEMY_GLOW);
+    const spriteBg = this.add.circle(x, y, r + 2, ringColor, 0.18);
+    spriteBg.setStrokeStyle(3, ringColor, 0.85);
+
+    // ── Class badge icon (below hp bar) ─────────────────────────────────────
     const badgeColor = unit.team === 'player' ? '#88bbff'
                      : unit.team === 'neutral' ? '#88ffaa'
                      : '#ff8888';
-    const badge = this.add.text(x, y + r + 10, unit.unitClass.slice(0, 4).toUpperCase(), {
-      fontSize: '7px',
+    const badgeLabel = CLASS_ICON[unit.unitClass] || unit.unitClass.slice(0, 4).toUpperCase();
+    const badge = this.add.text(x, y + r + 10, badgeLabel, {
+      fontSize: '9px',
       color: badgeColor,
       fontFamily: 'Courier New, monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
-    unit.spriteBg  = null;  // no background circle
+    unit.spriteBg  = spriteBg;
     unit.sprite    = sprite;
     unit.hpBarBg   = hpBg;
     unit.hpBar     = hpBar;
     unit.badge     = badge;
 
-    this._unitLayer.add([sprite, hpBg, hpBar, badge]);
+    this._unitLayer.add([spriteBg, sprite, hpBg, hpBar, badge]);
     this._updateHPBar(unit);
 
     // ── Idle bob animation ─────────────────────────────────────────────────

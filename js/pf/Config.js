@@ -58,6 +58,40 @@ const PAL = {
   DIM:     0x8899aa,
 };
 
+// Class ring colors — used as the colored border around each unit sprite
+const CLASS_RING_COLOR = {
+  'Knight':   0xf8d030, // gold
+  'Paladin':  0xffd700, // bright gold
+  'Healer':   0x44ff88, // green
+  'Cleric':   0x55ffaa, // light green
+  'Warrior':  0xff6644, // orange-red
+  'Hero':     0xff4422, // red
+  'Mage':     0xcc44ff, // purple
+  'Wizard':   0xdd66ff, // light purple
+  'Archer':   0xff9944, // orange
+  'Ranger':   0xffbb66, // light orange
+  'Cavalry':  0x44bbff, // sky blue
+  'Champion': 0x66ddff, // light sky blue
+  'Thief':    0xaa44cc, // dark purple
+  'Ninja':    0xcc66dd, // medium purple
+  'General':  0xff2222, // bright red
+  'Swimmer':  0x22ccff, // cyan
+  'Admiral':  0x44eeff, // light cyan
+};
+
+// Unicode class icons — shown in the badge below each unit's HP bar
+const CLASS_ICON = {
+  'Knight':   '⚔', 'Paladin':  '⚔',
+  'Healer':   '✚', 'Cleric':   '✚',
+  'Warrior':  '⚡', 'Hero':     '⚡',
+  'Mage':     '✦', 'Wizard':   '✦',
+  'Archer':   '➶', 'Ranger':   '➶',
+  'Cavalry':  '♞', 'Champion': '♞',
+  'Thief':    '◆', 'Ninja':    '◆',
+  'General':  '★',
+  'Swimmer':  '≈', 'Admiral':  '≈',
+};
+
 // =============================================================================
 // HERO DEFINITIONS
 // =============================================================================
