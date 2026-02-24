@@ -730,11 +730,20 @@ class BattleScene extends Phaser.Scene {
     const sk = SKILLS[skill];
     if (!sk) return;
 
+    // MP cost check — cancel immediately if the unit can't afford the skill
+    const mpCost = sk.mpCost || 0;
+    if (mpCost > 0 && unit.mp < mpCost) {
+      this._getUI()?.showMessage(`Not enough MP! (need ${mpCost})`);
+      return;
+    }
+
     // Instant buff — no targeting needed
     if (sk.type === 'buff') {
       if (skill === 'guard') {
+        if (mpCost > 0) unit.useMp(mpCost);
         unit.guardActive = true;
         unit.hasActed = true;
+        this._getUI()?.showUnitInfo(unit); // refresh MP bar
         this._getUI()?.showMessage(`${unit.name} raises their guard!`);
         this._getUI()?.hideActionMenu();
         this._setState(BS.IDLE);
@@ -745,7 +754,43 @@ class BattleScene extends Phaser.Scene {
     }
 
     if (sk.targetAlly) {
-      // Heal — use skill's own range rather than unit's weapon range
+      // AoE heal (healall) — immediately heal all allies in range without target selection
+      if (sk.aoe) {
+        if (mpCost > 0) unit.useMp(mpCost);
+
+        const healRange = sk.range || 3;
+        const alliesInRange = this.units.filter(u => {
+          if (u.dead || u === unit || u.team !== unit.team) return false;
+          const dist = Math.abs(u.col - unit.col) + Math.abs(u.row - unit.row);
+          return dist <= healRange;
+        });
+
+        alliesInRange.forEach(target => {
+          const healAmt = Math.floor(unit.atk * Math.abs(sk.power));
+          target.hp = Math.min(target.maxHp, target.hp + healAmt);
+          this._updateHPBar(target);
+          this._floatText(target.col, target.row, `+${healAmt}`, 0x00ff88);
+          this._healEffect(target.col, target.row);
+        });
+
+        if (alliesInRange.length === 0) {
+          this._getUI()?.showMessage('No allies in range!');
+          // Refund the MP cost since no one was healed
+          if (mpCost > 0) unit.recoverMp(mpCost);
+          this._getUI()?.showUnitInfo(unit);
+          return;
+        }
+
+        unit.hasActed = true;
+        unit.hasMoved = true;
+        this._getUI()?.showUnitInfo(unit); // refresh MP bar
+        this._clearHighlights();
+        this._deselect();
+        this._checkEndCondition();
+        return;
+      }
+
+      // Single-target heal — use skill's own range rather than unit's weapon range
       const skillRange = sk.range || unit.range;
       const healTiles = getAttackTiles({ ...unit, range: skillRange }, this.mapGrid, unit.col, unit.row);
       this._healTiles = healTiles;
@@ -838,6 +883,12 @@ class BattleScene extends Phaser.Scene {
     if (hitNum === 1) {
       skillName = this._pendingSkill;
       this._pendingSkill = null;
+      // Deduct MP cost when the skill is actually executed
+      if (skillName) {
+        const mpCost = (SKILLS[skillName]?.mpCost) || 0;
+        if (mpCost > 0) attacker.useMp(mpCost);
+        this._getUI()?.showUnitInfo(attacker); // refresh MP bar in panel
+      }
     }
     this._lastSkillUsed = skillName;  // keep updated so noCounter / post-effects always know the skill
 
@@ -1090,6 +1141,12 @@ class BattleScene extends Phaser.Scene {
   _beginPlayerTurn() {
     this.playerTurn = true;
     this.units.filter(u => !u.dead && u.team === 'player').forEach(u => u.resetTurn());
+
+    // MP recovery — each player unit gains 2 MP at the start of their turn
+    this.units.filter(u => !u.dead && u.team === 'player').forEach(u => { u.recoverMp(2); });
+    // Refresh UI panel if a unit is currently selected
+    if (this._selected) this._getUI()?.showUnitInfo(this._selected);
+
     this._setState(BS.IDLE);
     this._dimActedUnits();
     this._getUI()?.showTurnBanner('Your Turn', 0x2255cc);
