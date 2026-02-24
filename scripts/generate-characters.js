@@ -12,19 +12,22 @@ const POLL_MS    = 8000;
 const TIMEOUT_MS = 600000;
 const OUT_DIR    = path.join(__dirname, '..', 'assets', 'characters');
 
-const STYLE_PREFIX = 'score_9, score_8_up, masterpiece, best quality, ultra-detailed, anime jRPG character portrait, Fire Emblem aesthetic, Shining Force style, cute chibi-adjacent anime, warm cel shading, vibrant color palette, game card illustration style';
-const NEG = 'nsfw, nude, suggestive, realistic photograph, 3d render, ugly, deformed, bad anatomy, extra limbs, blurry, low quality, watermark, signature, text overlay, human face, cat, feline features, washed out, overexposed, monochrome';
+// KEY: Standard anime models generate humans by default.
+// Fix: lead every prompt with strong kemono/furry/anthro dog keywords,
+// use models known for animal characters, and hard-negative human anatomy.
+const STYLE_PREFIX = 'kemono, anthro dog, furry art, anthropomorphic canine, animal ears, dog snout, dog nose, dog face, non-human face, anime RPG character portrait, chibi-adjacent, cel shaded, vibrant colors, game card art';
+const NEG = 'nsfw, nude, human, human face, human nose, human ears, human skin, no fur, hairless face, realistic human, 3d render, ugly, deformed, bad anatomy, extra limbs, blurry, low quality, watermark, cat, feline';
 
 const HEROES = [
-  { id: 'PUPPY_KNIGHT',   portrait: 'cute golden retriever puppy knight, blue knight visor helmet with red plume, silver armor pauldrons, sapphire blue eyes, heroic determined expression, warm golden fur, cel shaded, dark blue gradient background, bust shot, vibrant colors, thick clean outlines' },
-  { id: 'CORGI_HEALER',   portrait: 'cute pembroke welsh corgi puppy healer, white and green healer robes, green cross symbol on forehead, emerald green eyes, gentle kind smile, cream fur, magical sparkles, cel shaded, dark teal gradient background, bust shot' },
-  { id: 'LABRADOR_SCOUT', portrait: 'cute yellow labrador puppy warrior, red bandana headband, amber brown eyes, grinning confident expression, golden-brown fur, leather armor, scout look, cel shaded, dark brown gradient background, bust shot' },
-  { id: 'BEAGLE_ARCHER',  portrait: 'cute tricolor beagle puppy archer, green ranger hood, arrow quiver strap, dark saddle patch on head, focused sharp eyes, dark brown eyes, black tan white fur markings, archery visor, cel shaded, dark forest green gradient background, bust shot' },
-  { id: 'POODLE_MAGE',    portrait: 'cute lavender standard poodle puppy mage, purple mage robes, gold star on forehead, poodle pompom curls, violet amethyst eyes, mysterious smile, magical purple sparkles, wand tip, cel shaded, dark purple gradient background, bust shot' },
-  { id: 'BULLDOG_TANK',   portrait: 'cute grey english bulldog puppy tank, heavy dark iron armor, spiked collar, stern furrowed brows, small fierce eyes, stocky wrinkled face, cute fang, shield emblem, cel shaded, dramatic dark grey background, bust shot' },
-  { id: 'HUSKY_RIDER',    portrait: 'cute siberian husky puppy cavalry, leather harness gold buckles, blue heterochromia eyes, black white husky mask markings, confident dashing smile, lance visible, grey white fur, cel shaded, dark navy blue gradient background, bust shot' },
-  { id: 'TERRIER_THIEF',  portrait: 'cute rust-red jack russell terrier puppy thief, black eye mask, red scarf, dagger earring, mischievous grin, amber orange eyes, tan rust fur, nimble look, cel shaded, dramatic side lighting dark red background, bust shot' },
-  { id: 'DOG_PALADIN',    portrait: 'majestic golden retriever paladin, gold full plate armor, white holy wings, ornate gold blue helm, white cross breastplate, radiant royal blue eyes, noble expression, holy light glow, divine background gold particles, bust shot' },
+  { id: 'PUPPY_KNIGHT',   portrait: 'golden retriever dog knight, fluffy golden fur face, floppy dog ears, wet black dog nose, big brown puppy eyes, blue knight helmet with red plume, silver plate armor, heroic determined expression, dark blue background, bust portrait' },
+  { id: 'CORGI_HEALER',   portrait: 'pembroke welsh corgi dog healer, orange and white fur face, pointy corgi ears, black dog nose, white and green healer robes, green cross emblem, gentle kind smile, magical sparkles, dark teal background, bust portrait' },
+  { id: 'LABRADOR_SCOUT', portrait: 'yellow labrador dog warrior, golden fur face, floppy lab ears, black dog nose, red bandana headband, leather armor, wide grin, confident expression, dark brown background, bust portrait' },
+  { id: 'BEAGLE_ARCHER',  portrait: 'tricolor beagle dog archer, black tan white fur face, long floppy beagle ears, brown dog nose, green ranger hood, arrow quiver strap, focused sharp eyes, dark forest green background, bust portrait' },
+  { id: 'POODLE_MAGE',    portrait: 'white poodle dog mage, fluffy curly white fur face, poodle pompom ears, pink dog nose, purple mage robes with gold stars, magical sparkles, wand, mysterious smile, dark purple background, bust portrait' },
+  { id: 'BULLDOG_TANK',   portrait: 'grey english bulldog dog tank, wrinkled stocky bulldog face, small rose ears, pushed-in black nose, heavy spiked iron armor, spiked collar, fierce furrowed brows, cute underbite fang, dark grey background, bust portrait' },
+  { id: 'HUSKY_RIDER',    portrait: 'siberian husky dog cavalry, grey white fur face, pointed husky ears with black tips, blue and brown heterochromia eyes, black nose, blue silver armor, confident smile, dark navy background, bust portrait' },
+  { id: 'TERRIER_THIEF',  portrait: 'jack russell terrier dog thief, tan white fur face, v-shaped terrier ears, black nose, black bandit eye mask, red scarf, dagger earring, mischievous grin, dark red background, bust portrait' },
+  { id: 'DOG_PALADIN',    portrait: 'golden retriever dog paladin, fluffy golden fur face, floppy ears, black nose, gold full plate armor, white holy wings, ornate helm, noble expression, holy light glow, gold particles background, bust portrait' },
 ];
 
 function request(method, urlStr, headers, body) {
