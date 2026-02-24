@@ -231,16 +231,7 @@ class BattleScene extends Phaser.Scene {
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
 
-    // ── Team-coloured background circle ────────────────────────────────────
-    const teamColor = unit.team === 'player' ? 0x224488
-                    : unit.team === 'neutral' ? 0x2a4a1a
-                    : 0x882222;
-    const glow      = unit.team === 'player' ? PAL.PLAYER_GLOW
-                    : unit.team === 'neutral' ? 0x44cc66
-                    : PAL.ENEMY_GLOW;
-
-    const bg = this.add.circle(x, y, r, teamColor, 0.95);
-    bg.setStrokeStyle(2, glow, 0.9);
+    // No background circle — sprites stand on their own.
 
     // ── SVG face sprite (replaces plain emoji text) ─────────────────────────
     // Scale the 64×64 SVG down to fit inside the circle (r*2 diameter = TILE-6)
@@ -282,13 +273,13 @@ class BattleScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
-    unit.spriteBg  = bg;
+    unit.spriteBg  = null;  // no background circle
     unit.sprite    = sprite;
     unit.hpBarBg   = hpBg;
     unit.hpBar     = hpBar;
     unit.badge     = badge;
 
-    this._unitLayer.add([bg, sprite, hpBg, hpBar, badge]);
+    this._unitLayer.add([sprite, hpBg, hpBar, badge]);
     this._updateHPBar(unit);
 
     // ── Idle bob animation ─────────────────────────────────────────────────
@@ -353,7 +344,7 @@ class BattleScene extends Phaser.Scene {
     if (!unit.sprite) return;
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
-    unit.spriteBg.setPosition(x, y);
+    if (unit.spriteBg) unit.spriteBg.setPosition(x, y);
     unit.sprite.setPosition(x, y - 1);
     unit.hpBarBg.setPosition(x, y + r + 3);
     unit.hpBar.setX(x - (TILE - 10) / 2);
@@ -564,6 +555,9 @@ class BattleScene extends Phaser.Scene {
       unit.col = col;
       unit.row = row;
       unit.hasMoved = true;
+      // Snap sprite to exact tile now that the model is updated
+      this._updateSpritePos(unit);
+      if (unit.team === 'player' && !unit.hasActed) this._startIdleBob(unit);
 
       // Check if recruitable unit is adjacent
       this._checkRecruitment(unit);
@@ -599,11 +593,8 @@ class BattleScene extends Phaser.Scene {
 
     const doStep = () => {
       if (step >= path.length) {
-        this._updateSpritePos(unit);
-        // Restart idle bob for player units after move completes
-        if (unit.team === 'player' && !unit.hasActed) {
-          this._startIdleBob(unit);
-        }
+        // NOTE: callers are responsible for updating unit.col/unit.row then
+        // calling _updateSpritePos() so the sprite snaps to the exact tile.
         onComplete();
         return;
       }
@@ -887,6 +878,8 @@ class BattleScene extends Phaser.Scene {
       enemy.col = action.moveTo.col;
       enemy.row = action.moveTo.row;
       enemy.hasMoved = true;
+      // Snap sprite to exact tile now that the model is updated
+      this._updateSpritePos(enemy);
 
       if (action.target && !action.target.dead) {
         this._executeCombat(enemy, action.target, () => {
