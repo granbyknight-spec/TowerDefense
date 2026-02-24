@@ -23,6 +23,9 @@ jobs:
         run: |
           mkdir -p assets/audio/sfx assets/audio/music
 
+      - name: Download music from OpenGameArt
+        run: node scripts/download-music.js
+
       - name: Generate SFX via ElevenLabs
         env:
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
