@@ -4,17 +4,17 @@
 // Game constants, terrain data, and unit definitions
 // =============================================================================
 
-const TILE = 44;
-const GCOLS = 10;
-const GROWS = 12;
-const GW = GCOLS * TILE;   // 440
-const GH = GROWS * TILE;   // 528
+const TILE = 36;
+const GCOLS = 13;
+const GROWS = 16;
+const GW = GCOLS * TILE;   // 468
+const GH = GROWS * TILE;   // 576
 const GAME_W = 480;
 const GAME_H = 720;
-const GRID_X = (GAME_W - GW) / 2;  // 20
+const GRID_X = (GAME_W - GW) / 2;  // 6
 const GRID_Y = 8;
-const UI_Y = GRID_Y + GH + 4;      // 540
-const UI_H = GAME_H - UI_Y;        // 180
+const UI_Y = GRID_Y + GH + 4;      // 588
+const UI_H = GAME_H - UI_Y;        // 132
 
 // Terrain IDs
 const T = {

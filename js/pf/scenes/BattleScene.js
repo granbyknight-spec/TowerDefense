@@ -406,48 +406,19 @@ class BattleScene extends Phaser.Scene {
     const spriteSize = (r * 2 - 4); // leave 2px padding inside ring
     const sprScale   = spriteSize / 64;
 
+    // Always use SVG chibi sprites on the map — portrait PNGs are for cutscenes/panels only
     const sprKey = getSpriteKey(unit);
-    // Prefer AI-generated portrait PNGs over SVG sprites (enemy and player)
-    const enemyPngKey  = `enemy_png_${unit.id}`;
-    const playerPngKey = `player_png_${unit.id}`;
-    const useEnemyPng  = unit.team === 'enemy'  && this.textures.exists(enemyPngKey);
-    const usePlayerPng = unit.team === 'player' && this.textures.exists(playerPngKey);
-    const usePng       = useEnemyPng || usePlayerPng;
-    const activeKey    = useEnemyPng ? enemyPngKey : usePlayerPng ? playerPngKey : sprKey;
 
     let sprite;
-    if (this.textures.exists(activeKey)) {
-      sprite = this.add.image(x, y - 1, activeKey).setOrigin(0.5);
-      if (usePng) {
-        // AI-generated PNGs can be any resolution — fit to tile size
-        const fitSize = spriteSize * (unit.isBoss ? 1.15 : 1);
-        sprite.setDisplaySize(fitSize, fitSize);
-        // Circular mask so the PNG background is clipped to a circle.
-        const maskGfx = this.make.graphics({ x: 0, y: 0, add: false });
-        const drawMask = (mx, my) => {
-          maskGfx.clear();
-          maskGfx.fillStyle(0xffffff);
-          maskGfx.fillCircle(mx, my, r);
-        };
-        drawMask(x, y - 1);
-        sprite.setMask(maskGfx.createGeometryMask());
-        const onUpdate = () => {
-          if (sprite.active) drawMask(sprite.x, sprite.y);
-          else this.events.off('update', onUpdate);
-        };
-        this.events.on('update', onUpdate);
-        unit._spriteMask   = maskGfx;
-        unit._spriteMaskCb = onUpdate;
-      } else {
-        sprite.setScale(sprScale);
-      }
+    if (this.textures.exists(sprKey)) {
+      sprite = this.add.image(x, y - 1, sprKey).setOrigin(0.5).setScale(sprScale);
     } else {
       // Fallback to emoji text if texture somehow not loaded
       sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: '22px' }).setOrigin(0.5);
     }
 
     // Boss units get a slightly larger sprite to stand out
-    if (unit.isBoss && sprite.setScale && !usePng) {
+    if (unit.isBoss && sprite.setScale) {
       sprite.setScale(sprScale * 1.15);
     }
 
