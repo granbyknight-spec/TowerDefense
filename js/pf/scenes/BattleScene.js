@@ -827,16 +827,19 @@ class BattleScene extends Phaser.Scene {
   // COMBAT
   // ==========================================================================
 
-  _executeCombat(attacker, defender, onDone) {
+  _executeCombat(attacker, defender, onDone, hitNum = 1) {
     this._setState(BS.ANIMATING);
     this._clearHighlights();
 
     // Combat math
     const atkBonus = this._pendingSkill ? (SKILLS[this._pendingSkill].power || 1) : 1;
+    this._lastSkillUsed = this._pendingSkill;
     this._pendingSkill = null;
+    const totalHits = (hitNum === 1 && this._lastSkillUsed) ? (SKILLS[this._lastSkillUsed]?.hits || 1) : 1;
 
     const terrainDef = TERRAIN[this.mapGrid[defender.row][defender.col]]?.def || 0;
-    const rawDmg = Math.max(1, attacker.atk - (defender.def + terrainDef));
+    const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
+    const rawDmg = Math.max(1, attacker.atk - (defender.def + guardBonus + terrainDef));
     const variance = Phaser.Math.Between(0, Math.floor(attacker.atk * 0.15));
     // Apply Math.max(1) after atkBonus and variance so skills with power < 1 can't produce 0 damage
     const dmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
@@ -868,7 +871,8 @@ class BattleScene extends Phaser.Scene {
 
           // Counter-attack: defender can retaliate if attacker is within defender's weapon range
           const dist = Math.abs(attacker.col - defender.col) + Math.abs(attacker.row - defender.row);
-          const canCounter = dist <= defender.range && defender.team === 'enemy';
+          const noCounter = this._lastSkillUsed ? (SKILLS[this._lastSkillUsed]?.noCounter || false) : false;
+          const canCounter = !noCounter && dist <= defender.range && defender.team === 'enemy';
           if (canCounter) {
             const cDef = TERRAIN[this.mapGrid[attacker.row][attacker.col]]?.def || 0;
             const cRaw = Math.max(1, defender.atk - (attacker.def + cDef));
@@ -891,14 +895,21 @@ class BattleScene extends Phaser.Scene {
                     if (aDied) {
                       this._killUnit(attacker, onDone);
                     } else {
-                      onDone && onDone();
+                      this._applyPostCombatEffects(attacker, defender, onDone);
                     }
                   },
                 });
               });
             });
           } else {
-            onDone && onDone();
+            if (totalHits > 1 && hitNum < totalHits && !defender.dead) {
+              // Fire second hit after short delay
+              this.time.delayedCall(200, () => {
+                this._executeCombat(attacker, defender, onDone, hitNum + 1);
+              });
+            } else {
+              this._applyPostCombatEffects(attacker, defender, onDone);
+            }
           }
         },
       });
@@ -945,6 +956,19 @@ class BattleScene extends Phaser.Scene {
     this.turnNumber++;
     this._setState(BS.ENEMY_TURN);
     this._getUI()?.showTurnBanner('Enemy Turn', 0xcc2222);
+
+    // Clear guard buffs from previous player turn
+    this.units.filter(u => u.team === 'player').forEach(u => { u.guardActive = false; });
+
+    // Apply burn DoT to all burning units
+    this.units.filter(u => !u.dead && u.burnDamage > 0).forEach(u => {
+      const bDmg = u.burnDamage;
+      u.burnDamage = 0;
+      const died = u.takeDamage(bDmg);
+      this._updateHPBar(u);
+      this._floatText(u.col, u.row, `-${bDmg}ð¥`, 0xff4400);
+      if (died) this._killUnit(u, () => {});
+    });
 
     this._enemyQueue = this.units.filter(u => !u.dead && u.team === 'enemy');
     // Enemy units need their turn state reset so they can act this turn
