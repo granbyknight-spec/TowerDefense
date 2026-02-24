@@ -406,15 +406,42 @@ class BattleScene extends Phaser.Scene {
     const spriteSize = (r * 2 - 4); // leave 2px padding inside ring
     const sprScale   = spriteSize / 64;
 
-    // Always use SVG chibi sprites on the map — portrait PNGs are for cutscenes/panels only
-    const sprKey = getSpriteKey(unit);
+    // Prefer PNG sprites when available; fall back to SVG sprite sheet, then emoji text
+    const pngScale = spriteSize / 128; // PNG source assumed 128px
 
     let sprite;
-    if (this.textures.exists(sprKey)) {
-      sprite = this.add.image(x, y - 1, sprKey).setOrigin(0.5).setScale(sprScale);
+    if (unit.team === 'player') {
+      const pngKey = `player_png_${unit.id}`;
+      if (this.textures.exists(pngKey)) {
+        sprite = this.add.image(x, y - 1, pngKey).setOrigin(0.5).setScale(pngScale);
+      } else {
+        const sprKey = getSpriteKey(unit);
+        if (this.textures.exists(sprKey)) {
+          sprite = this.add.image(x, y - 1, sprKey).setOrigin(0.5).setScale(sprScale);
+        } else {
+          sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: '22px' }).setOrigin(0.5);
+        }
+      }
+    } else if (unit.team === 'enemy') {
+      const pngKey = `enemy_png_${unit.id}`;
+      if (this.textures.exists(pngKey)) {
+        sprite = this.add.image(x, y - 1, pngKey).setOrigin(0.5).setScale(pngScale);
+      } else {
+        const sprKey = getSpriteKey(unit);
+        if (this.textures.exists(sprKey)) {
+          sprite = this.add.image(x, y - 1, sprKey).setOrigin(0.5).setScale(sprScale);
+        } else {
+          sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: '22px' }).setOrigin(0.5);
+        }
+      }
     } else {
-      // Fallback to emoji text if texture somehow not loaded
-      sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: '22px' }).setOrigin(0.5);
+      // Neutral units: SVG sprite sheet only
+      const sprKey = getSpriteKey(unit);
+      if (this.textures.exists(sprKey)) {
+        sprite = this.add.image(x, y - 1, sprKey).setOrigin(0.5).setScale(sprScale);
+      } else {
+        sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: '22px' }).setOrigin(0.5);
+      }
     }
 
     // Boss units get a slightly larger sprite to stand out
