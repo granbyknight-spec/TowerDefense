@@ -92,6 +92,34 @@ const CLASS_ICON = {
   'Swimmer':  '≈', 'Admiral':  '≈',
 };
 
+// Maps dialogue speaker names → Phaser texture cache keys for portrait images
+// Keys are loaded by BattleScene (enemy_png_* / player_png_*) and by CutsceneScene.preload()
+const SPEAKER_PORTRAIT_KEY = {
+  // Enemy bosses
+  'Alley Cat':        'enemy_png_ALLEY_CAT',
+  'Siamese Assassin': 'enemy_png_SIAMESE_ASSASSIN',
+  'Lynx Ranger':      'enemy_png_LYNX_RANGER',
+  'Snow Leopard':     'enemy_png_SNOW_LEOPARD',
+  'River Panther':    'enemy_png_RIVER_PANTHER',
+  'Sand Cat King':    'enemy_png_SAND_CAT_KING',
+  'Persian Queen':    'enemy_png_PERSIAN_QUEEN',
+  'Cat Emperor':      'enemy_png_CAT_EMPEROR',
+  'Tiger General':    'enemy_png_TIGER_GENERAL',
+  'Persian Sorcerer': 'enemy_png_PERSIAN_SORCERER',
+  'Scout Cat':        'enemy_png_SCOUT_CAT',
+  // Player heroes
+  'Puppy Knight':  'player_png_PUPPY_KNIGHT',
+  'Corgi Healer':  'player_png_CORGI_HEALER',
+  'Lab Scout':     'player_png_LABRADOR_SCOUT',
+  'Beagle Archer': 'player_png_BEAGLE_ARCHER',
+  'Bulldog Tank':  'player_png_BULLDOG_TANK',
+  'Poodle Mage':   'player_png_POODLE_MAGE',
+  'Husky Rider':   'player_png_HUSKY_RIDER',
+  'Terrier Thief': 'player_png_TERRIER_THIEF',
+  'Dog Paladin':   'player_png_DOG_PALADIN',
+  'Otto Otter':    'player_png_OTTER_ALLY',
+};
+
 // =============================================================================
 // HERO DEFINITIONS
 // =============================================================================
