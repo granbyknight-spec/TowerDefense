@@ -168,6 +168,25 @@ class TitleScene extends Phaser.Scene {
 
     // ── Chapter select: tap chapter number after continue ────────────────────
     // (handled via BattleScene start data)
+
+    // ── Visible audio unlock prompt ───────────────────────────────────────────
+    // Guarantees a user-gesture is captured to unlock audio on browsers that
+    // require it (especially mobile Safari and Chrome autoplay policy).
+    const audioPrompt = this.add.text(GAME_W / 2, GAME_H - 40, '🔊 Tap anywhere to enable audio', {
+      fontSize: '14px', color: '#aaddff', fontFamily: 'Nunito, monospace',
+      backgroundColor: '#00000066', padding: { x: 10, y: 5 },
+    }).setOrigin(0.5).setDepth(100);
+
+    this.input.once('pointerdown', () => {
+      audioPrompt.destroy();
+      if (this.sound.context && this.sound.context.state === 'suspended') {
+        this.sound.context.resume().then(() => {
+          AudioManager.playMusic(this, 'title');
+        });
+      } else {
+        AudioManager.playMusic(this, 'title');
+      }
+    });
   }
 
   _makeBtn(x, y, label, colorDark, colorLight, cb) {

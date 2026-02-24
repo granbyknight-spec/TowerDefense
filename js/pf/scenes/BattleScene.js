@@ -28,6 +28,13 @@ class BattleScene extends Phaser.Scene {
     // Audio (graceful — files are optional and may not exist yet)
     AudioManager.preloadMusic(this);
     AudioManager.preloadSFX(this);
+    // Battle background for current chapter (graceful — file may not exist)
+    try {
+      const bgKey = `bg_ch${this.chapterId}`;
+      this.load.image(bgKey, `assets/backgrounds/chapter_${this.chapterId}_v1.png`);
+    } catch (e) {
+      // silently skip if the file doesn't exist
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -95,6 +102,15 @@ class BattleScene extends Phaser.Scene {
     // ── Battle stats for win screen ─────────────────────────────────────────
     this._totalDamageDealt = 0;
     this._unitsLost        = 0;
+
+    // ── Battle background image (depth -10, behind grid/tiles) ───────────────
+    const bgKey = `bg_ch${this.chapterId}`;
+    if (this.textures.exists(bgKey)) {
+      this.add.image(GAME_W / 2, GAME_H / 2, bgKey)
+        .setDisplaySize(GAME_W, GAME_H)
+        .setDepth(-10)
+        .setAlpha(0.35);
+    }
 
     // ── Build map and sprites ────────────────────────────────────────────────
     this._buildMap();
