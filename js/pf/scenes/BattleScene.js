@@ -302,7 +302,7 @@ class BattleScene extends Phaser.Scene {
 
   _buildGridOverlay() {
     const g = this.add.graphics();
-    g.lineStyle(1, 0x000000, 0.15);
+    g.lineStyle(1, 0x000000, 0.28);
     for (let col = 0; col <= GCOLS; col++) {
       g.lineBetween(GRID_X + col*TILE, GRID_Y, GRID_X + col*TILE, GRID_Y + GH);
     }
@@ -330,13 +330,6 @@ class BattleScene extends Phaser.Scene {
     const pngKey = `enemy_png_${unit.id}`;
     const useEnemyPng = unit.team === 'enemy' && this.textures.exists(pngKey);
 
-    // Background circle — drawn before sprite; clips white PNG edges on enemy PNGs
-    if (useEnemyPng) {
-      const bgCircle = this.add.graphics();
-      bgCircle.fillStyle(0x331111, 1);
-      bgCircle.fillCircle(x, y - 1, r + 1);
-      unit._bgCircle = bgCircle;
-    }
     const activeKey = useEnemyPng ? pngKey : sprKey;
     let sprite;
     if (this.textures.exists(activeKey)) {
@@ -345,6 +338,24 @@ class BattleScene extends Phaser.Scene {
         // AI-generated PNGs can be any resolution — fit to tile size
         const fitSize = spriteSize * (unit.isBoss ? 1.15 : 1);
         sprite.setDisplaySize(fitSize, fitSize);
+        // Circular mask so the white PNG background is clipped to a circle.
+        // The mask graphics is not added to the display list — it only defines
+        // the clip region. We redraw it each frame so it follows the sprite.
+        const maskGfx = this.make.graphics({ x: 0, y: 0, add: false });
+        const drawMask = (mx, my) => {
+          maskGfx.clear();
+          maskGfx.fillStyle(0xffffff);
+          maskGfx.fillCircle(mx, my, r);
+        };
+        drawMask(x, y - 1);
+        sprite.setMask(maskGfx.createGeometryMask());
+        const onUpdate = () => {
+          if (sprite.active) drawMask(sprite.x, sprite.y);
+          else this.events.off('update', onUpdate);
+        };
+        this.events.on('update', onUpdate);
+        unit._spriteMask   = maskGfx;
+        unit._spriteMaskCb = onUpdate;
       } else {
         sprite.setScale(sprScale);
       }
@@ -448,7 +459,6 @@ class BattleScene extends Phaser.Scene {
     if (!unit.sprite) return;
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
-    if (unit._bgCircle) unit._bgCircle.setPosition(x, y - 1);
     if (unit.spriteBg) unit.spriteBg.setPosition(x, y);
     unit.sprite.setPosition(x, y - 1);
     unit.hpBarBg.setPosition(x, y + r + 3);
@@ -460,8 +470,9 @@ class BattleScene extends Phaser.Scene {
 
   _destroyUnitSprite(unit) {
     this._stopIdleBob(unit);
-    [unit._bgCircle, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
-    unit._bgCircle = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
+    if (unit._spriteMaskCb) this.events.off('update', unit._spriteMaskCb);
+    [unit._spriteMask, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
+    unit._spriteMask = unit._spriteMaskCb = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
   }
 
   // ==========================================================================
@@ -480,9 +491,9 @@ class BattleScene extends Phaser.Scene {
     g.clear();
     tiles.forEach(({ col, row }) => {
       const { x, y } = this._tileTL(col, row);
-      g.fillStyle(PAL.MOVE_HL, 0.30);
+      g.fillStyle(PAL.MOVE_HL, 0.35);
       g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
-      g.lineStyle(1, PAL.MOVE_HL, 0.7);
+      g.lineStyle(2, 0x88aaff, 0.9);
       g.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
     });
   }
@@ -492,9 +503,9 @@ class BattleScene extends Phaser.Scene {
     g.clear();
     tiles.forEach(({ col, row }) => {
       const { x, y } = this._tileTL(col, row);
-      g.fillStyle(PAL.ATK_HL, 0.30);
+      g.fillStyle(PAL.ATK_HL, 0.35);
       g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
-      g.lineStyle(1, PAL.ATK_HL, 0.7);
+      g.lineStyle(2, 0xff6666, 0.9);
       g.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
     });
   }
@@ -516,11 +527,11 @@ class BattleScene extends Phaser.Scene {
     g.clear();
     if (!unit) return;
     const { x, y } = this._tileTL(unit.col, unit.row);
-    g.lineStyle(3, PAL.SEL_HL, 1);
+    g.lineStyle(4, PAL.SEL_HL, 1);
     g.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
     // Animated corner marks
     const sz = 8;
-    g.lineStyle(3, PAL.GOLD, 1);
+    g.lineStyle(4, PAL.GOLD, 1);
     g.lineBetween(x+1, y+1, x+1+sz, y+1);
     g.lineBetween(x+1, y+1, x+1, y+1+sz);
     g.lineBetween(x+TILE-1, y+1, x+TILE-1-sz, y+1);
@@ -1311,7 +1322,7 @@ class BattleScene extends Phaser.Scene {
     this.playerTurn = false;
     this.turnNumber++;
     this._setState(BS.ENEMY_TURN);
-    this._getUI()?.showTurnBanner('Enemy Turn', 0xcc2222);
+    this._getUI()?.showTurnBanner('Enemy Turn', 0xff4444);
 
     // Clear guard buffs from previous player turn
     this.units.filter(u => u.team === 'player').forEach(u => { u.guardActive = false; });
@@ -1380,7 +1391,7 @@ class BattleScene extends Phaser.Scene {
 
     this._setState(BS.IDLE);
     this._dimActedUnits();
-    this._getUI()?.showTurnBanner('Your Turn', 0x2255cc);
+    this._getUI()?.showTurnBanner('Your Turn', 0xf8c030);
   }
 
   // ==========================================================================

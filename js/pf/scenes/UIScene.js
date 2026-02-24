@@ -63,6 +63,11 @@ class UIScene extends Phaser.Scene {
     pg.lineStyle(2, PAL.BORDER, 0.8);
     pg.lineBetween(0, UI_Y, W, UI_Y);
 
+    // Subtle top-border highlight strip (gradient effect)
+    const pgHighlight = this.add.graphics();
+    pgHighlight.fillStyle(0x334466, 0.8);
+    pgHighlight.fillRect(0, UI_Y, W, 2);
+
     // Turn indicator (left side)
     this._turnLabel = this.add.text(10, UI_Y + 8, 'TURN 1', {
       fontSize: '16px', color: '#aabbcc',
@@ -95,7 +100,14 @@ class UIScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5, 0);
 
-    this._unitHpTxt = this.add.text(W / 2, UI_Y + 50, '', {
+    this._unitStats2Txt = this.add.text(W / 2, UI_Y + 46, '', {
+      fontSize: '15px', color: '#ccddf0',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      align: 'center',
+    }).setOrigin(0.5, 0);
+
+    this._unitHpTxt = this.add.text(W / 2, UI_Y + 62, '', {
       fontSize: '15px', color: '#88ddaa',
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
@@ -104,7 +116,7 @@ class UIScene extends Phaser.Scene {
     // MP bar
     this._mpBarBg = this.add.graphics();
     this._mpBarFg = this.add.graphics();
-    this._mpTxt   = this.add.text(W / 2 + 50, UI_Y + 63, '', {
+    this._mpTxt   = this.add.text(W / 2 + 50, UI_Y + 77, '', {
       fontSize: '11px', color: '#88aaff',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(0, 0.5);
@@ -113,15 +125,14 @@ class UIScene extends Phaser.Scene {
       fontSize: '30px',
     }).setOrigin(0.5, 0);
 
-    // Portrait image — shown when a portrait texture exists for the selected unit;
-    // overlays the emoji slot (same anchor point, 48×48 px)
-    this._portraitImg = this.add.image(W / 2 - 80, UI_Y + 28, '__DEFAULT')
-      .setDisplaySize(48, 48)
-      .setOrigin(0.5, 0)
+    // Portrait image — shown in the left margin of the panel, clear of stats text
+    this._portraitImg = this.add.image(8, UI_Y + 42, '__DEFAULT')
+      .setDisplaySize(44, 44)
+      .setOrigin(0, 0)
       .setVisible(false);
 
     // Skills / items display
-    this._skillsTxt = this.add.text(W / 2, UI_Y + 70, '', {
+    this._skillsTxt = this.add.text(W / 2, UI_Y + 86, '', {
       fontSize: '14px', color: '#99aacc',
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
@@ -245,9 +256,12 @@ class UIScene extends Phaser.Scene {
       bg.fillRoundedRect(x, y, btnW, btnH, 6);
       bg.lineStyle(1, b.hi, 0.8);
       bg.strokeRoundedRect(x, y, btnW, btnH, 6);
+      // Inner highlight — subtle 1px lighter top edge
+      bg.lineStyle(1, 0xffffff, 0.2);
+      bg.lineBetween(x + 6, y + 1, x + btnW - 6, y + 1);
 
       const txt = this.add.text(x + btnW / 2, y + btnH / 2, b.label, {
-        fontSize: '15px', color: '#ffffff',
+        fontSize: '17px', color: '#ffffff',
         fontFamily: 'Nunito, Arial, sans-serif',
         fontStyle: 'bold',
         align: 'center',
@@ -262,6 +276,9 @@ class UIScene extends Phaser.Scene {
         bg.clear();
         bg.fillStyle(b.hi, 1);
         bg.fillRoundedRect(x, y, btnW, btnH, 6);
+        // Keep inner highlight on hover too
+        bg.lineStyle(1, 0xffffff, 0.3);
+        bg.lineBetween(x + 6, y + 1, x + btnW - 6, y + 1);
       });
       zone.on('pointerout', () => {
         bg.clear();
@@ -269,6 +286,8 @@ class UIScene extends Phaser.Scene {
         bg.fillRoundedRect(x, y, btnW, btnH, 6);
         bg.lineStyle(1, b.hi, 0.8);
         bg.strokeRoundedRect(x, y, btnW, btnH, 6);
+        bg.lineStyle(1, 0xffffff, 0.2);
+        bg.lineBetween(x + 6, y + 1, x + btnW - 6, y + 1);
       });
       zone.on('pointerdown', () => {
         AudioManager.play(this, 'cursor_move');
@@ -318,7 +337,7 @@ class UIScene extends Phaser.Scene {
     bg.strokeRoundedRect(x, y, w, h, 8);
 
     const txt = this.add.text(x + w/2, y + h/2, 'END\nTURN', {
-      fontSize: '15px', color: '#88ccff',
+      fontSize: '17px', color: '#aaddff',
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       align: 'center',
@@ -327,7 +346,7 @@ class UIScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const zone = this.add.zone(x + w/2, y + h/2, w, h).setInteractive({ useHandCursor: true });
-    zone.on('pointerover', () => { bg.clear(); bg.fillStyle(0x2255aa, 1); bg.fillRoundedRect(x,y,w,h,8); });
+    zone.on('pointerover', () => { bg.clear(); bg.fillStyle(0x3377cc, 1); bg.fillRoundedRect(x,y,w,h,8); bg.lineStyle(1, 0x66aaff, 0.9); bg.strokeRoundedRect(x,y,w,h,8); });
     zone.on('pointerout',  () => { bg.clear(); bg.fillStyle(0x113344, 1); bg.fillRoundedRect(x,y,w,h,8); bg.lineStyle(1,0x2266aa,0.9); bg.strokeRoundedRect(x,y,w,h,8); });
     zone.on('pointerdown', () => {
       AudioManager.play(this, 'cursor_move');
@@ -458,17 +477,21 @@ class UIScene extends Phaser.Scene {
 
     const promoted = unit.promoted ? '★' : '';
     this._unitNameTxt?.setText(`${unit.name}${promoted}  Lv${unit.level}`);
+    // Color the name gold for player units, pink-red for enemies
+    const nameColor = unit.team === 'player' ? '#f8d030' : '#ff8888';
+    this._unitNameTxt?.setStyle({ color: nameColor });
 
     // Show portrait image if texture exists, otherwise fall back to emoji
     const portraitKey = `portrait_${unit.id}`;
     if (this._portraitImg && this.textures.exists(portraitKey)) {
-      this._portraitImg.setTexture(portraitKey).setDisplaySize(48, 48).setVisible(true);
+      this._portraitImg.setTexture(portraitKey).setDisplaySize(44, 44).setVisible(true);
       this._unitEmojiTxt?.setText('');
     } else {
       this._portraitImg?.setVisible(false);
       this._unitEmojiTxt?.setText(unit.emoji);
     }
-    this._unitStatsTxt?.setText(`ATK:${unit.atk}  DEF:${unit.def}  MOV:${unit.mov}  AGI:${unit.agi}`);
+    this._unitStatsTxt?.setText(`ATK:${unit.atk}  DEF:${unit.def}`);
+    this._unitStats2Txt?.setText(`MOV:${unit.mov}  AGI:${unit.agi}`);
     this._unitHpTxt?.setText(`HP: ${unit.hp}/${unit.maxHp}  (${hpPct}%)`)
                     .setStyle({ color: hpColor });
 
@@ -476,7 +499,7 @@ class UIScene extends Phaser.Scene {
     const mpRatio = (unit.maxMp > 0) ? (unit.mp / unit.maxMp) : 0;
     const barW = 80, barH = 6;
     const barX = GAME_W / 2 - barW / 2;
-    const barY = UI_Y + 60;
+    const barY = UI_Y + 74;
 
     this._mpBarBg?.clear();
     this._mpBarFg?.clear();
@@ -528,6 +551,7 @@ class UIScene extends Phaser.Scene {
   clearUnitInfo() {
     this._unitNameTxt?.setText('');
     this._unitStatsTxt?.setText('Tap a unit to select');
+    this._unitStats2Txt?.setText('');
     this._unitHpTxt?.setText('');
     this._unitEmojiTxt?.setText('');
     this._portraitImg?.setVisible(false);
@@ -918,7 +942,7 @@ class UIScene extends Phaser.Scene {
     const dBg = this.add.graphics();
     dBg.fillStyle(0x000020, 0.92);
     dBg.fillRoundedRect(10, boxY, W - 20, boxH, 10);
-    dBg.lineStyle(2, PAL.GOLD, 0.8);
+    dBg.lineStyle(2, 0x4455aa, 0.85);
     dBg.strokeRoundedRect(10, boxY, W - 20, boxH, 10);
 
     this._dlgPortrait = this.add.text(28, boxY + 14, '', { fontSize: '38px' });
