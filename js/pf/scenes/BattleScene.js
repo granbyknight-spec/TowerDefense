@@ -22,6 +22,12 @@ class BattleScene extends Phaser.Scene {
   constructor() { super({ key: 'BattleScene' }); }
 
   // --------------------------------------------------------------------------
+  preload() {
+    // Load all unit SVG sprites as Phaser textures (self-contained data URIs)
+    preloadUnitSprites(this);
+  }
+
+  // --------------------------------------------------------------------------
   init(data) {
     this.chapterId  = data.chapter || 1;
     this.saveData   = data.saveData || SaveManager.newGame();
@@ -225,7 +231,7 @@ class BattleScene extends Phaser.Scene {
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
 
-    // Background circle
+    // ── Team-coloured background circle ────────────────────────────────────
     const teamColor = unit.team === 'player' ? 0x224488
                     : unit.team === 'neutral' ? 0x2a4a1a
                     : 0x882222;
@@ -236,25 +242,101 @@ class BattleScene extends Phaser.Scene {
     const bg = this.add.circle(x, y, r, teamColor, 0.95);
     bg.setStrokeStyle(2, glow, 0.9);
 
-    // Emoji sprite
-    const sprite = this.add.text(x, y - 2, unit.emoji, {
-      fontSize: '22px',
-    }).setOrigin(0.5);
+    // ── SVG face sprite (replaces plain emoji text) ─────────────────────────
+    // Scale the 64×64 SVG down to fit inside the circle (r*2 diameter = TILE-6)
+    const spriteSize = (r * 2 - 4); // leave 2px padding inside ring
+    const sprScale   = spriteSize / 64;
 
-    // HP bar background
+    const sprKey = getSpriteKey(unit);
+    let sprite;
+    if (this.textures.exists(sprKey)) {
+      sprite = this.add.image(x, y - 1, sprKey)
+        .setOrigin(0.5)
+        .setScale(sprScale);
+    } else {
+      // Fallback to emoji text if texture somehow not loaded
+      sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: '22px' }).setOrigin(0.5);
+    }
+
+    // Boss units get a slightly larger sprite to stand out
+    if (unit.isBoss && sprite.setScale) {
+      sprite.setScale(sprScale * 1.15);
+    }
+
+    // ── HP bar background ───────────────────────────────────────────────────
     const hpBg = this.add.rectangle(x, y + r + 3, TILE - 10, 4, 0x000000, 0.7);
 
-    // HP bar foreground
+    // ── HP bar foreground ───────────────────────────────────────────────────
     const hpBar = this.add.rectangle(x - (TILE - 10) / 2, y + r + 3, TILE - 10, 4, PAL.HP_G, 1);
     hpBar.setOrigin(0, 0.5);
+
+    // ── Class badge label (tiny, below hp bar) ──────────────────────────────
+    // Shows first 3 chars of unit class so player units are distinguishable
+    const badgeColor = unit.team === 'player' ? '#88bbff'
+                     : unit.team === 'neutral' ? '#88ffaa'
+                     : '#ff8888';
+    const badge = this.add.text(x, y + r + 10, unit.unitClass.slice(0, 4).toUpperCase(), {
+      fontSize: '7px',
+      color: badgeColor,
+      fontFamily: 'Courier New, monospace',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0);
 
     unit.spriteBg  = bg;
     unit.sprite    = sprite;
     unit.hpBarBg   = hpBg;
     unit.hpBar     = hpBar;
+    unit.badge     = badge;
 
-    this._unitLayer.add([bg, sprite, hpBg, hpBar]);
+    this._unitLayer.add([bg, sprite, hpBg, hpBar, badge]);
     this._updateHPBar(unit);
+
+    // ── Idle bob animation ─────────────────────────────────────────────────
+    // Player units gently float up and down to signal readiness
+    if (unit.team === 'player') {
+      this._startIdleBob(unit);
+    }
+  }
+
+  // Gentle idle float for player units (stored so it can be killed on act)
+  _startIdleBob(unit) {
+    if (!unit.sprite) return;
+    const baseY = unit.sprite.y;
+    const bobTween = this.tweens.add({
+      targets: unit.sprite,
+      y: { from: baseY - 2, to: baseY + 2 },
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      delay: Math.random() * 600, // stagger so units don't all bob in sync
+    });
+    unit._bobTween = bobTween;
+  }
+
+  _stopIdleBob(unit) {
+    if (unit._bobTween) {
+      unit._bobTween.stop();
+      unit._bobTween = null;
+      // Snap sprite back to its correct y
+      if (unit.sprite) {
+        const { y } = this._tileCenter(unit.col, unit.row);
+        unit.sprite.setY(y - 1);
+      }
+    }
+  }
+
+  // Bounce-pop animation when a unit is selected
+  _bounceSprite(unit) {
+    if (!unit.sprite) return;
+    this._stopIdleBob(unit);
+    this.tweens.add({
+      targets: unit.sprite,
+      scaleX: { from: unit.sprite.scaleX * 1.25, to: unit.sprite.scaleX },
+      scaleY: { from: unit.sprite.scaleY * 1.25, to: unit.sprite.scaleY },
+      duration: 220,
+      ease: 'Back.easeOut',
+    });
   }
 
   _updateHPBar(unit) {
@@ -272,16 +354,18 @@ class BattleScene extends Phaser.Scene {
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
     unit.spriteBg.setPosition(x, y);
-    unit.sprite.setPosition(x, y - 2);
+    unit.sprite.setPosition(x, y - 1);
     unit.hpBarBg.setPosition(x, y + r + 3);
     unit.hpBar.setX(x - (TILE - 10) / 2);
     unit.hpBar.setY(y + r + 3);
+    if (unit.badge) unit.badge.setPosition(x, y + r + 10);
     this._updateHPBar(unit);
   }
 
   _destroyUnitSprite(unit) {
-    [unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar].forEach(o => o && o.destroy());
-    unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = null;
+    this._stopIdleBob(unit);
+    [unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
+    unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
   }
 
   // ==========================================================================
@@ -455,6 +539,8 @@ class BattleScene extends Phaser.Scene {
     this._setState(BS.UNIT_SEL);
     this._getUI()?.showUnitInfo(unit);
     this._dimActedUnits();
+    // Bounce pop on selection
+    this._bounceSprite(unit);
   }
 
   _deselect() {
@@ -504,31 +590,42 @@ class BattleScene extends Phaser.Scene {
     if (!path || path.length === 0) { onComplete(); return; }
     this._setState(BS.ANIMATING);
 
+    // Stop idle bob while moving
+    this._stopIdleBob(unit);
+
     const r = TILE / 2 - 3;
+    const badgeY = (col, row) => this._tileCenter(col, row).y + r + 10;
     let step = 0;
 
     const doStep = () => {
       if (step >= path.length) {
         this._updateSpritePos(unit);
+        // Restart idle bob for player units after move completes
+        if (unit.team === 'player' && !unit.hasActed) {
+          this._startIdleBob(unit);
+        }
         onComplete();
         return;
       }
       const { col, row } = path[step++];
       const { x, y } = this._tileCenter(col, row);
-      const hpY = y + r + 3;
+      const hpY  = y + r + 3;
+      const bdgY = y + r + 10;
 
-      // Paw trail
+      // Small paw-print trail dot
       if (unit.sprite) {
-        const trail = this.add.text(unit.sprite.x, unit.sprite.y, '·', {
-          fontSize: '16px', color: '#aaccff',
-        }).setOrigin(0.5).setAlpha(0.6);
-        this.tweens.add({ targets: trail, alpha: 0, y: trail.y - 12, duration: 350, onComplete: () => trail.destroy() });
+        const trail = this.add.circle(
+          unit.sprite.x, unit.sprite.y + 4,
+          3, 0x99bbff, 0.55
+        );
+        this.tweens.add({ targets: trail, alpha: 0, y: trail.y - 10, duration: 350, onComplete: () => trail.destroy() });
       }
 
       // Separate tween per display object (different target y values)
       if (unit.spriteBg) this.tweens.add({ targets: unit.spriteBg, x, y,        duration: 120, ease: 'Power1' });
-      if (unit.sprite)   this.tweens.add({ targets: unit.sprite,   x, y: y - 2, duration: 120, ease: 'Power1' });
+      if (unit.sprite)   this.tweens.add({ targets: unit.sprite,   x, y: y - 1, duration: 120, ease: 'Power1' });
       if (unit.hpBarBg)  this.tweens.add({ targets: unit.hpBarBg,  x, y: hpY,  duration: 120, ease: 'Power1' });
+      if (unit.badge)    this.tweens.add({ targets: unit.badge,    x, y: bdgY, duration: 120, ease: 'Power1' });
       if (unit.hpBar) {
         this.tweens.add({
           targets: unit.hpBar,
@@ -614,7 +711,11 @@ class BattleScene extends Phaser.Scene {
       const msg = unit.promote() ? `${unit.name} promoted!` : 'Cannot promote!';
       unit.items.splice(0, 1);
       this._getUI()?.showMessage(msg);
-      unit.sprite.setText(unit.emoji);
+      // Update SVG sprite to promoted form (swap texture key)
+      if (unit.sprite && unit.sprite.setTexture) {
+        const newKey = getSpriteKey(unit);
+        unit.sprite.setTexture(newKey);
+      }
       unit.hasActed = true;
       this._checkEndCondition();
       this._deselect();
@@ -1000,7 +1101,7 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  // Grey out units that have acted
+  // Grey out units that have acted; stop/start idle bobs accordingly
   _dimActedUnits() {
     this.units.forEach(u => {
       if (!u.sprite) return;
@@ -1008,6 +1109,15 @@ class BattleScene extends Phaser.Scene {
       const alpha = dim ? 0.45 : 1.0;
       u.sprite.setAlpha(alpha);
       u.spriteBg?.setAlpha(alpha);
+      u.badge?.setAlpha(alpha);
+      // Stop bob for acted units, restart for ready ones
+      if (u.team === 'player') {
+        if (dim) {
+          this._stopIdleBob(u);
+        } else if (!u._bobTween) {
+          this._startIdleBob(u);
+        }
+      }
     });
   }
 
