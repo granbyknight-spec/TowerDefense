@@ -67,7 +67,7 @@ const SaveManager = {
 // Build the starting roster from hero definitions
 function _buildDefaultRoster() {
   const ids = ['PUPPY_KNIGHT','CORGI_HEALER','LABRADOR_SCOUT',
-               'POODLE_MAGE','HUSKY_RIDER','TERRIER_THIEF'];
+               'POODLE_MAGE','HUSKY_RIDER','BEAGLE_ARCHER'];
   return ids.map(id => {
     const def  = HERO_DEFS[id];
     const unit = new Unit(def, 0, 0);

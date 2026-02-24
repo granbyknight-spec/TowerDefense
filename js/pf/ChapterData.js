@@ -52,7 +52,7 @@ const CHAPTERS = [
       { unitId:'LABRADOR_SCOUT',col:3, row:10 },
       { unitId:'POODLE_MAGE',   col:6, row:10 },
       { unitId:'HUSKY_RIDER',   col:2, row:11 },
-      { unitId:'TERRIER_THIEF', col:7, row:11 },
+      { unitId:'BEAGLE_ARCHER', col:7, row:11 },
     ],
 
     enemies: [
@@ -110,7 +110,7 @@ const CHAPTERS = [
       { unitId:'LABRADOR_SCOUT',col:4, row:10 },
       { unitId:'POODLE_MAGE',   col:5, row:10 },
       { unitId:'HUSKY_RIDER',   col:3, row:11 },
-      { unitId:'TERRIER_THIEF', col:6, row:11 },
+      { unitId:'BEAGLE_ARCHER', col:6, row:11 },
     ],
 
     enemies: [
@@ -357,7 +357,7 @@ const CHAPTERS = [
       { unitId:'BEAGLE_ARCHER', col:3, row:11 },
       { unitId:'BULLDOG_TANK',  col:6, row:11 },
       { unitId:'LABRADOR_SCOUT',col:2, row:11 },
-      { unitId:'TERRIER_THIEF', col:7, row:11 },
+      { unitId:'BEAGLE_ARCHER', col:7, row:11 },
     ],
 
     enemies: [
@@ -420,7 +420,7 @@ const CHAPTERS = [
       { unitId:'LABRADOR_SCOUT',col:2, row:11 },
       { unitId:'POODLE_MAGE',   col:7, row:11 },
       { unitId:'HUSKY_RIDER',   col:3, row:10 },
-      { unitId:'TERRIER_THIEF', col:6, row:10 },
+      { unitId:'BEAGLE_ARCHER', col:6, row:10 },
     ],
 
     enemies: [
