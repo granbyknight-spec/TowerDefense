@@ -12,10 +12,10 @@ class AudioManager {
 
   static preloadMusic(scene) {
     const tracks = [
-      { key: 'battle',    path: 'assets/audio/music/battle.ogg'    },
-      { key: 'title',     path: 'assets/audio/music/title.ogg'     },
-      { key: 'victory',   path: 'assets/audio/music/victory.ogg'   },
-      { key: 'overworld', path: 'assets/audio/music/overworld.ogg' },
+      { key: 'battle',    path: 'assets/audio/music/battle.mp3'    },
+      { key: 'title',     path: 'assets/audio/music/title.mp3'     },
+      { key: 'victory',   path: 'assets/audio/music/victory.mp3'   },
+      { key: 'overworld', path: 'assets/audio/music/overworld.mp3' },
     ];
     tracks.forEach(({ key, path }) => {
       // Skip if already cached (prevents duplicate-load warnings on scene restart)
