@@ -21,6 +21,14 @@ class UIScene extends Phaser.Scene {
   preload() {
     // Audio (graceful — files are optional and may not exist yet)
     AudioManager.preloadSFX(this);
+    // Character portraits (graceful — files may not exist yet)
+    const portraits = [
+      'PUPPY_KNIGHT', 'CORGI_HEALER', 'LABRADOR_SCOUT', 'POODLE_MAGE',
+      'HUSKY_RIDER', 'BEAGLE_ARCHER', 'BULLDOG_TANK', 'TERRIER_THIEF', 'DOG_PALADIN',
+    ];
+    portraits.forEach(id => {
+      this.load.image(`portrait_${id}`, `assets/characters/${id}_portrait.png`);
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -104,6 +112,13 @@ class UIScene extends Phaser.Scene {
     this._unitEmojiTxt = this.add.text(W / 2 - 80, UI_Y + 28, '', {
       fontSize: '30px',
     }).setOrigin(0.5, 0);
+
+    // Portrait image — shown when a portrait texture exists for the selected unit;
+    // overlays the emoji slot (same anchor point, 48×48 px)
+    this._portraitImg = this.add.image(W / 2 - 80, UI_Y + 28, '__DEFAULT')
+      .setDisplaySize(48, 48)
+      .setOrigin(0.5, 0)
+      .setVisible(false);
 
     // Skills / items display
     this._skillsTxt = this.add.text(W / 2, UI_Y + 70, '', {
@@ -443,7 +458,16 @@ class UIScene extends Phaser.Scene {
 
     const promoted = unit.promoted ? '★' : '';
     this._unitNameTxt?.setText(`${unit.name}${promoted}  Lv${unit.level}`);
-    this._unitEmojiTxt?.setText(unit.emoji);
+
+    // Show portrait image if texture exists, otherwise fall back to emoji
+    const portraitKey = `portrait_${unit.id}`;
+    if (this._portraitImg && this.textures.exists(portraitKey)) {
+      this._portraitImg.setTexture(portraitKey).setVisible(true);
+      this._unitEmojiTxt?.setText('');
+    } else {
+      this._portraitImg?.setVisible(false);
+      this._unitEmojiTxt?.setText(unit.emoji);
+    }
     this._unitStatsTxt?.setText(`ATK:${unit.atk}  DEF:${unit.def}  MOV:${unit.mov}  AGI:${unit.agi}`);
     this._unitHpTxt?.setText(`HP: ${unit.hp}/${unit.maxHp}  (${hpPct}%)`)
                     .setStyle({ color: hpColor });
@@ -506,6 +530,7 @@ class UIScene extends Phaser.Scene {
     this._unitStatsTxt?.setText('Tap a unit to select');
     this._unitHpTxt?.setText('');
     this._unitEmojiTxt?.setText('');
+    this._portraitImg?.setVisible(false);
     this._skillsTxt?.setText('');
     this._mpBarBg?.clear();
     this._mpBarFg?.clear();
