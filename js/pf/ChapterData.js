@@ -311,7 +311,8 @@ const CHAPTERS = [
     ],
 
     recruitable: [
-      { unitId:'FOX_SCOUT', col:1, row:6, rescueMsg:'Foxy Scout joins your force!' },
+      { unitId:'FOX_SCOUT',     col:1, row:6, rescueMsg:'Foxy Scout joins your force!' },
+      { unitId:'TERRIER_THIEF', col:8, row:6, rescueMsg:'Terrier Thief joins your force!' },
     ],
   },
 
@@ -357,7 +358,7 @@ const CHAPTERS = [
       { unitId:'BEAGLE_ARCHER', col:3, row:11 },
       { unitId:'BULLDOG_TANK',  col:6, row:11 },
       { unitId:'LABRADOR_SCOUT',col:2, row:11 },
-      { unitId:'BEAGLE_ARCHER', col:7, row:11 },
+      { unitId:'TERRIER_THIEF', col:7, row:11 },
     ],
 
     enemies: [
