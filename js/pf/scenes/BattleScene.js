@@ -158,14 +158,11 @@ class BattleScene extends Phaser.Scene {
     this._totalDamageDealt = 0;
     this._unitsLost        = 0;
 
-    // ── Battle background image (depth -10, behind grid/tiles) ───────────────
-    const bgKey = `bg_ch${this.chapterId}`;
-    if (this.textures.exists(bgKey)) {
-      this.add.image(GAME_W / 2, GAME_H / 2, bgKey)
-        .setDisplaySize(GAME_W, GAME_H)
-        .setDepth(-10)
-        .setAlpha(0.18);
-    }
+    // ── Solid dark background behind the tile grid ────────────────────────────
+    // Tiles define the map visually (Shining Force style) — no background image.
+    this.add.graphics().setDepth(-20)
+      .fillStyle(PAL.BG, 1)
+      .fillRect(0, 0, GAME_W, GAME_H);
 
     // ── Build map and sprites ────────────────────────────────────────────────
     this._buildMap();
