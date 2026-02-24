@@ -462,7 +462,7 @@ class UIScene extends Phaser.Scene {
     // Show portrait image if texture exists, otherwise fall back to emoji
     const portraitKey = `portrait_${unit.id}`;
     if (this._portraitImg && this.textures.exists(portraitKey)) {
-      this._portraitImg.setTexture(portraitKey).setVisible(true);
+      this._portraitImg.setTexture(portraitKey).setDisplaySize(48, 48).setVisible(true);
       this._unitEmojiTxt?.setText('');
     } else {
       this._portraitImg?.setVisible(false);

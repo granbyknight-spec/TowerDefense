@@ -212,7 +212,7 @@ class BattleScene extends Phaser.Scene {
         if (this.textures.exists(terrainTexKey)) {
           this.add.image(x + TILE / 2, y + TILE / 2, terrainTexKey)
             .setDisplaySize(TILE, TILE)
-            .setAlpha(0.55)
+            .setAlpha(0.35)
             .setDepth(-5);
         } else {
           g.fillStyle(td.color, 1);
@@ -320,8 +320,6 @@ class BattleScene extends Phaser.Scene {
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
 
-    // No background circle — sprites stand on their own.
-
     // ── SVG face sprite (replaces plain emoji text) ─────────────────────────
     // Scale the 64×64 SVG down to fit inside the circle (r*2 diameter = TILE-6)
     const spriteSize = (r * 2 - 4); // leave 2px padding inside ring
@@ -331,6 +329,14 @@ class BattleScene extends Phaser.Scene {
     // For enemy units, prefer the PNG sprite override over the SVG if it loaded
     const pngKey = `enemy_png_${unit.id}`;
     const useEnemyPng = unit.team === 'enemy' && this.textures.exists(pngKey);
+
+    // Background circle — drawn before sprite; clips white PNG edges on enemy PNGs
+    if (useEnemyPng) {
+      const bgCircle = this.add.graphics();
+      bgCircle.fillStyle(0x331111, 1);
+      bgCircle.fillCircle(x, y - 1, r + 1);
+      unit._bgCircle = bgCircle;
+    }
     const activeKey = useEnemyPng ? pngKey : sprKey;
     let sprite;
     if (this.textures.exists(activeKey)) {
@@ -442,6 +448,7 @@ class BattleScene extends Phaser.Scene {
     if (!unit.sprite) return;
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
+    if (unit._bgCircle) unit._bgCircle.setPosition(x, y - 1);
     if (unit.spriteBg) unit.spriteBg.setPosition(x, y);
     unit.sprite.setPosition(x, y - 1);
     unit.hpBarBg.setPosition(x, y + r + 3);
@@ -453,8 +460,8 @@ class BattleScene extends Phaser.Scene {
 
   _destroyUnitSprite(unit) {
     this._stopIdleBob(unit);
-    [unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
-    unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
+    [unit._bgCircle, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
+    unit._bgCircle = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
   }
 
   // ==========================================================================
