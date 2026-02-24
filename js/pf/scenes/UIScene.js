@@ -2,7 +2,8 @@
 // =============================================================================
 // Puppy Force — UIScene.js
 // HUD overlay: runs simultaneously with BattleScene
-// Shows: bottom panel, unit info, action menu, turn banner, dialogue box
+// Shows: floating unit info panel (top-right), thin action bar (bottom),
+//        turn banner, dialogue box
 // =============================================================================
 
 class UIScene extends Phaser.Scene {
@@ -50,140 +51,145 @@ class UIScene extends Phaser.Scene {
   }
 
   // ==========================================================================
-  // BOTTOM PANEL
+  // FLOATING UNIT INFO PANEL  (top-right, overlays map)
   // ==========================================================================
+  // Layout constants for the floating panel
+  // Panel origin: x=264, y=8, w=210, h=110
+  // All element positions are absolute (not relative to a container) so that
+  // the Graphics bg can be redrawn independently.
 
   _buildPanel() {
-    const W = GAME_W;
+    const FP = this._FP = {
+      x: 264, y: 8, w: 210, h: 110,
+    };
 
-    // Panel background
-    const pg = this.add.graphics();
-    pg.fillStyle(PAL.PANEL, 0.95);
-    pg.fillRect(0, UI_Y, W, UI_H);
-    pg.lineStyle(2, PAL.BORDER, 0.8);
-    pg.lineBetween(0, UI_Y, W, UI_Y);
+    // Semi-transparent dark background + gold border — redrawn in showUnitInfo
+    this._fpBg = this.add.graphics().setVisible(false);
 
-    // Subtle top-border highlight strip (gradient effect)
-    const pgHighlight = this.add.graphics();
-    pgHighlight.fillStyle(0x334466, 0.8);
-    pgHighlight.fillRect(0, UI_Y, W, 2);
-
-    // Turn indicator — repositioned
-    this._turnLabel = this.add.text(64, UI_Y + 34, 'TURN 1', {
-      fontSize: '12px', color: '#aabbcc',
-      fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
-    });
-
-    // Phase indicator — repositioned
-    this._phaseLabel = this.add.text(64, UI_Y + 46, 'YOUR TURN', {
-      fontSize: '12px', color: '#4488ff',
-      fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
-      stroke: '#000033',
-      strokeThickness: 2,
-    });
-
-    // Portrait image — new position/size
-    this._portraitImg = this.add.image(6, UI_Y + 2, '__DEFAULT')
-      .setDisplaySize(52, 52)
+    // Portrait image
+    this._portraitImg = this.add.image(FP.x + 6, FP.y + 6, '__DEFAULT')
+      .setDisplaySize(40, 40)
       .setOrigin(0, 0)
       .setVisible(false);
 
-    // Emoji fallback — repositioned
-    this._unitEmojiTxt = this.add.text(32, UI_Y + 6, '', {
-      fontSize: '32px',
-    }).setOrigin(0.5, 0);
+    // Emoji fallback (when no portrait PNG)
+    this._unitEmojiTxt = this.add.text(FP.x + 6 + 20, FP.y + 6 + 18, '', {
+      fontSize: '26px',
+    }).setOrigin(0.5, 0.5).setVisible(false);
 
-    // Unit name — left-aligned, repositioned
-    this._unitNameTxt = this.add.text(64, UI_Y + 3, '', {
-      fontSize: '16px', color: '#ffffff',
+    // Unit name  (right of portrait)
+    this._unitNameTxt = this.add.text(FP.x + 52, FP.y + 6, '', {
+      fontSize: '14px', color: '#ffffff',
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0, 0);
-
-    // Class + level subline (NEW)
-    this._unitClassTxt = this.add.text(64, UI_Y + 20, '', {
-      fontSize: '12px', color: '#aabbcc',
-      fontFamily: 'Nunito, Arial, sans-serif',
-    }).setOrigin(0, 0);
-
-    // Stats row 1 — all 4 stats on one line
-    this._unitStatsTxt = this.add.text(64, UI_Y + 48, '', {
-      fontSize: '12px', color: '#ccddf0',
-      fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
-    }).setOrigin(0, 0);
-
-    // Stats row 2 — kept but hidden (other code may reference it)
-    this._unitStats2Txt = this.add.text(64, UI_Y + 48, '', {
-      fontSize: '12px', color: '#ccddf0',
-      fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
+      strokeThickness: 2,
     }).setOrigin(0, 0).setVisible(false);
 
-    // HP text — repositioned, no label/percent
-    this._unitHpTxt = this.add.text(232, UI_Y + 58, '', {
-      fontSize: '11px', color: '#88ddaa',
+    // Class • Lv N
+    this._unitClassTxt = this.add.text(FP.x + 52, FP.y + 22, '', {
+      fontSize: '11px', color: '#aabbcc',
       fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
-    }).setOrigin(0, 0);
+    }).setOrigin(0, 0).setVisible(false);
 
-    // HP bar (NEW)
-    this._hpBarBg = this.add.graphics();
-    this._hpBarFg = this.add.graphics();
-    this._hpLabel = this.add.text(6, UI_Y + 58, 'HP', {
-      fontSize: '11px', color: '#88ddaa', fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-    }).setOrigin(0, 0);
+    // Stats row  (ATK / DEF / MOV / AGI — small, below portrait)
+    this._unitStatsTxt = this.add.text(FP.x + 52, FP.y + 34, '', {
+      fontSize: '10px', color: '#ccddf0',
+      fontFamily: 'Nunito, Arial, sans-serif',
+    }).setOrigin(0, 0).setVisible(false);
 
-    // MP bar
-    this._mpBarBg = this.add.graphics();
-    this._mpBarFg = this.add.graphics();
-    this._mpTxt   = this.add.text(396, UI_Y + 58, '', {
-      fontSize: '11px', color: '#88aaff',
+    // Hidden second stats row (kept for API compatibility)
+    this._unitStats2Txt = this.add.text(0, 0, '', {
+      fontSize: '10px', color: '#ccddf0',
+      fontFamily: 'Nunito, Arial, sans-serif',
+    }).setOrigin(0, 0).setVisible(false);
+
+    // HP label
+    this._hpLabel = this.add.text(FP.x + 6, FP.y + 56, 'HP', {
+      fontSize: '10px', color: '#88ff88',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-    }).setOrigin(0, 0);
+    }).setOrigin(0, 0).setVisible(false);
 
-    // MP label (NEW)
-    this._mpLabel = this.add.text(290, UI_Y + 58, 'MP', {
-      fontSize: '11px', color: '#88aaff', fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-    }).setOrigin(0, 0);
+    // HP bars (bg / fg drawn in showUnitInfo)
+    this._hpBarBg = this.add.graphics().setVisible(false);
+    this._hpBarFg = this.add.graphics().setVisible(false);
 
-    // Skills / items display — kept hidden, replaced by chips
-    this._skillsTxt = this.add.text(W / 2, UI_Y + 86, '', {
-      fontSize: '14px', color: '#99aacc',
+    // HP fraction  (right-aligned at x=FP.x+FP.w-6)
+    this._unitHpTxt = this.add.text(FP.x + FP.w - 6, FP.y + 56, '', {
+      fontSize: '10px', color: '#88ddaa',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(1, 0).setVisible(false);
+
+    // MP label
+    this._mpLabel = this.add.text(FP.x + 6, FP.y + 70, 'MP', {
+      fontSize: '10px', color: '#88aaff',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(0, 0).setVisible(false);
+
+    // MP bars
+    this._mpBarBg = this.add.graphics().setVisible(false);
+    this._mpBarFg = this.add.graphics().setVisible(false);
+
+    // MP fraction
+    this._mpTxt = this.add.text(FP.x + FP.w - 6, FP.y + 70, '', {
+      fontSize: '10px', color: '#88aaff',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(1, 0).setVisible(false);
+
+    // Skill chips — created dynamically, tracked in array
+    this._skillChips = [];
+
+    // Skill text (hidden — kept for API compatibility / click to show skill popup)
+    this._skillsTxt = this.add.text(FP.x + 6, FP.y + 84, '', {
+      fontSize: '10px', color: '#99aacc',
       fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
-    }).setOrigin(0.5, 0).setVisible(false);
-
+    }).setOrigin(0, 0).setVisible(false);
     this._skillsTxt.setInteractive({ useHandCursor: true });
     this._skillsTxt.on('pointerdown', () => {
       if (this._selectedUnit) this._showSkillInfo(this._selectedUnit);
     });
 
-    // Skill chips array (NEW)
-    this._skillChips = [];
-
-    // Veteran battle history line — repositioned
-    this._unitVetTxt = this.add.text(290, UI_Y + 83, '', {
-      fontSize: '11px', color: '#99aabb',
-      fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
-    }).setOrigin(0, 0);
-
-    // Status effect icons — repositioned
-    this._statusIcon1 = this.add.text(290, UI_Y + 72, '', {
-      fontSize: '13px',
-      fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
+    // Veteran battle history line — shown inside floating panel
+    this._unitVetTxt = this.add.text(FP.x + 6, FP.y + 96, '', {
+      fontSize: '9px', color: '#99aabb',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(0, 0).setVisible(false);
 
-    this._statusIcon2 = this.add.text(340, UI_Y + 72, '', {
-      fontSize: '13px',
+    // Status effect icons
+    this._statusIcon1 = this.add.text(FP.x + 110, FP.y + 56, '', {
+      fontSize: '11px', fontFamily: 'Nunito, Arial, sans-serif',
+    }).setOrigin(0, 0).setVisible(false);
+    this._statusIcon2 = this.add.text(FP.x + 155, FP.y + 56, '', {
+      fontSize: '11px', fontFamily: 'Nunito, Arial, sans-serif',
+    }).setOrigin(0, 0).setVisible(false);
+
+    // --------------------------------------------------------------------------
+    // Thin action bar background  (bottom of screen, always visible)
+    // --------------------------------------------------------------------------
+    const ABG_Y = 682;
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x111122, 1);
+    barBg.fillRect(0, ABG_Y, GAME_W, 38);
+    // Top highlight line
+    barBg.fillStyle(0x3344aa, 1);
+    barBg.fillRect(0, ABG_Y, GAME_W, 1);
+
+    // Turn indicator (bottom-left of bar)
+    this._turnLabel = this.add.text(8, ABG_Y + 6, 'TURN 1', {
+      fontSize: '11px', color: '#aabbcc',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    });
+    this._phaseLabel = this.add.text(8, ABG_Y + 18, 'YOUR TURN', {
+      fontSize: '10px', color: '#4488ff',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    });
+
+    // Small terrain info panel (top-left corner, always visible as a label)
+    this._terrainPanel = this.add.text(6, 8, '', {
+      fontSize: '11px', color: '#ccddee',
       fontFamily: 'Nunito, Arial, sans-serif',
-      fontStyle: 'bold',
+      backgroundColor: '#00000099',
+      padding: { x: 5, y: 3 },
     }).setOrigin(0, 0).setVisible(false);
   }
 
@@ -252,73 +258,71 @@ class UIScene extends Phaser.Scene {
   }
 
   // ==========================================================================
-  // ACTION MENU
+  // ACTION BUTTON BAR  (thin bar at bottom: y=682, h=38)
   // ==========================================================================
 
   _buildActionMenu() {
     this._actionMenu = this.add.container(0, 0).setVisible(false);
-    const W = GAME_W;
-    const btnData = [
-      { key: 'atk',   label: '⚔ Attack',  color: 0x882222, hi: 0xcc4444 },
-      { key: 'mag',   label: '⚡ Skill',   color: 0x224488, hi: 0x4488cc },
-      { key: 'item',  label: '🎒 Item',    color: 0x226622, hi: 0x44aa44 },
-      { key: 'wait',  label: '⏳ Wait',    color: 0x444422, hi: 0x888822 },
-    ];
 
-    const btnW = (W - 20) / 4 - 4;
-    const btnH = 30;
-    const startX = 10;
-    const y = UI_Y + 90;
+    const W = GAME_W;
+    const BAR_Y = 682;
+    const BAR_H = 38;
+    const btnW = W / 4;          // 120 px each (480/4)
+    const btnH = BAR_H;          // full bar height
+    const btnY = BAR_Y;
+
+    const btnData = [
+      { key: 'atk',  label: 'Attack', color: 0x223355, hi: 0x335588 },
+      { key: 'mag',  label: 'Skill',  color: 0x223355, hi: 0x335588 },
+      { key: 'item', label: 'Item',   color: 0x223355, hi: 0x335588 },
+      { key: 'wait', label: 'Wait',   color: 0x223355, hi: 0x335588 },
+    ];
 
     this._actionBtns = {};
     btnData.forEach((b, i) => {
-      const x = startX + i * (btnW + 4);
-      const bg = this.add.graphics();
-      bg.fillStyle(b.color, 1);
-      bg.fillRoundedRect(x, y, btnW, btnH, 6);
-      bg.lineStyle(1, b.hi, 0.8);
-      bg.strokeRoundedRect(x, y, btnW, btnH, 6);
-      // Inner highlight — subtle 1px lighter top edge
-      bg.lineStyle(1, 0xffffff, 0.2);
-      bg.lineBetween(x + 6, y + 1, x + btnW - 6, y + 1);
+      const x = i * btnW;
 
-      const txt = this.add.text(x + btnW / 2, y + btnH / 2, b.label, {
-        fontSize: '14px', color: '#ffffff',
+      const bg = this.add.graphics();
+      // Draw normal state
+      const drawNormal = () => {
+        bg.clear();
+        bg.fillStyle(b.color, 1);
+        bg.fillRect(x, btnY, btnW - 1, btnH); // 1px gap between buttons
+        // subtle top-highlight
+        bg.fillStyle(0x4455aa, 1);
+        bg.fillRect(x, btnY, btnW - 1, 1);
+      };
+      const drawHover = () => {
+        bg.clear();
+        bg.fillStyle(b.hi, 1);
+        bg.fillRect(x, btnY, btnW - 1, btnH);
+        bg.fillStyle(0x6677cc, 1);
+        bg.fillRect(x, btnY, btnW - 1, 1);
+      };
+      drawNormal();
+
+      const txt = this.add.text(x + btnW / 2, btnY + btnH / 2, b.label, {
+        fontSize: '13px', color: '#aabbff',
         fontFamily: 'Nunito, Arial, sans-serif',
         fontStyle: 'bold',
         align: 'center',
-        stroke: '#000000',
+        stroke: '#000022',
         strokeThickness: 2,
       }).setOrigin(0.5);
 
-      const zone = this.add.zone(x + btnW/2, y + btnH/2, btnW, btnH)
+      const zone = this.add.zone(x + btnW / 2, btnY + btnH / 2, btnW - 1, btnH)
         .setInteractive({ useHandCursor: true });
 
-      zone.on('pointerover', () => {
-        bg.clear();
-        bg.fillStyle(b.hi, 1);
-        bg.fillRoundedRect(x, y, btnW, btnH, 6);
-        // Keep inner highlight on hover too
-        bg.lineStyle(1, 0xffffff, 0.3);
-        bg.lineBetween(x + 6, y + 1, x + btnW - 6, y + 1);
-      });
-      zone.on('pointerout', () => {
-        bg.clear();
-        bg.fillStyle(b.color, 1);
-        bg.fillRoundedRect(x, y, btnW, btnH, 6);
-        bg.lineStyle(1, b.hi, 0.8);
-        bg.strokeRoundedRect(x, y, btnW, btnH, 6);
-        bg.lineStyle(1, 0xffffff, 0.2);
-        bg.lineBetween(x + 6, y + 1, x + btnW - 6, y + 1);
-      });
+      zone.on('pointerover',  () => drawHover());
+      zone.on('pointerout',   () => drawNormal());
       zone.on('pointerdown', () => {
         AudioManager.play(this, 'cursor_move');
-        this.tweens.add({ targets: txt, scaleX:0.9, scaleY:0.9, duration:80, yoyo:true });
+        this.tweens.add({ targets: txt, scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true });
         this._onActionBtn(b.key);
       });
 
       this._actionMenu.add([bg, txt, zone]);
-      this._actionBtns[b.key] = { bg, txt, zone, bData: b, x, y, w: btnW, h: btnH };
+      this._actionBtns[b.key] = { bg, txt, zone, bData: b, x, y: btnY, w: btnW, h: btnH, drawNormal, drawHover };
     });
   }
 
@@ -345,21 +349,25 @@ class UIScene extends Phaser.Scene {
   }
 
   // ==========================================================================
-  // END TURN BUTTON
+  // END TURN BUTTON  — sits right of action bar at bottom
   // ==========================================================================
 
   _buildEndTurnBtn() {
-    const W = GAME_W;
-    const x = W - 76, y = UI_Y + 12, w = 66, h = 52;
+    const BAR_Y = 682;
+    const BAR_H = 38;
+    // Overlay the rightmost button slot (Wait) isn't ideal; place END TURN
+    // as a compact button just above the bar, top-right corner
+    const w = 66, h = 30;
+    const x = GAME_W - w - 4, y = BAR_Y - h - 4;
 
     const bg = this.add.graphics();
     bg.fillStyle(0x113344, 1);
-    bg.fillRoundedRect(x, y, w, h, 8);
+    bg.fillRoundedRect(x, y, w, h, 6);
     bg.lineStyle(1, 0x2266aa, 0.9);
-    bg.strokeRoundedRect(x, y, w, h, 8);
+    bg.strokeRoundedRect(x, y, w, h, 6);
 
-    const txt = this.add.text(x + w/2, y + h/2, 'END\nTURN', {
-      fontSize: '17px', color: '#aaddff',
+    const txt = this.add.text(x + w / 2, y + h / 2, 'END\nTURN', {
+      fontSize: '12px', color: '#aaddff',
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
       align: 'center',
@@ -367,12 +375,24 @@ class UIScene extends Phaser.Scene {
       strokeThickness: 2,
     }).setOrigin(0.5);
 
-    const zone = this.add.zone(x + w/2, y + h/2, w, h).setInteractive({ useHandCursor: true });
-    zone.on('pointerover', () => { bg.clear(); bg.fillStyle(0x3377cc, 1); bg.fillRoundedRect(x,y,w,h,8); bg.lineStyle(1, 0x66aaff, 0.9); bg.strokeRoundedRect(x,y,w,h,8); });
-    zone.on('pointerout',  () => { bg.clear(); bg.fillStyle(0x113344, 1); bg.fillRoundedRect(x,y,w,h,8); bg.lineStyle(1,0x2266aa,0.9); bg.strokeRoundedRect(x,y,w,h,8); });
+    const zone = this.add.zone(x + w / 2, y + h / 2, w, h).setInteractive({ useHandCursor: true });
+    zone.on('pointerover', () => {
+      bg.clear();
+      bg.fillStyle(0x3377cc, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+      bg.lineStyle(1, 0x66aaff, 0.9);
+      bg.strokeRoundedRect(x, y, w, h, 6);
+    });
+    zone.on('pointerout', () => {
+      bg.clear();
+      bg.fillStyle(0x113344, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+      bg.lineStyle(1, 0x2266aa, 0.9);
+      bg.strokeRoundedRect(x, y, w, h, 6);
+    });
     zone.on('pointerdown', () => {
       AudioManager.play(this, 'cursor_move');
-      this.tweens.add({ targets: [bg,txt], scaleX:0.9, scaleY:0.9, duration:80, yoyo:true });
+      this.tweens.add({ targets: [bg, txt], scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true });
       this._battle?.onEndTurn();
     });
 
@@ -380,30 +400,31 @@ class UIScene extends Phaser.Scene {
   }
 
   // ==========================================================================
-  // MUTE TOGGLE BUTTON
+  // MUTE TOGGLE BUTTON — compact, top-right above bar
   // ==========================================================================
 
   _buildMuteBtn() {
-    const W = GAME_W;
-    // Sit just to the left of the END TURN button, same vertical alignment
-    const w = 36, h = 52;
-    const x = W - 76 - w - 4;   // 4 px gap between mute btn and end-turn btn
-    const y = UI_Y + 12;
+    const BAR_Y = 682;
+    const BAR_H = 38;
+    const w = 30, h = 30;
+    // Sit just left of the END TURN button
+    const endX = GAME_W - 66 - 4;
+    const x = endX - w - 4;
+    const y = BAR_Y - h - 4;
 
     const bg = this.add.graphics();
     bg.fillStyle(0x113344, 1);
-    bg.fillRoundedRect(x, y, w, h, 8);
+    bg.fillRoundedRect(x, y, w, h, 6);
     bg.lineStyle(1, 0x2266aa, 0.9);
-    bg.strokeRoundedRect(x, y, w, h, 8);
+    bg.strokeRoundedRect(x, y, w, h, 6);
 
-    // Label reflects current mute state (default: not muted)
     const isMuted = () => {
       const bs = this.scene.get('BattleScene');
       return bs ? bs.sound.mute : false;
     };
 
     const txt = this.add.text(x + w / 2, y + h / 2, isMuted() ? '🔇' : '🔊', {
-      fontSize: '18px',
+      fontSize: '16px',
     }).setOrigin(0.5);
 
     const zone = this.add.zone(x + w / 2, y + h / 2, w, h)
@@ -412,14 +433,14 @@ class UIScene extends Phaser.Scene {
     zone.on('pointerover', () => {
       bg.clear();
       bg.fillStyle(0x2255aa, 1);
-      bg.fillRoundedRect(x, y, w, h, 8);
+      bg.fillRoundedRect(x, y, w, h, 6);
     });
     zone.on('pointerout', () => {
       bg.clear();
       bg.fillStyle(0x113344, 1);
-      bg.fillRoundedRect(x, y, w, h, 8);
+      bg.fillRoundedRect(x, y, w, h, 6);
       bg.lineStyle(1, 0x2266aa, 0.9);
-      bg.strokeRoundedRect(x, y, w, h, 8);
+      bg.strokeRoundedRect(x, y, w, h, 6);
     });
     zone.on('pointerdown', () => {
       const bs = this.scene.get('BattleScene');
@@ -456,10 +477,10 @@ class UIScene extends Phaser.Scene {
     this._bannerTxt.setVisible(true);
     this._bannerBg.clear();
     this._bannerBg.fillStyle(0x000000, 0.6);
-    this._bannerBg.fillRect(0, GAME_H/2 - 60, W, 80);
+    this._bannerBg.fillRect(0, GAME_H / 2 - 60, W, 80);
     this._bannerBg.lineStyle(2, color, 0.8);
-    this._bannerBg.lineBetween(0, GAME_H/2 - 60, W, GAME_H/2 - 60);
-    this._bannerBg.lineBetween(0, GAME_H/2 + 20, W, GAME_H/2 + 20);
+    this._bannerBg.lineBetween(0, GAME_H / 2 - 60, W, GAME_H / 2 - 60);
+    this._bannerBg.lineBetween(0, GAME_H / 2 + 20, W, GAME_H / 2 + 20);
 
     this._bannerTxt.setText(text);
     this._bannerTxt.setStyle({ color: '#' + color.toString(16).padStart(6, '0') });
@@ -478,7 +499,7 @@ class UIScene extends Phaser.Scene {
       },
     });
 
-    // Update turn label
+    // Update turn / phase labels in the bottom bar
     const bn = this._battle;
     if (bn) {
       this._turnLabel?.setText(`TURN ${bn.turnNumber}`);
@@ -488,125 +509,175 @@ class UIScene extends Phaser.Scene {
   }
 
   // ==========================================================================
-  // UNIT INFO
+  // UNIT INFO  — populates the floating top-right panel
   // ==========================================================================
 
   showUnitInfo(unit) {
     if (!unit) { this.clearUnitInfo(); return; }
 
-    const promoted = unit.promoted ? '★' : '';
-    this._unitNameTxt?.setText(`${unit.name}${promoted}`);
-    // Color the name gold for player units, pink-red for enemies
-    const nameColor = unit.team === 'player' ? '#f8d030' : '#ff8888';
-    this._unitNameTxt?.setStyle({ color: nameColor });
+    const FP = this._FP;
 
-    // Class + level subline
-    this._unitClassTxt?.setText(`${unit.unitClass}  •  Lv ${unit.level}`);
+    // Draw / redraw the floating panel background
+    this._fpBg.clear();
+    this._fpBg.fillStyle(0x000000, 0.75);
+    this._fpBg.fillRoundedRect(FP.x, FP.y, FP.w, FP.h, 6);
+    this._fpBg.lineStyle(2, 0xf8d030, 1);
+    this._fpBg.strokeRoundedRect(FP.x, FP.y, FP.w, FP.h, 6);
+    this._fpBg.setVisible(true);
 
-    // Show portrait image if texture exists, otherwise fall back to emoji
+    // Portrait — 40x40 at top-left of panel
     const portraitKey = `portrait_${unit.id}`;
     if (this._portraitImg && this.textures.exists(portraitKey)) {
-      this._portraitImg.setTexture(portraitKey).setDisplaySize(52, 52).setVisible(true);
-      this._unitEmojiTxt?.setText('');
+      this._portraitImg
+        .setTexture(portraitKey)
+        .setDisplaySize(40, 40)
+        .setPosition(FP.x + 6, FP.y + 6)
+        .setVisible(true);
+      this._unitEmojiTxt?.setVisible(false);
     } else {
       this._portraitImg?.setVisible(false);
-      this._unitEmojiTxt?.setText(unit.emoji);
+      this._unitEmojiTxt
+        ?.setPosition(FP.x + 6 + 20, FP.y + 6 + 20)
+        .setText(unit.emoji)
+        .setVisible(true);
     }
 
-    // Stats — all 4 on one line
-    this._unitStatsTxt?.setText(`ATK:${unit.atk}  DEF:${unit.def}  MOV:${unit.mov}  AGI:${unit.agi}`);
-    this._unitStats2Txt?.setText('');
-    this._unitStats2Txt?.setVisible(false);
+    // Unit name
+    const promoted = unit.promoted ? '★' : '';
+    const nameColor = unit.team === 'player' ? '#f8d030' : '#ff8888';
+    this._unitNameTxt
+      ?.setText(`${unit.name}${promoted}`)
+      .setStyle({ color: nameColor })
+      .setPosition(FP.x + 52, FP.y + 6)
+      .setVisible(true);
 
-    // HP text — just the fraction, no label/percent
-    const hpColor = unit.hp > unit.maxHp * 0.5 ? '#44cc66'
-                  : unit.hp > unit.maxHp * 0.25 ? '#ffcc00' : '#ff4444';
-    this._unitHpTxt?.setText(`${unit.hp}/${unit.maxHp}`)
-                    .setStyle({ color: hpColor });
+    // Class + level
+    this._unitClassTxt
+      ?.setText(`${unit.unitClass}  •  Lv ${unit.level}`)
+      .setPosition(FP.x + 52, FP.y + 22)
+      .setVisible(true);
 
-    // HP bar
-    const hpRatio = Math.max(0, unit.hp / unit.maxHp);
-    const hpColor2 = hpRatio > 0.5 ? 0x38c864 : hpRatio > 0.25 ? 0xf8d030 : 0xc83030;
+    // Stats row
+    this._unitStatsTxt
+      ?.setText(`ATK:${unit.atk}  DEF:${unit.def}  MOV:${unit.mov}  AGI:${unit.agi}`)
+      .setPosition(FP.x + 52, FP.y + 34)
+      .setVisible(true);
+    this._unitStats2Txt?.setText('').setVisible(false);
+
+    // HP  -----------------------------------------------------------------
+    const hpRatio  = Math.max(0, unit.hp / unit.maxHp);
+    const hpColor  = hpRatio > 0.5 ? '#44cc66' : hpRatio > 0.25 ? '#ffcc00' : '#ff4444';
+    const hpColor2 = hpRatio > 0.5 ? 0x38c864  : hpRatio > 0.25 ? 0xf8d030  : 0xc83030;
+    const barX = FP.x + 25;   // after "HP" label
+    const barW = FP.w - 31;   // leaves room for fraction on right
+    const hpBarY = FP.y + 54;
+
+    this._hpLabel?.setPosition(FP.x + 6, FP.y + 56).setVisible(true);
+
     this._hpBarBg?.clear();
-    this._hpBarBg?.fillStyle(0x223322, 1);
-    this._hpBarBg?.fillRoundedRect(26, UI_Y + 57, 200, 9, 4);
+    this._hpBarBg?.fillStyle(0x333333, 1);
+    this._hpBarBg?.fillRoundedRect(barX, hpBarY, barW, 8, 3);
+    this._hpBarBg?.setVisible(true);
+
     this._hpBarFg?.clear();
     this._hpBarFg?.fillStyle(hpColor2, 1);
-    this._hpBarFg?.fillRoundedRect(26, UI_Y + 57, Math.max(4, 200 * hpRatio), 9, 4);
+    this._hpBarFg?.fillRoundedRect(barX, hpBarY, Math.max(4, barW * hpRatio), 8, 3);
+    this._hpBarFg?.setVisible(true);
 
-    // MP bar
-    const mpRatio = (unit.maxMp > 0) ? (unit.mp / unit.maxMp) : 0;
-    const barX = 310, barY = UI_Y + 57, barW = 80, barH = 9;
+    this._unitHpTxt
+      ?.setText(`${unit.hp}/${unit.maxHp}`)
+      .setStyle({ color: hpColor })
+      .setPosition(FP.x + FP.w - 6, FP.y + 56)
+      .setVisible(true);
+
+    // MP  -----------------------------------------------------------------
+    const mpBarY  = FP.y + 68;
+    const mpRatio = (unit.maxMp > 0) ? Math.max(0, unit.mp / unit.maxMp) : 0;
 
     this._mpBarBg?.clear();
     this._mpBarFg?.clear();
 
     if (unit.maxMp > 0) {
-      this._mpBarBg?.fillStyle(0x112244, 0.8);
-      this._mpBarBg?.fillRoundedRect(barX, barY, barW, barH, 3);
-      this._mpBarFg?.fillStyle(0x4488ff, 1);
-      this._mpBarFg?.fillRoundedRect(barX, barY, Math.max(2, barW * mpRatio), barH, 3);
-      this._mpTxt?.setPosition(396, UI_Y + 62).setText(`${unit.mp}/${unit.maxMp}`).setVisible(true);
-      this._mpLabel?.setVisible(true);
+      this._mpLabel?.setPosition(FP.x + 6, FP.y + 70).setVisible(true);
+
+      this._mpBarBg?.fillStyle(0x333333, 1);
+      this._mpBarBg?.fillRoundedRect(barX, mpBarY, barW, 8, 3);
+      this._mpBarBg?.setVisible(true);
+
+      this._mpBarFg?.fillStyle(0x4466ff, 1);
+      this._mpBarFg?.fillRoundedRect(barX, mpBarY, Math.max(2, barW * mpRatio), 8, 3);
+      this._mpBarFg?.setVisible(true);
+
+      this._mpTxt
+        ?.setText(`${unit.mp}/${unit.maxMp}`)
+        .setPosition(FP.x + FP.w - 6, FP.y + 70)
+        .setVisible(true);
     } else {
-      this._mpTxt?.setVisible(false);
       this._mpLabel?.setVisible(false);
+      this._mpBarBg?.setVisible(false);
+      this._mpBarFg?.setVisible(false);
+      this._mpTxt?.setVisible(false);
     }
 
-    // Skills — draw chips instead of text
-    this._skillsTxt?.setVisible(false);
-    this._drawSkillChips(unit);
-
-    // Status effect icons
+    // Status effect icons  ------------------------------------------------
     const icons = [];
-    if (unit.guardActive) icons.push({ icon: '🛡', label: ' Guard', color: '#88aaff' });
-    if (unit.burnStacks > 0) icons.push({ icon: '🔥', label: ` Burn×${unit.burnStacks}`, color: '#ff8844' });
+    if (unit.guardActive)  icons.push({ icon: '🛡', label: ' Guard', color: '#88aaff' });
+    if (unit.burnStacks > 0) icons.push({ icon: '🔥', label: ` ×${unit.burnStacks}`, color: '#ff8844' });
 
     [this._statusIcon1, this._statusIcon2].forEach((txt, i) => {
       if (!txt) return;
       if (icons[i]) {
-        txt.setText(icons[i].icon + icons[i].label).setColor(icons[i].color).setVisible(true);
+        txt.setText(icons[i].icon + icons[i].label)
+          .setColor(icons[i].color)
+          .setVisible(true);
       } else {
         txt.setVisible(false);
       }
     });
 
-    // Veteran battle history
+    // Veteran history
     const battles = unit.battlesParticipated || 0;
     const kills   = unit.killCount || 0;
-    const vetStr  = battles > 0
-      ? `⚔ ${kills} KO · ${battles} battles`
-      : '';
-    this._unitVetTxt?.setText(vetStr);
+    const vetStr  = battles > 0 ? `⚔ ${kills} KO · ${battles} battles` : '';
     const vetColor = kills >= 10 ? '#ffd700' : kills >= 5 ? '#ff9944' : '#99aabb';
-    this._unitVetTxt?.setStyle({ color: vetColor });
+    this._unitVetTxt
+      ?.setText(vetStr)
+      .setStyle({ color: vetColor })
+      .setPosition(FP.x + 6, FP.y + 96)
+      .setVisible(true);
 
-    // Update phase labels
+    // Skill chips  --------------------------------------------------------
+    this._skillsTxt?.setVisible(false);
+    this._drawSkillChips(unit);
+
+    // Update turn label
     if (this._battle) {
       this._turnLabel?.setText(`TURN ${this._battle.turnNumber}`);
     }
   }
 
   clearUnitInfo() {
-    this._unitNameTxt?.setText('');
-    this._unitClassTxt?.setText('');
-    this._unitStatsTxt?.setText('Tap a unit to select');
-    this._unitStats2Txt?.setText('');
-    this._unitStats2Txt?.setVisible(false);
-    this._unitHpTxt?.setText('');
-    this._unitEmojiTxt?.setText('');
+    // Hide all floating panel elements
+    this._fpBg?.setVisible(false);
     this._portraitImg?.setVisible(false);
-    this._hpBarBg?.clear();
-    this._hpBarFg?.clear();
-    this._clearSkillChips();
-    this._skillsTxt?.setVisible(false);
-    this._mpBarBg?.clear();
-    this._mpBarFg?.clear();
-    this._mpTxt?.setText('').setVisible(false);
+    this._unitEmojiTxt?.setVisible(false);
+    this._unitNameTxt?.setVisible(false);
+    this._unitClassTxt?.setVisible(false);
+    this._unitStatsTxt?.setVisible(false);
+    this._unitStats2Txt?.setVisible(false);
+    this._hpLabel?.setVisible(false);
+    this._hpBarBg?.clear().setVisible(false);
+    this._hpBarFg?.clear().setVisible(false);
+    this._unitHpTxt?.setVisible(false);
     this._mpLabel?.setVisible(false);
+    this._mpBarBg?.clear().setVisible(false);
+    this._mpBarFg?.clear().setVisible(false);
+    this._mpTxt?.setVisible(false);
     this._statusIcon1?.setVisible(false);
     this._statusIcon2?.setVisible(false);
-    this._unitVetTxt?.setText('');
+    this._unitVetTxt?.setVisible(false);
+    this._skillsTxt?.setVisible(false);
+    this._clearSkillChips();
   }
 
   // ==========================================================================
@@ -621,56 +692,60 @@ class UIScene extends Phaser.Scene {
   _drawSkillChips(unit) {
     this._clearSkillChips();
     if (!unit) return;
-    let chipX = 6;
-    const chipY = UI_Y + 71;
-    const chipH = 16;
+
+    const FP = this._FP;
+    let chipX = FP.x + 6;
+    const chipY = FP.y + 84;
+    const chipH = 14;
+    const maxRight = FP.x + FP.w - 6;
 
     (unit.skills || []).forEach(skillId => {
       const sk = SKILLS[skillId];
       const label = sk?.name || skillId;
-      const chipW = Math.min(label.length * 7 + 10, 80);
+      const chipW = Math.min(label.length * 6 + 10, 72);
+      if (chipX + chipW > maxRight) return;
+
       const bg = this.add.graphics();
       bg.fillStyle(0x1a3050, 1);
-      bg.fillRoundedRect(chipX, chipY, chipW, chipH, 4);
+      bg.fillRoundedRect(chipX, chipY, chipW, chipH, 3);
       bg.lineStyle(1, 0x4466aa, 1);
-      bg.strokeRoundedRect(chipX, chipY, chipW, chipH, 4);
-      const txt = this.add.text(chipX + 5, chipY + 3, label, {
+      bg.strokeRoundedRect(chipX, chipY, chipW, chipH, 3);
+      const txt = this.add.text(chipX + 5, chipY + 2, label, {
         fontSize: '9px', color: '#aaccff',
         fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
       }).setOrigin(0, 0);
       this._skillChips.push({ bg, txt });
-      chipX += chipW + 4;
-      if (chipX > 280) return; // stop if we'd overflow into vet text zone
+      chipX += chipW + 3;
     });
 
     // Item chips
     (unit.items || []).forEach(itemId => {
       const it = ITEMS?.[itemId];
       const label = it?.emoji || '📦';
-      const chipW = 22;
-      if (chipX + chipW > 280) return;
+      const chipW = 20;
+      if (chipX + chipW > maxRight) return;
       const bg = this.add.graphics();
       bg.fillStyle(0x103010, 1);
-      bg.fillRoundedRect(chipX, chipY, chipW, chipH, 4);
+      bg.fillRoundedRect(chipX, chipY, chipW, chipH, 3);
       bg.lineStyle(1, 0x336633, 1);
-      bg.strokeRoundedRect(chipX, chipY, chipW, chipH, 4);
-      const txt = this.add.text(chipX + 4, chipY + 2, label, {
-        fontSize: '11px', fontFamily: 'Nunito, Arial, sans-serif',
+      bg.strokeRoundedRect(chipX, chipY, chipW, chipH, 3);
+      const txt = this.add.text(chipX + 3, chipY + 1, label, {
+        fontSize: '10px', fontFamily: 'Nunito, Arial, sans-serif',
       }).setOrigin(0, 0);
       this._skillChips.push({ bg, txt });
-      chipX += chipW + 4;
+      chipX += chipW + 3;
     });
   }
 
   // ==========================================================================
-  // ACTION MENU
+  // ACTION MENU — show / hide
   // ==========================================================================
 
   showActionMenu(unit, battleScene) {
     this._selectedUnit = unit;
     this._battle = battleScene;
     this._actionMenu.setVisible(true);
-    // Attack and Magic are only available if the unit hasn't acted yet
+
     const canAttack = !unit.hasActed;
     const hasMagic  = canAttack && unit.skills.length > 0;
     const hasItem   = unit.items.length > 0;
@@ -719,7 +794,7 @@ class UIScene extends Phaser.Scene {
     const padV = 8;
     const skillCount = unit.skills.length;
     const menuH = padV + headerH + skillCount * (rowH + 4) + 4 + cancelH + padV;
-    const menuY = UI_Y - menuH - 4;  // float above HUD
+    const menuY = 682 - menuH - 4;  // float above bottom bar
 
     const container = this.add.container(0, 0).setDepth(50);
 
@@ -897,17 +972,15 @@ class UIScene extends Phaser.Scene {
 
     const W = GAME_W;
     const itemCount = unit.items.length;
-    // Each item row is btnH tall; add room for a Cancel button and top padding
     const btnH    = 38;
     const padTop  = 8;
     const padBot  = 6;
     const cancelH = 32;
     const menuH   = padTop + itemCount * (btnH + 4) + cancelH + padBot + 4;
-    const menuY   = UI_Y + 100 - menuH;  // sit just above the bottom panel action row
+    const menuY   = 682 - menuH - 4;  // sit just above the bottom action bar
     const menuX   = 8;
     const menuW   = W - 16;
 
-    // Container that we'll destroy on close
     const container = this.add.container(0, 0).setDepth(50);
 
     // Background panel
@@ -930,7 +1003,6 @@ class UIScene extends Phaser.Scene {
     // One button per item
     unit.items.forEach((itemId, idx) => {
       const it = ITEMS[itemId];
-      // Always treat items as usable (no cost check needed in current design)
       const canUse = !!it;
       const rowY = menuY + padTop + 18 + idx * (btnH + 4);
       const rowX = menuX + 6;
@@ -1019,12 +1091,10 @@ class UIScene extends Phaser.Scene {
     });
     cancelZone.on('pointerdown', () => {
       destroy();
-      // Re-show the main action menu
       this.showActionMenu(unit, this._battle);
     });
     container.add(cancelZone);
 
-    // Keep a reference so BattleScene can close it programmatically if needed
     this._itemMenuContainer = container;
     container.once('destroy', () => { this._itemMenuContainer = null; });
   }
@@ -1036,7 +1106,7 @@ class UIScene extends Phaser.Scene {
   _buildMessage() {
     const W = GAME_W;
     this._msgBg  = this.add.graphics().setVisible(false);
-    this._msgTxt = this.add.text(W / 2, UI_Y - 22, '', {
+    this._msgTxt = this.add.text(W / 2, 682 - 22, '', {
       fontSize: '17px',
       color: '#ffffff',
       fontFamily: 'Nunito, Arial, sans-serif',
@@ -1050,7 +1120,7 @@ class UIScene extends Phaser.Scene {
     const W = GAME_W;
     this._msgBg.clear();
     this._msgBg.fillStyle(0x000000, 0.7);
-    this._msgBg.fillRoundedRect(W/2 - 160, UI_Y - 36, 320, 30, 6);
+    this._msgBg.fillRoundedRect(W / 2 - 160, 682 - 36, 320, 30, 6);
     this._msgBg.setVisible(true);
     this._msgTxt.setText(text).setVisible(true);
 
@@ -1155,7 +1225,7 @@ class UIScene extends Phaser.Scene {
     overlay.fillStyle(0x000000, 0.85);
     overlay.fillRect(0, 0, W, GAME_H);
 
-    const chNum = this.add.text(W/2, GAME_H/2 - 60, `CHAPTER ${chapterId}`, {
+    const chNum = this.add.text(W / 2, GAME_H / 2 - 60, `CHAPTER ${chapterId}`, {
       fontSize: '16px', color: '#aabbcc',
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
@@ -1164,7 +1234,7 @@ class UIScene extends Phaser.Scene {
       strokeThickness: 2,
     }).setOrigin(0.5).setAlpha(0);
 
-    const chTitle = this.add.text(W/2, GAME_H/2 - 26, chap.title, {
+    const chTitle = this.add.text(W / 2, GAME_H / 2 - 26, chap.title, {
       fontSize: '34px', color: '#f8d030',
       fontFamily: 'Nunito, Georgia, serif',
       fontStyle: 'bold',
@@ -1172,7 +1242,7 @@ class UIScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5).setAlpha(0);
 
-    const chSub = this.add.text(W/2, GAME_H/2 + 24, chap.subtitle, {
+    const chSub = this.add.text(W / 2, GAME_H / 2 + 24, chap.subtitle, {
       fontSize: '15px', color: '#ccddf0',
       fontFamily: 'Nunito, Arial, sans-serif',
       fontStyle: 'bold',
@@ -1182,11 +1252,11 @@ class UIScene extends Phaser.Scene {
       strokeThickness: 2,
     }).setOrigin(0.5).setAlpha(0);
 
-    this.tweens.add({ targets:[chNum,chTitle,chSub], alpha:1, duration:600, stagger:200 });
+    this.tweens.add({ targets: [chNum, chTitle, chSub], alpha: 1, duration: 600, stagger: 200 });
     this.time.delayedCall(2200, () => {
       this.tweens.add({
-        targets:[overlay,chNum,chTitle,chSub], alpha:0, duration:500,
-        onComplete:() => { overlay.destroy(); chNum.destroy(); chTitle.destroy(); chSub.destroy(); },
+        targets: [overlay, chNum, chTitle, chSub], alpha: 0, duration: 500,
+        onComplete: () => { overlay.destroy(); chNum.destroy(); chTitle.destroy(); chSub.destroy(); },
       });
     });
   }
