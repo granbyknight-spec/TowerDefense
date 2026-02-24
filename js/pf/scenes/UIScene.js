@@ -464,6 +464,150 @@ class UIScene extends Phaser.Scene {
   }
 
   // ==========================================================================
+  // SKILL SELECTOR SUB-MENU
+  // ==========================================================================
+
+  showSkillMenu(unit, battleScene) {
+    if (!unit || !unit.skills || unit.skills.length === 0) return;
+    this._selectedUnit = unit;
+    this._battle = battleScene;
+
+    // Hide the main action menu while the sub-menu is open
+    this._actionMenu.setVisible(false);
+
+    const W = GAME_W;
+    const skillCount = unit.skills.length;
+    // Each skill row is btnH tall; add room for a Cancel button and top padding
+    const btnH   = 38;
+    const padTop = 8;
+    const padBot = 6;
+    const cancelH= 32;
+    const menuH  = padTop + skillCount * (btnH + 4) + cancelH + padBot + 4;
+    const menuY  = UI_Y + 100 - menuH;  // sit just above the bottom panel action row
+    const menuX  = 8;
+    const menuW  = W - 16;
+
+    // Container that we'll destroy on close
+    const container = this.add.container(0, 0).setDepth(50);
+
+    // Background panel
+    const panelBg = this.add.graphics();
+    panelBg.fillStyle(0x0a1a2e, 0.97);
+    panelBg.fillRoundedRect(menuX, menuY, menuW, menuH, 8);
+    panelBg.lineStyle(2, 0x4488cc, 0.9);
+    panelBg.strokeRoundedRect(menuX, menuY, menuW, menuH, 8);
+    container.add(panelBg);
+
+    const headerTxt = this.add.text(W / 2, menuY + padTop + 2, 'Choose Skill', {
+      fontSize: '13px', color: '#aabbcc',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0);
+    container.add(headerTxt);
+
+    const destroy = () => { container.destroy(true); };
+
+    // One button per skill
+    unit.skills.forEach((skillId, idx) => {
+      const sk = SKILLS[skillId];
+      if (!sk) return;
+
+      const canAfford = (sk.mpCost || 0) === 0 || unit.mp >= (sk.mpCost || 0);
+      const rowY = menuY + padTop + 18 + idx * (btnH + 4);
+      const rowX = menuX + 6;
+      const rowW = menuW - 12;
+
+      const colorBase = canAfford ? 0x224488 : 0x1a1a1a;
+      const colorHi   = canAfford ? 0x4488cc : 0x2a2a2a;
+      const textAlpha = canAfford ? 1.0 : 0.45;
+
+      const bg = this.add.graphics();
+      bg.fillStyle(colorBase, 1);
+      bg.fillRoundedRect(rowX, rowY, rowW, btnH, 6);
+      bg.lineStyle(1, colorHi, 0.8);
+      bg.strokeRoundedRect(rowX, rowY, rowW, btnH, 6);
+      container.add(bg);
+
+      const mpLabel = sk.mpCost ? `  MP:${sk.mpCost}` : '';
+      const nameTxt = this.add.text(rowX + 10, rowY + btnH / 2, sk.name + mpLabel, {
+        fontSize: '15px', color: '#ffffff',
+        fontFamily: 'Nunito, Arial, sans-serif',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2,
+      }).setOrigin(0, 0.5).setAlpha(textAlpha);
+      container.add(nameTxt);
+
+      if (canAfford) {
+        const zone = this.add.zone(rowX + rowW / 2, rowY + btnH / 2, rowW, btnH)
+          .setInteractive({ useHandCursor: true });
+        zone.on('pointerover', () => {
+          bg.clear();
+          bg.fillStyle(colorHi, 1);
+          bg.fillRoundedRect(rowX, rowY, rowW, btnH, 6);
+        });
+        zone.on('pointerout', () => {
+          bg.clear();
+          bg.fillStyle(colorBase, 1);
+          bg.fillRoundedRect(rowX, rowY, rowW, btnH, 6);
+          bg.lineStyle(1, colorHi, 0.8);
+          bg.strokeRoundedRect(rowX, rowY, rowW, btnH, 6);
+        });
+        zone.on('pointerdown', () => {
+          this.tweens.add({ targets: nameTxt, scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true });
+          destroy();
+          this._battle.onActionMagic(skillId);
+        });
+        container.add(zone);
+      }
+    });
+
+    // Cancel / Back button
+    const cancelY = menuY + padTop + 18 + skillCount * (btnH + 4) + 4;
+    const cancelX = menuX + 6;
+    const cancelW = menuW - 12;
+
+    const cancelBg = this.add.graphics();
+    cancelBg.fillStyle(0x222222, 1);
+    cancelBg.fillRoundedRect(cancelX, cancelY, cancelW, cancelH, 6);
+    cancelBg.lineStyle(1, 0x555555, 0.8);
+    cancelBg.strokeRoundedRect(cancelX, cancelY, cancelW, cancelH, 6);
+    container.add(cancelBg);
+
+    const cancelTxt = this.add.text(W / 2, cancelY + cancelH / 2, '✕  Back', {
+      fontSize: '14px', color: '#aabbcc',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    container.add(cancelTxt);
+
+    const cancelZone = this.add.zone(W / 2, cancelY + cancelH / 2, cancelW, cancelH)
+      .setInteractive({ useHandCursor: true });
+    cancelZone.on('pointerover', () => {
+      cancelBg.clear();
+      cancelBg.fillStyle(0x444444, 1);
+      cancelBg.fillRoundedRect(cancelX, cancelY, cancelW, cancelH, 6);
+    });
+    cancelZone.on('pointerout', () => {
+      cancelBg.clear();
+      cancelBg.fillStyle(0x222222, 1);
+      cancelBg.fillRoundedRect(cancelX, cancelY, cancelW, cancelH, 6);
+      cancelBg.lineStyle(1, 0x555555, 0.8);
+      cancelBg.strokeRoundedRect(cancelX, cancelY, cancelW, cancelH, 6);
+    });
+    cancelZone.on('pointerdown', () => {
+      destroy();
+      // Re-show the main action menu
+      this.showActionMenu(unit, this._battle);
+    });
+    container.add(cancelZone);
+
+    // Keep a reference so BattleScene can close it programmatically if needed
+    this._skillMenuContainer = container;
+    container.once('destroy', () => { this._skillMenuContainer = null; });
+  }
+
+  // ==========================================================================
   // MESSAGE
   // ==========================================================================
 

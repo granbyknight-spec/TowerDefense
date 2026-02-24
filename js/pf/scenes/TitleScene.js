@@ -116,14 +116,16 @@ class TitleScene extends Phaser.Scene {
       this.scene.restart();
     });
 
-    // ── Debug: preview cutscene ─────────────────────────────────────────────
-    this._makeSmallDebugBtn(W / 2, H - 58, '🎬 Preview Cutscene [Debug]', () => {
-      this.scene.start('CutsceneScene', {
-        currentChap: 1,
-        chapter: 2,
-        saveData: SaveManager.newGame(),
+    // ── Debug: preview cutscene (only visible on localhost) ─────────────────
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      this._makeSmallDebugBtn(W / 2, H - 58, '🎬 Preview Cutscene [Debug]', () => {
+        this.scene.start('CutsceneScene', {
+          currentChap: 1,
+          chapter: 2,
+          saveData: SaveManager.newGame(),
+        });
       });
-    });
+    }
 
     // ── Version & credits ────────────────────────────────────────────────────
     this.add.text(W / 2, H - 30, 'v1.0  ·  7 Chapters  ·  Dogs vs Cats', {
