@@ -661,6 +661,8 @@ class BattleScene extends Phaser.Scene {
     const badgeY = (col, row) => this._tileCenter(col, row).y + r + 10;
     let step = 0;
 
+    const stepDur = Math.max(70, 160 - unit.mov * 8);
+
     const doStep = () => {
       if (step >= path.length) {
         // NOTE: callers are responsible for updating unit.col/unit.row then
@@ -668,6 +670,7 @@ class BattleScene extends Phaser.Scene {
         onComplete();
         return;
       }
+      const isLastStep = (step === path.length - 1);
       const { col, row } = path[step++];
       const { x, y } = this._tileCenter(col, row);
       const hpY  = y + r + 3;
@@ -683,21 +686,39 @@ class BattleScene extends Phaser.Scene {
       }
 
       // Separate tween per display object (different target y values)
-      if (unit.spriteBg) this.tweens.add({ targets: unit.spriteBg, x, y,        duration: 120, ease: 'Power1' });
-      if (unit.sprite)   this.tweens.add({ targets: unit.sprite,   x, y: y - 1, duration: 120, ease: 'Power1' });
-      if (unit.hpBarBg)  this.tweens.add({ targets: unit.hpBarBg,  x, y: hpY,  duration: 120, ease: 'Power1' });
-      if (unit.badge)    this.tweens.add({ targets: unit.badge,    x, y: bdgY, duration: 120, ease: 'Power1' });
+      if (unit.spriteBg) this.tweens.add({ targets: unit.spriteBg, x, y,        duration: stepDur, ease: 'Power1' });
+      if (unit.sprite)   this.tweens.add({ targets: unit.sprite,   x, y: y - 1, duration: stepDur, ease: 'Power1' });
+      if (unit.hpBarBg)  this.tweens.add({ targets: unit.hpBarBg,  x, y: hpY,  duration: stepDur, ease: 'Power1' });
+      if (unit.badge)    this.tweens.add({ targets: unit.badge,    x, y: bdgY, duration: stepDur, ease: 'Power1' });
       if (unit.hpBar) {
         this.tweens.add({
           targets: unit.hpBar,
           x: x - (TILE - 10) / 2,
           y: hpY,
-          duration: 120,
+          duration: stepDur,
           ease: 'Power1',
-          onComplete: doStep,
+          onComplete: () => {
+            if (isLastStep && unit.sprite) {
+              const sprite = unit.sprite;
+              this.tweens.add({
+                targets: sprite,
+                scaleX: 1.25, scaleY: 0.75,
+                duration: 60, yoyo: true, ease: 'Back.easeOut',
+              });
+            }
+            doStep();
+          },
         });
       } else {
-        this.time.delayedCall(125, doStep);
+        if (isLastStep && unit.sprite) {
+          const sprite = unit.sprite;
+          this.tweens.add({
+            targets: sprite,
+            scaleX: 1.25, scaleY: 0.75,
+            duration: 60, yoyo: true, ease: 'Back.easeOut',
+          });
+        }
+        this.time.delayedCall(stepDur + 5, doStep);
       }
     };
     doStep();
@@ -934,6 +955,11 @@ class BattleScene extends Phaser.Scene {
           const died = defender.takeDamage(dmg);
           this._totalDamageDealt += dmg;
           this._updateHPBar(defender);
+          const defSprite = defender.sprite;
+          if (defSprite && defSprite.setTint) {
+            defSprite.setTint(0xff4444);
+            this.time.delayedCall(150, () => defSprite.clearTint());
+          }
           this._floatText(defender.col, defender.row, `-${dmg}`, PAL.HP_R);
 
           // EXP gain
@@ -1084,6 +1110,11 @@ class BattleScene extends Phaser.Scene {
     const healAmt = Math.floor(healer.atk * skillPower) + Phaser.Math.Between(2, 6);
     const actual  = target.heal(healAmt);
     this._updateHPBar(target);
+    const targetSprite = target.sprite;
+    if (targetSprite && targetSprite.setTint) {
+      targetSprite.setTint(0x44ff88);
+      this.time.delayedCall(200, () => targetSprite.clearTint());
+    }
     this._floatText(target.col, target.row, `+${actual} HP`, PAL.HP_G);
 
     const expGain = 15;
