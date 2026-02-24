@@ -41,6 +41,11 @@ const config = {
     PrepScene,
   ],
 
+  audio: {
+    disableWebAudio: false,
+    noAudio: false,
+  },
+
   // Disable default right-click menu
   disableContextMenu: true,
 

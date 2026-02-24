@@ -1381,9 +1381,12 @@ class BattleScene extends Phaser.Scene {
       this.saveData.completedChapters = completed;
       this.saveData.currentChapter = Math.min(7, this.chapterId + 1);
       // Update roster with current unit states
-      // Apply inter-chapter training bonus: +2 maxHp, +1 ATK per surviving hero
-      const survivors = this.units.filter(u => !u.dead && u.team === 'player');
+      // Revive any fallen heroes and apply inter-chapter training bonus: +2 maxHp, +1 ATK per hero
+      const survivors = this.units.filter(u => u.team === 'player');
       survivors.forEach(u => {
+        if (u.dead) {
+          u.dead = false;
+        }
         u.maxHp += 2;
         u.hp = u.maxHp;
         u.atk += 1;

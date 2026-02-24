@@ -19,6 +19,8 @@ class TitleScene extends Phaser.Scene {
 
     // ── Title music ──────────────────────────────────────────────────────────
     AudioManager.playMusic(this, 'title');
+    // Unlock Web Audio context for browsers that block autoplay
+    this.input.once('pointerdown', () => { this.sound.unlock(); });
 
     // ── Background gradient ──────────────────────────────────────────────────
     const bg = this.add.graphics();

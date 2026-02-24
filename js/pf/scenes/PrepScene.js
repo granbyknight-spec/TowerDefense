@@ -13,7 +13,13 @@ class PrepScene extends Phaser.Scene {
     this.saveData = data.saveData;
   }
 
+  preload() {
+    AudioManager.preloadMusic(this);
+    AudioManager.preloadSFX(this);
+  }
+
   create() {
+    AudioManager.playMusic(this, 'overworld', 0.35);
     const W = GAME_W, H = GAME_H;
 
     this._buildBackground(W, H);
