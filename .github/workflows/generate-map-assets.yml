@@ -1,0 +1,101 @@
+name: Generate Map Backgrounds
+
+# Generates full pixel art battle map background images via PixelLab.
+# Images are CLEAN — no grid lines.  The game overlays its logical grid at runtime.
+# After generation, pull the branch and run /analyze-map <N> in Claude Code
+# to have Claude vision analyze the image and write the terrain mapGrid.
+
+on:
+  workflow_dispatch:
+    inputs:
+      chapter:
+        description: 'Which chapter to generate (or all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
+          - '7'
+      variants:
+        description: 'Number of image variants to generate per chapter'
+        required: false
+        default: '2'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+      skip_existing:
+        description: 'Skip chapters that already have a generated image'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create output directory
+        run: mkdir -p assets/maps
+
+      - name: Generate map backgrounds
+        env:
+          PIXELLAB_SECRET: ${{ secrets.PIXELLAB_API_KEY }}
+          CHAPTER: ${{ inputs.chapter }}
+          VARIANTS: ${{ inputs.variants }}
+          SKIP_EXISTING: ${{ inputs.skip_existing }}
+        run: node scripts/generate-map-backgrounds-pixellab.js
+
+      - name: Commit generated images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/maps/
+          if git diff --staged --quiet; then
+            echo "No new map images generated (all skipped or API quota reached)"
+          else
+            COUNT=$(git diff --staged --name-only | wc -l)
+            git commit -m "Generate map backgrounds: chapter ${{ inputs.chapter }} (${COUNT} files)"
+            for i in 1 2 3 4; do
+              git pull --rebase origin HEAD && git push origin HEAD && break
+              echo "Push attempt $i failed, retrying in $((i * 2))s..."
+              sleep $((i * 2))
+            done
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Map Background Generation Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Chapter:** ${{ inputs.chapter }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Variants:** ${{ inputs.variants }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Pull the branch to get the generated images" >> $GITHUB_STEP_SUMMARY
+          echo "2. Review variants: \`assets/maps/chapter_N_bg_v1.png\`, \`_v2.png\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Promote best variant: \`cp assets/maps/chapter_1_bg_v1.png assets/maps/chapter_1_bg.png\`" >> $GITHUB_STEP_SUMMARY
+          echo "4. Run \`/analyze-map <N>\` in Claude Code — Claude reads the image" >> $GITHUB_STEP_SUMMARY
+          echo "   and writes the terrain obstacle grid (mapGrid) to ChapterData.js" >> $GITHUB_STEP_SUMMARY
