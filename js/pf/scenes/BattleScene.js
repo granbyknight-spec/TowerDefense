@@ -417,9 +417,9 @@ class BattleScene extends Phaser.Scene {
       sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: '22px' }).setOrigin(0.5);
     }
 
-    // Boss units get a slightly larger sprite to stand out
+    // Boss units render 60% larger and get a dramatic outer glow ring
     if (unit.isBoss && sprite.setScale) {
-      sprite.setScale(sprScale * 1.15);
+      sprite.setScale(sprScale * 1.6);
     }
 
     // ── HP bar background ───────────────────────────────────────────────────
@@ -437,7 +437,23 @@ class BattleScene extends Phaser.Scene {
       (unit.team === 'player' ? PAL.PLAYER_GLOW :
        unit.team === 'neutral' ? 0x44ff88 : PAL.ENEMY_GLOW);
     const spriteBg = this.add.circle(x, y, r + 2, ringColor, 0.18);
-    spriteBg.setStrokeStyle(3, ringColor, 0.85);
+    // Bosses get a thicker, brighter inner ring
+    spriteBg.setStrokeStyle(unit.isBoss ? 5 : 3, ringColor, unit.isBoss ? 1.0 : 0.85);
+
+    // ── Boss outer glow ring (pulsing) ───────────────────────────────────────
+    let bossGlow = null;
+    if (unit.isBoss) {
+      bossGlow = this.add.circle(x, y, r + 10, ringColor, 0.0);
+      bossGlow.setStrokeStyle(3, ringColor, 0.55);
+      this.tweens.add({
+        targets: bossGlow,
+        strokeAlpha: { from: 0.55, to: 0.0 },
+        radius:      { from: r + 10, to: r + 20 },
+        duration: 1200,
+        repeat: -1,
+        ease: 'Sine.easeOut',
+      });
+    }
 
     // ── Class badge icon (below hp bar) ─────────────────────────────────────
     const badgeColor = unit.team === 'player' ? '#88bbff'
@@ -452,13 +468,17 @@ class BattleScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
 
     unit.shadow    = shadow;
+    unit.bossGlow  = bossGlow;
     unit.spriteBg  = spriteBg;
     unit.sprite    = sprite;
     unit.hpBarBg   = hpBg;
     unit.hpBar     = hpBar;
     unit.badge     = badge;
 
-    this._unitLayer.add([shadow, spriteBg, sprite, hpBg, hpBar, badge]);
+    const layerItems = [shadow];
+    if (bossGlow) layerItems.push(bossGlow);
+    layerItems.push(spriteBg, sprite, hpBg, hpBar, badge);
+    this._unitLayer.add(layerItems);
     this._updateHPBar(unit);
 
     // ── Idle bob animation ─────────────────────────────────────────────────
@@ -523,6 +543,7 @@ class BattleScene extends Phaser.Scene {
     if (!unit.sprite) return;
     const { x, y } = this._tileCenter(unit.col, unit.row);
     const r = TILE / 2 - 3;
+    if (unit.bossGlow) unit.bossGlow.setPosition(x, y);
     if (unit.spriteBg) unit.spriteBg.setPosition(x, y);
     if (unit.shadow) unit.shadow.setPosition(x, y + r - 2);
     unit.sprite.setPosition(x, y - 1);
@@ -536,8 +557,8 @@ class BattleScene extends Phaser.Scene {
   _destroyUnitSprite(unit) {
     this._stopIdleBob(unit);
     if (unit._spriteMaskCb) this.events.off('update', unit._spriteMaskCb);
-    [unit._spriteMask, unit.shadow, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
-    unit._spriteMask = unit._spriteMaskCb = unit.shadow = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
+    [unit._spriteMask, unit.shadow, unit.bossGlow, unit.spriteBg, unit.sprite, unit.hpBarBg, unit.hpBar, unit.badge].forEach(o => o && o.destroy());
+    unit._spriteMask = unit._spriteMaskCb = unit.shadow = unit.bossGlow = unit.spriteBg = unit.sprite = unit.hpBarBg = unit.hpBar = unit.badge = null;
   }
 
   // ==========================================================================
@@ -739,16 +760,26 @@ class BattleScene extends Phaser.Scene {
 
   _selectUnit(unit) {
     this._selected = unit;
-    const tiles = getReachableTiles(unit, this.mapGrid, this.units);
-    this._moveTiles = tiles;
     this._clearHighlights();
-    this._drawMoveHighlights(tiles);
-    // Show attack-range preview from current position (red overlay)
-    if (!unit.hasActed) {
-      this._drawAtkHighlights(getAttackTiles(unit, this.mapGrid, unit.col, unit.row));
+
+    if (unit.hasMoved) {
+      // Unit already moved this turn — go straight to UNIT_MOVED (no move tiles)
+      this._moveTiles = [];
+      this._drawSelHighlight(unit);
+      this._setState(BS.UNIT_MOVED);
+    } else {
+      // Unit has not moved yet — show movement + attack-range highlights
+      const tiles = getReachableTiles(unit, this.mapGrid, this.units);
+      this._moveTiles = tiles;
+      this._drawMoveHighlights(tiles);
+      // Show attack-range preview from current position (red overlay)
+      if (!unit.hasActed) {
+        this._drawAtkHighlights(getAttackTiles(unit, this.mapGrid, unit.col, unit.row));
+      }
+      this._drawSelHighlight(unit);
+      this._setState(BS.UNIT_SEL);
     }
-    this._drawSelHighlight(unit);
-    this._setState(BS.UNIT_SEL);
+
     this._getUI()?.showUnitInfo(unit);
     this._getUI()?.showActionMenu(unit, this);  // action menu visible immediately
     this._dimActedUnits();
@@ -867,6 +898,7 @@ class BattleScene extends Phaser.Scene {
       }
 
       // Separate tween per display object (different target y values)
+      if (unit.bossGlow) this.tweens.add({ targets: unit.bossGlow, x, y,        duration: stepDur, ease: 'Power1' });
       if (unit.spriteBg) this.tweens.add({ targets: unit.spriteBg, x, y,        duration: stepDur, ease: 'Power1' });
       if (unit.sprite)   this.tweens.add({ targets: unit.sprite,   x, y: y - 1, duration: stepDur, ease: 'Power1' });
       if (unit.hpBarBg)  this.tweens.add({ targets: unit.hpBarBg,  x, y: hpY,  duration: stepDur, ease: 'Power1' });
@@ -1373,7 +1405,7 @@ class BattleScene extends Phaser.Scene {
   _killUnit(unit, onDone) {
     AudioManager.play(this, 'unit_death');
     this.tweens.add({
-      targets: [unit.spriteBg, unit.sprite, unit.hpBar, unit.hpBarBg],
+      targets: [unit.bossGlow, unit.spriteBg, unit.sprite, unit.hpBar, unit.hpBarBg].filter(Boolean),
       alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 400,
       ease: 'Power2',
       onComplete: () => {

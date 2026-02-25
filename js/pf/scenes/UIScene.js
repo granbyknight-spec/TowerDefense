@@ -60,7 +60,7 @@ class UIScene extends Phaser.Scene {
 
   _buildPanel() {
     const FP = this._FP = {
-      x: 264, y: 8, w: 210, h: 110,
+      x: 264, y: 8, w: 210, h: 124,
     };
 
     // Semi-transparent dark background + gold border — redrawn in showUnitInfo
@@ -105,36 +105,36 @@ class UIScene extends Phaser.Scene {
     }).setOrigin(0, 0).setVisible(false);
 
     // HP label
-    this._hpLabel = this.add.text(FP.x + 6, FP.y + 56, 'HP', {
-      fontSize: '10px', color: '#88ff88',
+    this._hpLabel = this.add.text(FP.x + 6, FP.y + 60, 'HP', {
+      fontSize: '12px', color: '#88ff88',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-    }).setOrigin(0, 0).setVisible(false);
+    }).setOrigin(0, 0.5).setVisible(false);
 
     // HP bars (bg / fg drawn in showUnitInfo)
     this._hpBarBg = this.add.graphics().setVisible(false);
     this._hpBarFg = this.add.graphics().setVisible(false);
 
     // HP fraction  (right-aligned at x=FP.x+FP.w-6)
-    this._unitHpTxt = this.add.text(FP.x + FP.w - 6, FP.y + 56, '', {
-      fontSize: '10px', color: '#88ddaa',
+    this._unitHpTxt = this.add.text(FP.x + FP.w - 6, FP.y + 60, '', {
+      fontSize: '12px', color: '#000000',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-    }).setOrigin(1, 0).setVisible(false);
+    }).setOrigin(1, 0.5).setVisible(false);
 
     // MP label
-    this._mpLabel = this.add.text(FP.x + 6, FP.y + 70, 'MP', {
-      fontSize: '10px', color: '#88aaff',
+    this._mpLabel = this.add.text(FP.x + 6, FP.y + 78, 'MP', {
+      fontSize: '12px', color: '#88aaff',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-    }).setOrigin(0, 0).setVisible(false);
+    }).setOrigin(0, 0.5).setVisible(false);
 
     // MP bars
     this._mpBarBg = this.add.graphics().setVisible(false);
     this._mpBarFg = this.add.graphics().setVisible(false);
 
     // MP fraction
-    this._mpTxt = this.add.text(FP.x + FP.w - 6, FP.y + 70, '', {
-      fontSize: '10px', color: '#88aaff',
+    this._mpTxt = this.add.text(FP.x + FP.w - 6, FP.y + 78, '', {
+      fontSize: '12px', color: '#000000',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
-    }).setOrigin(1, 0).setVisible(false);
+    }).setOrigin(1, 0.5).setVisible(false);
 
     // Skill chips — created dynamically, tracked in array
     this._skillChips = [];
@@ -302,7 +302,7 @@ class UIScene extends Phaser.Scene {
       drawNormal();
 
       const txt = this.add.text(x + btnW / 2, btnY + btnH / 2, b.label, {
-        fontSize: '13px', color: '#aabbff',
+        fontSize: '18px', color: '#aabbff',
         fontFamily: 'Nunito, Arial, sans-serif',
         fontStyle: 'bold',
         align: 'center',
@@ -572,45 +572,45 @@ class UIScene extends Phaser.Scene {
     const barW = FP.w - 31;   // leaves room for fraction on right
     const hpBarY = FP.y + 54;
 
-    this._hpLabel?.setPosition(FP.x + 6, FP.y + 56).setVisible(true);
+    this._hpLabel?.setPosition(FP.x + 6, FP.y + 60).setVisible(true);
 
     this._hpBarBg?.clear();
     this._hpBarBg?.fillStyle(0x333333, 1);
-    this._hpBarBg?.fillRoundedRect(barX, hpBarY, barW, 8, 3);
+    this._hpBarBg?.fillRoundedRect(barX, hpBarY, barW, 12, 4);
     this._hpBarBg?.setVisible(true);
 
     this._hpBarFg?.clear();
     this._hpBarFg?.fillStyle(hpColor2, 1);
-    this._hpBarFg?.fillRoundedRect(barX, hpBarY, Math.max(4, barW * hpRatio), 8, 3);
+    this._hpBarFg?.fillRoundedRect(barX, hpBarY, Math.max(4, barW * hpRatio), 12, 4);
     this._hpBarFg?.setVisible(true);
 
     this._unitHpTxt
       ?.setText(`${unit.hp}/${unit.maxHp}`)
-      .setStyle({ color: hpColor })
-      .setPosition(FP.x + FP.w - 6, FP.y + 56)
+      .setStyle({ color: '#000000', fontSize: '12px', fontStyle: 'bold' })
+      .setPosition(FP.x + FP.w - 6, FP.y + 60)
       .setVisible(true);
 
     // MP  -----------------------------------------------------------------
-    const mpBarY  = FP.y + 68;
+    const mpBarY  = FP.y + 72;
     const mpRatio = (unit.maxMp > 0) ? Math.max(0, unit.mp / unit.maxMp) : 0;
 
     this._mpBarBg?.clear();
     this._mpBarFg?.clear();
 
     if (unit.maxMp > 0) {
-      this._mpLabel?.setPosition(FP.x + 6, FP.y + 70).setVisible(true);
+      this._mpLabel?.setPosition(FP.x + 6, FP.y + 78).setVisible(true);
 
       this._mpBarBg?.fillStyle(0x333333, 1);
-      this._mpBarBg?.fillRoundedRect(barX, mpBarY, barW, 8, 3);
+      this._mpBarBg?.fillRoundedRect(barX, mpBarY, barW, 12, 4);
       this._mpBarBg?.setVisible(true);
 
       this._mpBarFg?.fillStyle(0x4466ff, 1);
-      this._mpBarFg?.fillRoundedRect(barX, mpBarY, Math.max(2, barW * mpRatio), 8, 3);
+      this._mpBarFg?.fillRoundedRect(barX, mpBarY, Math.max(2, barW * mpRatio), 12, 4);
       this._mpBarFg?.setVisible(true);
 
       this._mpTxt
         ?.setText(`${unit.mp}/${unit.maxMp}`)
-        .setPosition(FP.x + FP.w - 6, FP.y + 70)
+        .setPosition(FP.x + FP.w - 6, FP.y + 78)
         .setVisible(true);
     } else {
       this._mpLabel?.setVisible(false);
