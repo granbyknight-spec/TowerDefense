@@ -294,6 +294,7 @@ const ENEMY_DEFS = {
   },
   ALLEY_CAT: {
     id:'ALLEY_CAT', name:'Alley Cat', emoji:'🐈', isBoss:true,
+    tileSize: 2,
     unitClass:'Fighter', team:'enemy',
     baseStats:{ maxHp:30, atk:14, def:8, mov:5, agi:7, level:3 },
     growth:{ hp:2, atk:2, def:1, agi:1 },
@@ -322,6 +323,7 @@ const ENEMY_DEFS = {
   },
   LYNX_RANGER: {
     id:'LYNX_RANGER', name:'Lynx Ranger', emoji:'🦁', isBoss:true,
+    tileSize: 2,
     unitClass:'Ranger', team:'enemy',
     baseStats:{ maxHp:28, atk:15, def:7, mov:5, agi:10, level:4 },
     growth:{ hp:2, atk:2, def:1, agi:1 },
@@ -329,6 +331,7 @@ const ENEMY_DEFS = {
   },
   SNOW_LEOPARD: {
     id:'SNOW_LEOPARD', name:'Snow Leopard', emoji:'🐆', isBoss:true,
+    tileSize: 2,
     unitClass:'Knight', team:'enemy',
     baseStats:{ maxHp:34, atk:16, def:11, mov:5, agi:8, level:5 },
     growth:{ hp:3, atk:2, def:2, agi:1 },
@@ -336,6 +339,7 @@ const ENEMY_DEFS = {
   },
   RIVER_PANTHER: {
     id:'RIVER_PANTHER', name:'River Panther', emoji:'🐆', isBoss:true,
+    tileSize: 2,
     unitClass:'Swimmer', team:'enemy',
     baseStats:{ maxHp:36, atk:17, def:10, mov:6, agi:9, level:5 },
     growth:{ hp:3, atk:2, def:1, agi:1 },
@@ -344,6 +348,7 @@ const ENEMY_DEFS = {
   },
   SAND_CAT_KING: {
     id:'SAND_CAT_KING', name:'Sand Cat King', emoji:'🐅', isBoss:true,
+    tileSize: 2,
     unitClass:'King', team:'enemy',
     baseStats:{ maxHp:40, atk:18, def:12, mov:6, agi:10, level:6 },
     growth:{ hp:3, atk:2, def:2, agi:1 },
@@ -351,6 +356,7 @@ const ENEMY_DEFS = {
   },
   PERSIAN_QUEEN: {
     id:'PERSIAN_QUEEN', name:'Persian Queen', emoji:'😺', isBoss:true,
+    tileSize: 2,
     unitClass:'Sorceress', team:'enemy',
     baseStats:{ maxHp:42, atk:22, def:10, mov:5, agi:11, level:7 },
     growth:{ hp:3, atk:3, def:1, agi:1 },
@@ -358,6 +364,7 @@ const ENEMY_DEFS = {
   },
   CAT_EMPEROR: {
     id:'CAT_EMPEROR', name:'Cat Emperor', emoji:'👑', isBoss:true,
+    tileSize: 2,
     unitClass:'Emperor', team:'enemy',
     baseStats:{ maxHp:62, atk:25, def:18, mov:5, agi:12, level:10 },
     growth:{ hp:4, atk:3, def:2, agi:1 },

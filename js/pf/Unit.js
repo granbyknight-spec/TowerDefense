@@ -38,6 +38,7 @@ class Unit {
     this.growth   = def.growth || { hp:3, atk:2, def:1, agi:1 };
     this.ai       = def.ai    || 'aggressive';
     this.isBoss   = def.isBoss || false;
+    this.tileSize = def.tileSize || 1; // footprint width & height in tiles
     this.expReward= def.expReward || 20;
     this.promoted = false;
     this.promotedData = def.promotedData || null;
@@ -257,5 +258,23 @@ class Unit {
     if (saveData.battlesParticipated !== undefined) unit.battlesParticipated = saveData.battlesParticipated;
     if (saveData.killCount           !== undefined) unit.killCount           = saveData.killCount;
     return unit;
+  }
+
+  // --------------------------------------------------------------------------
+  /** Returns all {col, row} tile positions this unit occupies. */
+  getTilesOccupied() {
+    const tiles = [];
+    for (let dc = 0; dc < this.tileSize; dc++) {
+      for (let dr = 0; dr < this.tileSize; dr++) {
+        tiles.push({ col: this.col + dc, row: this.row + dr });
+      }
+    }
+    return tiles;
+  }
+
+  /** Returns true if this unit occupies the given tile. */
+  isOccupyingTile(col, row) {
+    return col >= this.col && col < this.col + this.tileSize &&
+           row >= this.row && row < this.row + this.tileSize;
   }
 }

@@ -271,6 +271,29 @@ class InnScene extends Phaser.Scene {
     return null;
   }
 
+  // Returns the ordered list of available style strings for a unit.
+  // Priority order: 'dark', 'chibi', 'svg'. SVG is always included.
+  _getCardStyles(def) {
+    const styles = [];
+    if (this._hasTexture(`inn_dark_${def.id}`))  styles.push('dark');
+    if (this._hasTexture(`inn_chibi_${def.id}`)) styles.push('chibi');
+    styles.push('svg');
+    return styles;
+  }
+
+  // Resolve the texture key for a given style string and unit definition.
+  // Returns { key, isPixellab } or null for SVG/emoji fallback.
+  _getSpriteKeyForStyle(def, style) {
+    if (style === 'dark' || style === 'chibi') {
+      const plKey = `inn_${style}_${def.id}`;
+      if (this._hasTexture(plKey)) return { key: plKey, isPixellab: true };
+    }
+    // SVG or fallback
+    const svgKey = getSpriteKey(def);
+    if (this._hasTexture(svgKey)) return { key: svgKey, isPixellab: false };
+    return null;
+  }
+
   _rebuildGrid() {
     this._grid.removeAll(true);
 
@@ -327,6 +350,36 @@ class InnScene extends Phaser.Scene {
       this._grid.add(glow);
     }
 
+    // ── Determine available styles for this card ──────────────────────────
+    const availStyles = this._getCardStyles(def);
+
+    // Load saved preference; if none (or saved style unavailable), pick best.
+    let savedStyle = SaveManager.getUnitStyle(def.id);
+    if (!savedStyle || !availStyles.includes(savedStyle)) {
+      savedStyle = availStyles[0]; // best available (dark > chibi > svg)
+    }
+
+    // Mutable state for this card (mutated by the tap handler via closure)
+    const cardState = { style: savedStyle };
+
+    // ── Style glow overlay (drawn under sprite, above bg) ─────────────────
+    // Redrawn on each style cycle. Only visible for non-SVG styles.
+    const styleGlow = this.add.graphics();
+    this._grid.add(styleGlow);
+
+    const _drawStyleGlow = (style) => {
+      styleGlow.clear();
+      if (style === 'dark') {
+        styleGlow.lineStyle(2, 0xff8844, 0.55);
+        styleGlow.strokeRoundedRect(cx - CARD_W/2 + 2, cy - CARD_H/2 + 2, CARD_W - 4, CARD_H - 4, 5);
+      } else if (style === 'chibi') {
+        styleGlow.lineStyle(2, 0xff88dd, 0.55);
+        styleGlow.strokeRoundedRect(cx - CARD_W/2 + 2, cy - CARD_H/2 + 2, CARD_W - 4, CARD_H - 4, 5);
+      }
+      // svg: no glow (transparent bg)
+    };
+    _drawStyleGlow(cardState.style);
+
     // ── Team/role badge (top-right) ───────────────────────────────────────
     const roleBadge = isBoss ? '👑' : (isHero ? '⭐' : '');
     if (roleBadge) {
@@ -337,10 +390,38 @@ class InnScene extends Phaser.Scene {
       );
     }
 
+    // ── Style badge (top-left) ────────────────────────────────────────────
+    const STYLE_BADGE_Y = cy - CARD_H/2 + 10;
+    const styleBadgeTxt = this.add.text(cx - CARD_W/2 + 6, STYLE_BADGE_Y, '', {
+      fontSize: '8px',
+      fontFamily: 'Courier New, monospace', fontStyle: 'bold',
+      padding: { x: 3, y: 2 },
+    }).setOrigin(0, 0);
+    this._grid.add(styleBadgeTxt);
+
+    // "tap to cycle" hint below the style badge
+    const tapHint = this.add.text(cx - CARD_W/2 + 6, STYLE_BADGE_Y + 14, 'tap to cycle', {
+      fontSize: '8px', color: '#776655',
+      fontFamily: 'Courier New, monospace',
+    }).setOrigin(0, 0);
+    this._grid.add(tapHint);
+
+    // Helper: update the style badge text/color
+    const _updateStyleBadge = (style) => {
+      if (style === 'svg') {
+        styleBadgeTxt.setText('[SVG]').setColor('#778899').setBackgroundColor('#0d1218');
+      } else if (style === 'chibi') {
+        styleBadgeTxt.setText('[CHIBI]').setColor('#ff88dd').setBackgroundColor('#1a0014');
+      } else {
+        styleBadgeTxt.setText('[DARK]').setColor('#ff8844').setBackgroundColor('#200800');
+      }
+    };
+    _updateStyleBadge(cardState.style);
+
     // ── Sprite image ──────────────────────────────────────────────────────
-    // Center of sprite: 16px from top + 50px = 66px from card top
+    // Center of sprite area: 66px from card top
     const sprY = cy - CARD_H/2 + 66;
-    const texInfo = this._getBestSpriteKey(def);
+    const texInfo = this._getSpriteKeyForStyle(def, cardState.style);
 
     // Light backdrop so transparent sprites are visible on dark cards
     const sprBg = this.add.graphics();
@@ -350,43 +431,41 @@ class InnScene extends Phaser.Scene {
     sprBg.strokeRoundedRect(cx - 46, sprY - 46, 92, 92, 6);
     this._grid.add(sprBg);
 
+    // Mutable sprite display — replaced on style cycle
     let sprObj;
-    if (texInfo) {
-      // Base display size — bosses slightly larger, PixelLab art larger
-      const baseSize = texInfo.isPixellab ? (isBoss ? 88 : 76) : (isBoss ? 68 : 58);
-      sprObj = this.add.image(cx, sprY, texInfo.key).setDisplaySize(baseSize, baseSize);
-    } else {
-      sprObj = this.add.text(cx, sprY, def.emoji || '❓', {
-        fontSize: '40px',
-      }).setOrigin(0.5);
-    }
+    const _buildSpriteObj = (ti) => {
+      if (ti) {
+        const baseSize = ti.isPixellab ? (isBoss ? 88 : 76) : (isBoss ? 68 : 58);
+        return this.add.image(cx, sprY, ti.key).setDisplaySize(baseSize, baseSize);
+      } else {
+        return this.add.text(cx, sprY, def.emoji || '❓', {
+          fontSize: '40px',
+        }).setOrigin(0.5);
+      }
+    };
+    sprObj = _buildSpriteObj(texInfo);
     this._grid.add(sprObj);
 
     // ── Style source label (below sprite) ────────────────────────────────
-    const darkReady  = this._hasTexture(`inn_dark_${def.id}`);
-    const chibiReady = this._hasTexture(`inn_chibi_${def.id}`);
+    const srcLabelTxt = this.add.text(cx, cy - CARD_H/2 + 112, '', {
+      fontSize: '9px',
+      fontFamily: 'Courier New, monospace', fontStyle: 'bold',
+      padding: { x: 4, y: 2 },
+    }).setOrigin(0.5, 0);
+    this._grid.add(srcLabelTxt);
 
-    if (texInfo && texInfo.isPixellab) {
-      // Showing a PixelLab sprite — label which style
-      const styleLabel = this._style === 'dark' ? '⚡ DARK' : '✨ CHIBI';
-      const sColor     = this._style === 'dark' ? '#ff8844' : '#ff88ee';
-      this._grid.add(
-        this.add.text(cx, cy - CARD_H/2 + 112, styleLabel, {
-          fontSize: '9px', color: sColor,
-          fontFamily: 'Courier New, monospace', fontStyle: 'bold',
-          backgroundColor: this._style === 'dark' ? '#200800' : '#1a0014',
-          padding: { x: 4, y: 2 },
-        }).setOrigin(0.5, 0)
-      );
-    } else {
-      // SVG fallback — show pending status
-      this._grid.add(
-        this.add.text(cx, cy - CARD_H/2 + 112, '⟳ SVG FALLBACK', {
-          fontSize: '8px', color: '#887755',
-          fontFamily: 'Courier New, monospace',
-        }).setOrigin(0.5, 0)
-      );
-    }
+    // Helper: update the source label below the sprite
+    const _updateSrcLabel = (style, ti) => {
+      if (ti && ti.isPixellab) {
+        const label = style === 'dark' ? '⚡ DARK' : '✨ CHIBI';
+        const col   = style === 'dark' ? '#ff8844' : '#ff88ee';
+        const bgCol = style === 'dark' ? '#200800' : '#1a0014';
+        srcLabelTxt.setText(label).setColor(col).setBackgroundColor(bgCol);
+      } else {
+        srcLabelTxt.setText('⟳ SVG FALLBACK').setColor('#887755').setBackgroundColor('');
+      }
+    };
+    _updateSrcLabel(cardState.style, texInfo);
 
     // ── Unit name ─────────────────────────────────────────────────────────
     const nameColor = isHero ? '#88aaee' : (isBoss ? '#ffaa77' : '#bb8866');
@@ -421,6 +500,8 @@ class InnScene extends Phaser.Scene {
     }
 
     // ── Art availability indicators ──────────────────────────────────────
+    const darkReady  = this._hasTexture(`inn_dark_${def.id}`);
+    const chibiReady = this._hasTexture(`inn_chibi_${def.id}`);
     const badgeY = cy + CARD_H/2 - 16;
     const badges = [];
     if (darkReady)  badges.push({ label: '⚡D', bg: '#1a0800', fg: '#ff8844' });
@@ -446,6 +527,62 @@ class InnScene extends Phaser.Scene {
         );
       });
     }
+
+    // ── Interactive tap-to-cycle ──────────────────────────────────────────
+    // Use a transparent hit zone over the whole card so the card is tappable.
+    const hitZone = this.add.rectangle(cx, cy, CARD_W, CARD_H)
+      .setInteractive({ useHandCursor: true });
+    this._grid.add(hitZone);
+
+    // Track pointer-down position so we can distinguish tap from scroll drag.
+    let _ptrDownX = null;
+    let _ptrDownY = null;
+
+    hitZone.on('pointerdown', (ptr) => {
+      _ptrDownX = ptr.x;
+      _ptrDownY = ptr.y;
+    });
+
+    hitZone.on('pointerup', (ptr) => {
+      // Only treat as a tap if pointer hasn't moved more than 6px (not a scroll)
+      if (_ptrDownX === null) return;
+      const dx = Math.abs(ptr.x - _ptrDownX);
+      const dy = Math.abs(ptr.y - _ptrDownY);
+      _ptrDownX = null;
+      _ptrDownY = null;
+      if (dx > 6 || dy > 6) return;
+
+      // Advance to next style in the available list
+      const curIdx  = availStyles.indexOf(cardState.style);
+      const nextIdx = (curIdx + 1) % availStyles.length;
+      cardState.style = availStyles[nextIdx];
+
+      // Persist selection
+      SaveManager.setUnitStyle(def.id, cardState.style);
+
+      // Resolve new texture
+      const newTex = this._getSpriteKeyForStyle(def, cardState.style);
+
+      // Swap sprite in-place: destroy old, add new
+      sprObj.destroy();
+      sprObj = _buildSpriteObj(newTex);
+      // Insert before hitZone (last item) so hit zone stays on top
+      this._grid.addAt(sprObj, this._grid.getIndex(hitZone));
+
+      // Update decorative elements
+      _updateStyleBadge(cardState.style);
+      _updateSrcLabel(cardState.style, newTex);
+      _drawStyleGlow(cardState.style);
+
+      // Brief scale pulse: 0.95 → 1.0
+      this.tweens.add({
+        targets: [bg, sprBg, sprObj, styleBadgeTxt, srcLabelTxt],
+        scaleX: { from: 0.95, to: 1.0 },
+        scaleY: { from: 0.95, to: 1.0 },
+        duration: 120,
+        ease: 'Quad.easeOut',
+      });
+    });
   }
 
   // ---------------------------------------------------------------------------
