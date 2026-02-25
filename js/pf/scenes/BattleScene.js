@@ -175,21 +175,10 @@ class BattleScene extends Phaser.Scene {
     this._totalDamageDealt = 0;
     this._unitsLost        = 0;
 
-    // ── Dark background behind everything (visible at map edges) ─────────────
+    // ── Dark background behind the tile grid ────────────────────────────────
     this.add.graphics().setDepth(-20)
       .fillStyle(PAL.BG, 1)
-      .fillRect(0, 0, this.mapGrid[0].length * TILE + GRID_X * 2,
-                      this.mapGrid.length    * TILE + GRID_Y * 2);
-
-    // ── Chapter background image — units walk on this ─────────────────────────
-    const _mapW  = this.mapGrid[0].length * TILE;
-    const _mapH  = this.mapGrid.length    * TILE;
-    const _bgKey = `bg_ch${this.chapterId}`;
-    if (this.textures.exists(_bgKey)) {
-      this.add.image(GRID_X + _mapW / 2, GRID_Y + _mapH / 2, _bgKey)
-        .setDisplaySize(_mapW, _mapH)
-        .setDepth(-10);
-    }
+      .fillRect(0, 0, GAME_W, GAME_H);
 
     // ── Build map and sprites ────────────────────────────────────────────────
     this._buildMap();
@@ -310,120 +299,241 @@ class BattleScene extends Phaser.Scene {
   // ==========================================================================
 
   _buildMap() {
-    // Tiles are invisible — the chapter background image provides all terrain visuals.
-    // This graphics object is kept for any future per-tile drawing needs.
     this._tileGfx = this.add.graphics().setDepth(-4);
+    const g = this._tileGfx;
+
+    for (let row = 0; row < this.mapGrid.length; row++) {
+      for (let col = 0; col < this.mapGrid[0].length; col++) {
+        const tid = this.mapGrid[row][col];
+        const td  = TERRAIN[tid];
+        const x   = GRID_X + col * TILE;
+        const y   = GRID_Y + row * TILE;
+
+        // Base fill
+        g.fillStyle(td.color, 1);
+        g.fillRect(x, y, TILE, TILE);
+
+        // GBA-style pixel art detail
+        this._drawTerrainDetail(g, tid, x, y);
+
+        // Crisp 1px dark border (right + bottom edges only — avoids double-drawing)
+        g.fillStyle(0x000000, 0.18);
+        g.fillRect(x + TILE - 1, y, 1, TILE);
+        g.fillRect(x, y + TILE - 1, TILE, 1);
+      }
+    }
   }
 
+  // Draw GBA-style pixel art detail on top of the base tile fill.
+  // Each terrain type uses fillRect / fillCircle / fillEllipse only — no lineStyle —
+  // so the look is clean, opaque, and consistent with the Fire Emblem GBA aesthetic.
   _drawTerrainDetail(g, tid, x, y) {
     const cx = x + TILE / 2, cy = y + TILE / 2;
+
     if (tid === T.GRASS) {
-      // Subtle grass tufts
-      g.fillStyle(0x2d5018, 0.4);
-      g.fillCircle(cx - 10, cy + 6,  4);
-      g.fillCircle(cx + 8,  cy - 6,  3);
-      g.fillCircle(cx + 12, cy + 8,  3);
-      g.fillStyle(0x5a9030, 0.3);
-      g.fillCircle(cx - 4,  cy - 8,  3);
-      g.fillCircle(cx + 3,  cy + 12, 3);
+      // ── Grass: scattered "ε" marks (dark olive squiggles) ────────────────
+      g.fillStyle(0x4a6810, 0.75);
+      const _em = (mx, my) => {
+        g.fillRect(mx+2, my,   4, 2); // top bar
+        g.fillRect(mx,   my+2, 2, 2); // upper-left
+        g.fillRect(mx+2, my+4, 4, 2); // mid bar
+        g.fillRect(mx,   my+6, 2, 2); // lower-left
+        g.fillRect(mx+2, my+8, 4, 2); // bot bar
+      };
+      _em(x+3,  y+4);
+      _em(x+21, y+3);
+      _em(x+7,  y+20);
+      _em(x+23, y+21);
+
     } else if (tid === T.FOREST) {
-      // Three overlapping tree crowns — clearly "forest"
-      g.fillStyle(0x122e09, 0.85);
-      g.fillCircle(cx - 8, cy + 5, 8);
-      g.fillCircle(cx + 7, cy + 5, 7);
-      g.fillStyle(0x1a4010, 0.9);
-      g.fillCircle(cx - 1, cy - 2, 9);
-      g.fillStyle(0x3a6820, 0.45);
-      g.fillCircle(cx - 3, cy - 5, 5); // highlight
+      // ── Forest: pine canopy from above — dark star-shaped crown ──────────
+      const tx = cx, ty = cy - 2;
+      // Drop shadow
+      g.fillStyle(0x0c2208, 0.7);
+      g.fillCircle(tx + 2, ty + 3, 13);
+      // Base canopy
+      g.fillStyle(0x1a5010, 1);
+      g.fillCircle(tx, ty, 13);
+      // Star-shaped branch spokes (8 directions)
+      g.fillStyle(0x245e14, 1);
+      for (let a = 0; a < 8; a++) {
+        const ang = (a / 8) * Math.PI * 2 - Math.PI / 8;
+        g.fillEllipse(tx + Math.cos(ang) * 8, ty + Math.sin(ang) * 8, 9, 6);
+      }
+      // Inner crown
+      g.fillStyle(0x3a7820, 1);
+      g.fillCircle(tx, ty, 7);
+      // Highlight (upper-left)
+      g.fillStyle(0x508a2c, 1);
+      g.fillCircle(tx - 2, ty - 3, 4);
+      // Trunk stub at bottom
+      g.fillStyle(0x5a2c10, 1);
+      g.fillRect(cx - 2, cy + 11, 4, 4);
+
     } else if (tid === T.MOUNTAIN) {
-      // Two overlapping peaks with snow caps
-      g.fillStyle(0x4a3a2a, 0.9);
-      g.fillTriangle(cx - 14, cy + 12, cx - 4, cy - 6,  cx + 4,  cy + 12);
-      g.fillStyle(0x6a5a48, 0.9);
-      g.fillTriangle(cx,     cy + 12, cx + 10, cy - 8,  cx + 20, cy + 12);
-      g.fillStyle(0xffffff, 0.75);
-      g.fillTriangle(cx - 6, cy - 2,  cx - 4, cy - 9,  cx - 2,  cy - 2);
-      g.fillTriangle(cx + 8, cy - 4,  cx + 10,cy - 11, cx + 12, cy - 4);
+      // ── Mountain: rocky boulders from above ──────────────────────────────
+      g.fillStyle(0x4a3828, 0.9);
+      g.fillEllipse(cx - 2, cy + 4, 30, 20);
+      g.fillStyle(0x686050, 1);
+      g.fillEllipse(cx - 4, cy,     26, 18);
+      g.fillStyle(0x7a7060, 1);
+      g.fillEllipse(cx + 2, cy - 6, 20, 16);
+      // Peak highlight
+      g.fillStyle(0x9a9088, 0.8);
+      g.fillEllipse(cx, cy - 7, 10, 8);
+      // Snow cap
+      g.fillStyle(0xe8e8f0, 0.7);
+      g.fillCircle(cx, cy - 8, 4);
+
     } else if (tid === T.WATER) {
-      // Distinct wave pattern — clearly impassable water
-      g.fillStyle(0x44aaee, 0.5);
-      g.fillEllipse(cx - 12, cy - 5, 18, 7);
-      g.fillEllipse(cx + 6,  cy + 5, 18, 7);
-      g.fillStyle(0x66ccff, 0.3);
-      g.fillEllipse(cx - 4,  cy - 10, 14, 5);
-      g.fillEllipse(cx + 2,  cy + 10, 14, 5);
+      // ── Water: horizontal wave bands + sparkles ──────────────────────────
+      g.fillStyle(0x1060a0, 0.35);
+      g.fillRect(x + 1, y + 5,  TILE - 2, 5);
+      g.fillRect(x + 1, y + 15, TILE - 2, 5);
+      g.fillRect(x + 1, y + 25, TILE - 2, 5);
+      // Wave crests (lighter)
+      g.fillStyle(0x58b8e8, 0.55);
+      g.fillRect(x + 3,  y + 6,  10, 2);
+      g.fillRect(x + 20, y + 6,  12, 2);
+      g.fillRect(x + 7,  y + 16, 12, 2);
+      g.fillRect(x + 18, y + 16, 10, 2);
+      g.fillRect(x + 3,  y + 26, 10, 2);
+      g.fillRect(x + 21, y + 26, 11, 2);
+
     } else if (tid === T.ROAD) {
-      // Two parallel wheel ruts — clearly a path/road
-      g.fillStyle(0xc09848, 0.45);
-      g.fillRect(cx - 10, y + 2, 6, TILE - 4);
-      g.fillRect(cx + 4,  y + 2, 6, TILE - 4);
+      // ── Road: worn-path center stripe, minimal (keep it clean) ───────────
+      g.fillStyle(0x9a7018, 0.22);
+      g.fillRect(cx - 3, y + 2, 6, TILE - 4);
+
     } else if (tid === T.SAND) {
-      // Ripple lines — desert wind pattern
-      g.fillStyle(0xe8cc70, 0.35);
-      for (let i = 0; i < 4; i++) {
-        g.fillEllipse(cx - 14 + i * 10, cy - 6 + (i % 2) * 12, 14, 4);
-      }
+      // ── Sand: wind-blown ellipse ripples ─────────────────────────────────
+      g.fillStyle(0xa88820, 0.38);
+      g.fillEllipse(cx - 7, cy - 5, 22, 6);
+      g.fillEllipse(cx + 5, cy + 4, 18, 5);
+      g.fillEllipse(cx - 4, cy + 1, 20, 5);
+
     } else if (tid === T.CASTLE) {
-      // Staggered brick/mortar grid — stone floor
-      g.lineStyle(1, 0x555568, 0.65);
-      g.lineBetween(x + 2, y + 12, x + TILE - 2, y + 12);
-      g.lineBetween(x + 2, y + 24, x + TILE - 2, y + 24);
-      g.lineBetween(x + 2, y + 36, x + TILE - 2, y + 36);
-      g.lineBetween(cx,      y + 2,  cx,      y + 12);
-      g.lineBetween(cx - 8,  y + 12, cx - 8,  y + 24);
-      g.lineBetween(cx + 8,  y + 24, cx + 8,  y + 36);
-      g.lineBetween(cx,      y + 36, cx,      y + TILE - 2);
+      // ── Castle: stone floor — staggered mortar grid ──────────────────────
+      g.fillStyle(0x485060, 0.55);
+      // Horizontal mortar
+      g.fillRect(x, y + 12, TILE, 1);
+      g.fillRect(x, y + 24, TILE, 1);
+      // Vertical mortar (staggered rows)
+      g.fillRect(cx,      y + 1,  1, 11);
+      g.fillRect(cx - 9,  y + 13, 1, 11);
+      g.fillRect(cx + 9,  y + 13, 1, 11);
+      g.fillRect(cx,      y + 25, 1, 10);
+      // Tile highlight corners
+      g.fillStyle(0x8898b0, 0.2);
+      g.fillRect(x + 1,    y + 1,  5, 3);
+      g.fillRect(cx + 1,   y + 1,  5, 3);
+      g.fillRect(x + 1,    y + 13, 5, 3);
+      g.fillRect(cx + 1,   y + 13, 5, 3);
+      g.fillRect(x + 1,    y + 25, 5, 3);
+      g.fillRect(cx + 1,   y + 25, 5, 3);
+
     } else if (tid === T.VILLAGE) {
-      // House silhouette — roof + walls + door
-      g.fillStyle(0xb87050, 0.85);
-      g.fillRect(cx - 8, cy + 1, 16, 11);
-      g.fillStyle(0x884030, 0.9);
-      g.fillTriangle(cx - 11, cy + 2, cx, cy - 10, cx + 11, cy + 2);
-      g.fillStyle(0x553020, 0.8);
-      g.fillRect(cx - 3, cy + 5, 6, 7); // door
+      // ── Village: house from above — roof ridge + walls + door ────────────
+      // Outer wall / floor
+      g.fillStyle(0xd09060, 0.9);
+      g.fillRect(cx - 10, cy - 6, 20, 16);
+      // Roof (darker, triangle peak)
+      g.fillStyle(0x7a3828, 1);
+      g.fillTriangle(cx - 11, cy - 6, cx, cy - 15, cx + 11, cy - 6);
+      // Roof highlight
+      g.fillStyle(0x9a5040, 0.8);
+      g.fillTriangle(cx - 5, cy - 8, cx, cy - 14, cx + 5, cy - 8);
+      // Door
+      g.fillStyle(0x583818, 0.9);
+      g.fillRect(cx - 2, cy + 4, 4, 6);
+      // Windows
+      g.fillStyle(0x80b0d0, 0.75);
+      g.fillRect(cx - 9, cy - 2, 4, 4);
+      g.fillRect(cx + 5, cy - 2, 4, 4);
+
     } else if (tid === T.SNOW) {
-      // Snowflake dot scatter
-      g.fillStyle(0xddeeff, 0.65);
-      [[-10,-8],[6,-10],[-4,4],[10,2],[-8,10],[4,10],[-2,-2]].forEach(([dx,dy]) => {
-        g.fillCircle(cx + dx, cy + dy, 2.5);
+      // ── Snow: small cross-shaped snowflakes scattered ─────────────────────
+      g.fillStyle(0xd8eef8, 0.72);
+      [[-10,-8],[6,-10],[-4,4],[10,2],[-8,10],[4,10],[0,-2],[8,-4]].forEach(([dx,dy]) => {
+        g.fillRect(cx + dx - 1, cy + dy - 3, 2, 6);
+        g.fillRect(cx + dx - 3, cy + dy - 1, 6, 2);
       });
+      // Snow mound
+      g.fillStyle(0xe8f4fc, 0.35);
+      g.fillEllipse(cx - 6, cy + 4, 16, 8);
+      g.fillEllipse(cx + 5, cy - 4, 13, 7);
+
     } else if (tid === T.BRIDGE) {
-      // Water hint beneath wooden planks — crossing point
-      g.fillStyle(0x2266aa, 0.4);
+      // ── Bridge: water below + horizontal wooden planks ───────────────────
+      // Water hint
+      g.fillStyle(0x2060a8, 0.45);
       g.fillRect(x, y, TILE, TILE);
-      g.fillStyle(0x9a6828, 0.95);
-      g.fillRect(x + 4, cy - 10, TILE - 8, 6);
-      g.fillRect(x + 4, cy - 3,  TILE - 8, 6);
-      g.fillRect(x + 4, cy + 4,  TILE - 8, 6);
-      g.lineStyle(1, 0x5a3810, 0.6);
-      const pw = Math.floor((TILE - 8) / 4);
-      for (let i = 1; i < 4; i++) {
-        g.lineBetween(x + 4 + i * pw, cy - 10, x + 4 + i * pw, cy + 10);
+      // Planks (5 horizontal strips)
+      g.fillStyle(0xa87030, 1);
+      for (let i = 0; i < 5; i++) {
+        g.fillRect(x + 2, y + 2 + i * 7, TILE - 4, 5);
       }
+      // Plank gaps
+      g.fillStyle(0x5c3010, 0.9);
+      for (let i = 0; i < 4; i++) {
+        g.fillRect(x + 2, y + 7 + i * 7, TILE - 4, 1);
+      }
+      // Side railings
+      g.fillStyle(0x784018, 0.95);
+      g.fillRect(x,            y, 3, TILE);
+      g.fillRect(x + TILE - 3, y, 3, TILE);
+
     } else if (tid === T.WALL) {
-      // Solid stone wall — clearly impassable, dark brick pattern
-      g.fillStyle(0x202028, 0.9);
-      g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
-      g.lineStyle(1, 0x484858, 0.8);
-      g.lineBetween(x + 2, y + 13, x + TILE - 2, y + 13);
-      g.lineBetween(x + 2, y + 24, x + TILE - 2, y + 24);
-      g.lineBetween(x + 2, y + 35, x + TILE - 2, y + 35);
-      g.lineBetween(cx,      y + 2,  cx,      y + 13);
-      g.lineBetween(cx + 10, y + 13, cx + 10, y + 24);
-      g.lineBetween(cx - 10, y + 24, cx - 10, y + 35);
-      g.lineBetween(cx,      y + 35, cx,      y + TILE - 2);
+      // ── Wall: GBA-style 3D stone battlement ──────────────────────────────
+      // Top face (lighter — viewed from slightly above)
+      g.fillStyle(0xb0bcc8, 1);
+      g.fillRect(x, y, TILE, 11);
+      // Column cap highlights (3 evenly-spaced pillars)
+      g.fillStyle(0xc8d4e0, 1);
+      g.fillRect(x + 1,  y + 1, 9, 9);
+      g.fillRect(x + 14, y + 1, 8, 9);
+      g.fillRect(x + 27, y + 1, 8, 9);
+      // Column cap shine
+      g.fillStyle(0xdce8f0, 0.8);
+      g.fillRect(x + 2,  y + 1, 5, 3);
+      g.fillRect(x + 15, y + 1, 5, 3);
+      g.fillRect(x + 28, y + 1, 5, 3);
+      // Front face (medium stone)
+      g.fillStyle(0x7078a0, 1);
+      g.fillRect(x, y + 11, TILE, 19);
+      // Column fronts (slightly recessed / darker)
+      g.fillStyle(0x586088, 1);
+      g.fillRect(x + 1,  y + 12, 9,  17);
+      g.fillRect(x + 14, y + 12, 8,  17);
+      g.fillRect(x + 27, y + 12, 8,  17);
+      // Mortar lines on front face
+      g.fillStyle(0x2c3440, 1);
+      g.fillRect(x,      y + 11, TILE, 1);  // top joint
+      g.fillRect(x,      y + 22, TILE, 1);  // mid joint
+      g.fillRect(x + 10, y + 12, 1,   17);  // vertical joints
+      g.fillRect(x + 22, y + 12, 1,   17);
+      g.fillRect(x + 5,  y + 22, 1,   8);   // offset verticals
+      g.fillRect(x + 17, y + 22, 1,   8);
+      g.fillRect(x + 29, y + 22, 1,   8);
+      // Bottom shadow
+      g.fillStyle(0x1c2430, 1);
+      g.fillRect(x, y + 30, TILE, 6);
+
     } else if (tid === T.OASIS) {
-      // Bright water pool + palm tree
-      g.fillStyle(0x33cc66, 0.75);
-      g.fillCircle(cx, cy + 4, 10);
-      g.fillStyle(0x55ee88, 0.5);
-      g.fillCircle(cx - 2, cy + 3, 6);
-      g.fillStyle(0x996633, 0.9);
-      g.fillRect(cx - 1, cy - 10, 2, 10); // trunk
-      g.fillStyle(0x33bb33, 0.85);
-      g.fillTriangle(cx,     cy - 10, cx - 10, cy - 17, cx - 1, cy - 6);
-      g.fillTriangle(cx,     cy - 10, cx + 10, cy - 17, cx + 1, cy - 6);
-      g.fillTriangle(cx,     cy - 10, cx + 1,  cy - 18, cx + 4, cy - 6);
+      // ── Oasis: water pool + palm fronds from above ────────────────────────
+      g.fillStyle(0x1878b8, 0.65);
+      g.fillCircle(cx, cy + 4, 9);
+      g.fillStyle(0x38a0d0, 0.45);
+      g.fillCircle(cx - 2, cy + 3, 5);
+      // Palm fronds (6 radiating leaves)
+      g.fillStyle(0x28882c, 1);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        g.fillEllipse(cx + Math.cos(a) * 9, cy - 4 + Math.sin(a) * 7, 9, 5);
+      }
+      // Trunk
+      g.fillStyle(0x8a4820, 1);
+      g.fillCircle(cx, cy - 4, 3);
     }
   }
 

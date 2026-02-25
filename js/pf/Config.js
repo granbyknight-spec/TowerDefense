@@ -24,18 +24,18 @@ const T = {
 };
 
 const TERRAIN = [
-  { name:'Grass',    color:0x4aba22, hi:0x5cd630, movCost:1,  def:0 }, // 0 — bright lime green (Shining Force style)
-  { name:'Forest',   color:0x1a6010, hi:0x228018, movCost:2,  def:1 }, // 1 — rich forest green, darker than grass
-  { name:'Mountain', color:0x9a6030, hi:0xb07848, movCost:3,  def:2 }, // 2 — warm brown/rust earth
-  { name:'Water',    color:0x2288cc, hi:0x33aaee, movCost:99, def:0 }, // 3 — clear bright blue (impassable)
-  { name:'Road',     color:0xc8a058, hi:0xdcb870, movCost:1,  def:0 }, // 4 — warm sandy tan path
-  { name:'Sand',     color:0xd4b458, hi:0xe8cc78, movCost:2,  def:0 }, // 5 — bright desert sand
-  { name:'Castle',   color:0x6a6880, hi:0x808098, movCost:1,  def:2 }, // 6 — blue-grey stone floor
-  { name:'Village',  color:0x9a6848, hi:0xb07c58, movCost:1,  def:0 }, // 7 — warm terracotta
-  { name:'Snow',     color:0x9ab8d0, hi:0xb0ccde, movCost:2,  def:0 }, // 8 — pale ice blue
-  { name:'Bridge',   color:0x9a7030, hi:0xb08848, movCost:1,  def:0 }, // 9 — warm wood brown
-  { name:'Wall',     color:0x2a2a38, hi:0x3a3a4a, movCost:99, def:3 }, // 10 — near-black stone (impassable)
-  { name:'Oasis',    color:0x2a9040, hi:0x38ae52, movCost:1,  def:1 }, // 11 — vibrant teal-green
+  { name:'Grass',    color:0x88a828, hi:0xa0c030, movCost:1,  def:0 }, // 0 — GBA olive-yellow-green
+  { name:'Forest',   color:0x1a5010, hi:0x286018, movCost:2,  def:1 }, // 1 — dark forest green (tree canopy base)
+  { name:'Mountain', color:0x706050, hi:0x908070, movCost:3,  def:2 }, // 2 — grey-brown rock
+  { name:'Water',    color:0x2878c0, hi:0x3898d8, movCost:99, def:0 }, // 3 — clear GBA blue (impassable)
+  { name:'Road',     color:0xc8a040, hi:0xdcb850, movCost:1,  def:0 }, // 4 — sandy tan path
+  { name:'Sand',     color:0xd4b448, hi:0xe8c860, movCost:2,  def:0 }, // 5 — golden desert sand
+  { name:'Castle',   color:0x7c8090, hi:0x909aa8, movCost:1,  def:2 }, // 6 — blue-grey stone floor
+  { name:'Village',  color:0xb07040, hi:0xc88858, movCost:1,  def:0 }, // 7 — warm terracotta
+  { name:'Snow',     color:0xb8d0e0, hi:0xd0e4f0, movCost:2,  def:0 }, // 8 — pale ice blue
+  { name:'Bridge',   color:0xa87030, hi:0xbc8840, movCost:1,  def:0 }, // 9 — dark wood brown
+  { name:'Wall',     color:0x6878a0, hi:0x909aa8, movCost:99, def:3 }, // 10 — stone grey (3D detail drawn on top)
+  { name:'Oasis',    color:0x30884a, hi:0x48a860, movCost:1,  def:1 }, // 11 — oasis green
 ];
 
 // Palette for nice rendering
