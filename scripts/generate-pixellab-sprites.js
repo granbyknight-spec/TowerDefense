@@ -334,7 +334,7 @@ async function generateEnemy(enemy) {
         console.log(`  [${styleMode}] v${v}: saved → ${path.basename(outPath)}`);
         if (!bestB64 && styleMode === 'dark') bestB64 = b64;
 
-        await sleep(250);
+        await sleep(3000);
       } catch (err) {
         console.error(`  [${styleMode}] v${v}: ERROR — ${err.message}`);
       }
