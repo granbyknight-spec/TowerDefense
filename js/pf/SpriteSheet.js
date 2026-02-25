@@ -676,7 +676,15 @@ function preloadUnitSprites(scene) {
 /**
  * Returns the Phaser texture key for a given unit.
  */
-function getSpriteKey(unit) {
+function getSpriteKey(unit, scene) {
+  if (scene && typeof SaveManager !== 'undefined') {
+    const preferred = SaveManager.getArtStyle(); // 'chibi' | 'dark', defaults to 'chibi'
+    const fallback  = preferred === 'chibi' ? 'dark' : 'chibi';
+    const prefKey  = `inn_${preferred}_${unit.id}`;
+    const fallKey  = `inn_${fallback}_${unit.id}`;
+    if (scene.textures.exists(prefKey))  return prefKey;
+    if (scene.textures.exists(fallKey))  return fallKey;
+  }
   if (unit.promoted && unit.id === 'PUPPY_KNIGHT') return UNIT_SPRITES['DOG_PALADIN'].key;
   const info = UNIT_SPRITES[unit.id];
   if (info) return info.key;

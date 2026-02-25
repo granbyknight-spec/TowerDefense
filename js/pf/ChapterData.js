@@ -73,12 +73,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
-      { unitId:'CORGI_HEALER',   col:12, row:30 },
-      { unitId:'LABRADOR_SCOUT', col:8,  row:28 },
-      { unitId:'POODLE_MAGE',    col:14, row:28 },
-      { unitId:'HUSKY_RIDER',    col:6,  row:30 },
-      { unitId:'BEAGLE_ARCHER',  col:16, row:30 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
+      { unitId:'CORGI_HEALER',   col:12, row:22 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:20 },
+      { unitId:'POODLE_MAGE',    col:14, row:20 },
+      { unitId:'HUSKY_RIDER',    col:6,  row:22 },
+      { unitId:'BEAGLE_ARCHER',  col:16, row:22 },
     ],
 
     enemies: [
@@ -154,11 +154,11 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
-      { unitId:'CORGI_HEALER',   col:12, row:30 },
-      { unitId:'LABRADOR_SCOUT', col:8,  row:28 },
-      { unitId:'POODLE_MAGE',    col:14, row:28 },
-      { unitId:'HUSKY_RIDER',    col:6,  row:30 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
+      { unitId:'CORGI_HEALER',   col:12, row:22 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:20 },
+      { unitId:'POODLE_MAGE',    col:14, row:20 },
+      { unitId:'HUSKY_RIDER',    col:6,  row:22 },
       // Beagle Archer is captured — wait near bridge for rescue
     ],
 
@@ -237,12 +237,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
-      { unitId:'CORGI_HEALER',   col:12, row:30 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:30 },
-      { unitId:'LABRADOR_SCOUT', col:14, row:30 },
-      { unitId:'POODLE_MAGE',    col:10, row:28 },
-      { unitId:'HUSKY_RIDER',    col:12, row:28 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
+      { unitId:'CORGI_HEALER',   col:12, row:22 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:22 },
+      { unitId:'LABRADOR_SCOUT', col:14, row:22 },
+      { unitId:'POODLE_MAGE',    col:10, row:20 },
+      { unitId:'HUSKY_RIDER',    col:12, row:20 },
     ],
 
     enemies: [
@@ -323,12 +323,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
-      { unitId:'CORGI_HEALER',   col:12, row:30 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:30 },
-      { unitId:'BULLDOG_TANK',   col:14, row:30 },
-      { unitId:'LABRADOR_SCOUT', col:10, row:28 },
-      { unitId:'POODLE_MAGE',    col:12, row:28 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
+      { unitId:'CORGI_HEALER',   col:12, row:22 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:22 },
+      { unitId:'BULLDOG_TANK',   col:14, row:22 },
+      { unitId:'LABRADOR_SCOUT', col:10, row:20 },
+      { unitId:'POODLE_MAGE',    col:12, row:20 },
     ],
 
     enemies: [
@@ -408,12 +408,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
-      { unitId:'CORGI_HEALER',   col:12, row:30 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:30 },
-      { unitId:'BULLDOG_TANK',   col:14, row:30 },
-      { unitId:'LABRADOR_SCOUT', col:10, row:28 },
-      { unitId:'HUSKY_RIDER',    col:12, row:28 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
+      { unitId:'CORGI_HEALER',   col:12, row:22 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:22 },
+      { unitId:'BULLDOG_TANK',   col:14, row:22 },
+      { unitId:'LABRADOR_SCOUT', col:10, row:20 },
+      { unitId:'HUSKY_RIDER',    col:12, row:20 },
     ],
 
     enemies: [
@@ -497,12 +497,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
-      { unitId:'CORGI_HEALER',   col:12, row:30 },
-      { unitId:'BEAGLE_ARCHER',  col:10, row:28 },
-      { unitId:'BULLDOG_TANK',   col:12, row:28 },
-      { unitId:'LABRADOR_SCOUT', col:8,  row:26 },
-      { unitId:'TERRIER_THIEF',  col:14, row:26 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
+      { unitId:'CORGI_HEALER',   col:12, row:22 },
+      { unitId:'BEAGLE_ARCHER',  col:10, row:20 },
+      { unitId:'BULLDOG_TANK',   col:12, row:20 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:22 },
+      { unitId:'TERRIER_THIEF',  col:14, row:22 },
     ],
 
     enemies: [
@@ -582,14 +582,14 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
-      { unitId:'CORGI_HEALER',   col:12, row:30 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:30 },
-      { unitId:'BULLDOG_TANK',   col:14, row:30 },
-      { unitId:'LABRADOR_SCOUT', col:6,  row:30 },
-      { unitId:'POODLE_MAGE',    col:16, row:30 },
-      { unitId:'HUSKY_RIDER',    col:8,  row:28 },
-      { unitId:'TERRIER_THIEF',  col:14, row:28 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
+      { unitId:'CORGI_HEALER',   col:12, row:22 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:22 },
+      { unitId:'BULLDOG_TANK',   col:14, row:22 },
+      { unitId:'LABRADOR_SCOUT', col:6,  row:22 },
+      { unitId:'POODLE_MAGE',    col:16, row:22 },
+      { unitId:'HUSKY_RIDER',    col:8,  row:20 },
+      { unitId:'TERRIER_THIEF',  col:14, row:20 },
     ],
 
     enemies: [
