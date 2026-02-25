@@ -63,6 +63,20 @@ const SaveManager = {
     }
     return units;
   },
+
+  // Per-unit art style preference (persisted separately from save data)
+  // Returns the saved style string ('dark'|'chibi'|'svg') or null (auto).
+  getUnitStyle(unitId) {
+    const prefs = JSON.parse(localStorage.getItem('pf_unit_styles') || '{}');
+    return prefs[unitId] || null;
+  },
+
+  // Persist the chosen art style for a unit.
+  setUnitStyle(unitId, style) {
+    const prefs = JSON.parse(localStorage.getItem('pf_unit_styles') || '{}');
+    prefs[unitId] = style;
+    localStorage.setItem('pf_unit_styles', JSON.stringify(prefs));
+  },
 };
 
 // Build the starting roster from hero definitions

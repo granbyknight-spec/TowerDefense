@@ -116,7 +116,7 @@ class UIScene extends Phaser.Scene {
 
     // HP fraction  (right-aligned at x=FP.x+FP.w-6)
     this._unitHpTxt = this.add.text(FP.x + FP.w - 6, FP.y + 60, '', {
-      fontSize: '12px', color: '#000000',
+      fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 2,
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(1, 0.5).setVisible(false);
 
@@ -132,7 +132,7 @@ class UIScene extends Phaser.Scene {
 
     // MP fraction
     this._mpTxt = this.add.text(FP.x + FP.w - 6, FP.y + 78, '', {
-      fontSize: '12px', color: '#000000',
+      fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 2,
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(1, 0.5).setVisible(false);
 
@@ -586,7 +586,7 @@ class UIScene extends Phaser.Scene {
 
     this._unitHpTxt
       ?.setText(`${unit.hp}/${unit.maxHp}`)
-      .setStyle({ color: '#000000', fontSize: '12px', fontStyle: 'bold' })
+      .setStyle({ color: '#ffffff', stroke: '#000000', strokeThickness: 2, fontSize: '12px', fontStyle: 'bold' })
       .setPosition(FP.x + FP.w - 6, FP.y + 60)
       .setVisible(true);
 
@@ -639,7 +639,7 @@ class UIScene extends Phaser.Scene {
     const battles = unit.battlesParticipated || 0;
     const kills   = unit.killCount || 0;
     const vetStr  = battles > 0 ? `⚔ ${kills} KO · ${battles} battles` : '';
-    const vetColor = kills >= 10 ? '#ffd700' : kills >= 5 ? '#ff9944' : '#99aabb';
+    const vetColor = kills >= 10 ? '#ffd700' : kills >= 5 ? '#ff9944' : '#aabbcc';
     this._unitVetTxt
       ?.setText(vetStr)
       .setStyle({ color: vetColor })
@@ -711,7 +711,7 @@ class UIScene extends Phaser.Scene {
       bg.lineStyle(1, 0x4466aa, 1);
       bg.strokeRoundedRect(chipX, chipY, chipW, chipH, 3);
       const txt = this.add.text(chipX + 5, chipY + 2, label, {
-        fontSize: '9px', color: '#aaccff',
+        fontSize: '11px', color: '#aaccff',
         fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
       }).setOrigin(0, 0);
       this._skillChips.push({ bg, txt });
@@ -730,7 +730,7 @@ class UIScene extends Phaser.Scene {
       bg.lineStyle(1, 0x336633, 1);
       bg.strokeRoundedRect(chipX, chipY, chipW, chipH, 3);
       const txt = this.add.text(chipX + 3, chipY + 1, label, {
-        fontSize: '10px', fontFamily: 'Nunito, Arial, sans-serif',
+        fontSize: '11px', fontFamily: 'Nunito, Arial, sans-serif',
       }).setOrigin(0, 0);
       this._skillChips.push({ bg, txt });
       chipX += chipW + 3;
@@ -876,7 +876,7 @@ class UIScene extends Phaser.Scene {
       // Description sub-line
       const desc = sk.desc || sk.type || '';
       const descTxt = this.add.text(rowX + 34, rowY + 26, desc, {
-        fontSize: '10px', color: '#8899bb',
+        fontSize: '11px', color: '#aabbcc',
         fontFamily: 'Nunito, Arial, sans-serif',
       }).setOrigin(0, 0).setAlpha(textAlpha);
       container.add(descTxt);
@@ -895,7 +895,7 @@ class UIScene extends Phaser.Scene {
         badgeBg.strokeRoundedRect(badgeX, badgeY, badgeW, 16, 4);
         container.add(badgeBg);
         const badgeLbl = this.add.text(badgeX + badgeW / 2, badgeY + 8, badgeTxt, {
-          fontSize: '9px', color: canAfford ? '#88aaff' : '#555555',
+          fontSize: '9px', color: canAfford ? '#88aaff' : '#887777',
           fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
         }).setOrigin(0.5).setAlpha(textAlpha);
         container.add(badgeLbl);

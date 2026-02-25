@@ -5,6 +5,32 @@
 // =============================================================================
 
 /**
+ * Returns true if ALL tiles of `unit`'s footprint anchored at (nc, nr) are:
+ *  - within map bounds
+ *  - not impassable terrain (movCost < 99)
+ *  - not occupied by an enemy unit
+ * Friendly-occupied tiles are allowed (pass-through).
+ */
+function _footprintClear(unit, nc, nr, mapGrid, occupied) {
+  const sz = 1; // bosses move as 1x1 (visual 2x2 footprint doesn't restrict movement)
+  const rows = mapGrid.length;
+  const cols = mapGrid[0].length;
+  for (let dc = 0; dc < sz; dc++) {
+    for (let dr = 0; dr < sz; dr++) {
+      const c = nc + dc, r = nr + dr;
+      if (c < 0 || c >= cols || r < 0 || r >= rows) return false;
+      // terrain check — use unit's moveCostFor if available, else raw tile value
+      const tileId = mapGrid[r][c];
+      const cost = unit.moveCostFor ? unit.moveCostFor(tileId) : (tileId === 10 || tileId === 3 ? 99 : 1);
+      if (cost >= 99) return false;
+      const blocker = occupied.get(`${c},${r}`);
+      if (blocker && blocker.team !== unit.team) return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Returns array of {col, row} tiles a unit can reach, excluding its own tile.
  * Friendly units can be passed through but not stopped on.
  * Enemy-occupied tiles block movement.
@@ -13,11 +39,13 @@ function getReachableTiles(unit, mapGrid, allUnits) {
   const rows = mapGrid.length;
   const cols = mapGrid[0].length;
 
-  // Build occupancy map
+  // Build occupancy map (register all tiles each unit occupies)
   const occupied = new Map();
   allUnits.forEach(u => {
     if (!u.dead && u !== unit) {
-      occupied.set(`${u.col},${u.row}`, u);
+      u.getTilesOccupied().forEach(({ col, row }) => {
+        occupied.set(`${col},${row}`, u);
+      });
     }
   });
 
@@ -48,18 +76,15 @@ function getReachableTiles(unit, mapGrid, allUnits) {
     for (const [dc, dr] of DIR) {
       const nc = cur.col + dc;
       const nr = cur.row + dr;
-      if (nc < 0 || nc >= cols || nr < 0 || nr >= rows) continue;
+
+      // Validate the full footprint at (nc, nr)
+      if (!_footprintClear(unit, nc, nr, mapGrid, occupied)) continue;
 
       const terrainId = mapGrid[nr][nc];
       const movCost   = unit.moveCostFor(terrainId);
-      if (movCost >= 99) continue; // impassable
 
       const newCost = cur.cost + movCost;
       if (newCost > unit.mov) continue;
-
-      // Can we pass through this tile?
-      const neighbor = occupied.get(`${nc},${nr}`);
-      if (neighbor && neighbor.team !== unit.team) continue; // blocked by enemy
 
       const key = `${nc},${nr}`;
       if (!visited.has(key) || visited.get(key) > newCost) {
@@ -85,7 +110,9 @@ function findPath(unit, targetCol, targetRow, mapGrid, allUnits, ignoreOccupancy
   if (!ignoreOccupancy) {
     allUnits.forEach(u => {
       if (!u.dead && u !== unit) {
-        occupied.set(`${u.col},${u.row}`, u);
+        u.getTilesOccupied().forEach(({ col, row }) => {
+          occupied.set(`${col},${row}`, u);
+        });
       }
     });
   }
@@ -124,8 +151,8 @@ function findPath(unit, targetCol, targetRow, mapGrid, allUnits, ignoreOccupancy
       // Allow stepping onto target even if impassable terrain (e.g. attack from side)
       if (movCost >= 99 && !isTarget) continue;
 
-      const occ = occupied.get(nk);
-      if (occ && occ.team !== unit.team && !isTarget) continue; // blocked
+      // For non-target tiles, validate the full footprint at (nc, nr)
+      if (!isTarget && !_footprintClear(unit, nc, nr, mapGrid, occupied)) continue;
 
       const g = cur.g + (movCost >= 99 ? 1 : movCost);
       const existing = open.find(n => n.col === nc && n.row === nr);
@@ -141,20 +168,29 @@ function findPath(unit, targetCol, targetRow, mapGrid, allUnits, ignoreOccupancy
 
 /**
  * Returns all tiles in attack range from a given position.
- * Manhattan distance between min=1 and max=unit.range.
+ * For tileSize=1: Manhattan distance from (col, row) to candidate tile.
+ * For tileSize>1: minimum Manhattan distance from ANY footprint tile to candidate tile.
+ * Range window: [minRange, unit.range].
  */
 function getAttackTiles(unit, mapGrid, fromCol, fromRow) {
+  const col = (fromCol !== undefined) ? fromCol : unit.col;
+  const row = (fromRow !== undefined) ? fromRow : unit.row;
+  const sz = unit.tileSize || 1;
+  const minDist = unit.minRange || 1;
   const rows = mapGrid.length;
   const cols = mapGrid[0].length;
-  const col  = (fromCol !== undefined) ? fromCol : unit.col;
-  const row  = (fromRow !== undefined) ? fromRow : unit.row;
-  const minDist = unit.minRange || 1;  // support minRange for skills like shoot
   const result = [];
-
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const dist = Math.abs(c - col) + Math.abs(r - row);
-      if (dist >= minDist && dist <= unit.range) {
+      // find min Manhattan dist from any footprint tile to (c, r)
+      let minD = Infinity;
+      for (let dc = 0; dc < sz; dc++) {
+        for (let dr = 0; dr < sz; dr++) {
+          const d = Math.abs((col + dc) - c) + Math.abs((row + dr) - r);
+          if (d < minD) minD = d;
+        }
+      }
+      if (minD >= minDist && minD <= unit.range) {
         result.push({ col: c, row: r });
       }
     }
