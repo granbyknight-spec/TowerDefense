@@ -316,11 +316,12 @@ async function generateEnemy(enemy) {
 
       try {
         console.log(`  [${styleMode}] v${v}: requesting…`);
-        const result = await pixellabRequest('generate-image', {
-          description:         `${fullPrompt} ### NEG: ${NEG}`,
-          image_size:          { width: size, height: size },
-          no_background:       true,
-          text_guidance_scale: 7.5,
+        const result = await pixellabRequest('generate-image-pixflux', {
+          description:  `${fullPrompt}`,
+          image_size:   { width: size, height: size },
+          no_background: true,
+          negative_description: NEG,
+          outline: 'single color black outline',
         });
 
         const b64 = extractB64(result);
@@ -333,7 +334,7 @@ async function generateEnemy(enemy) {
         console.log(`  [${styleMode}] v${v}: saved → ${path.basename(outPath)}`);
         if (!bestB64 && styleMode === 'dark') bestB64 = b64;
 
-        await sleep(250);
+        await sleep(3000);
       } catch (err) {
         console.error(`  [${styleMode}] v${v}: ERROR — ${err.message}`);
       }

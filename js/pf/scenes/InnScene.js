@@ -96,11 +96,12 @@ class InnScene extends Phaser.Scene {
     // ── Filter tabs ───────────────────────────────────────────────────────────
     this._filterBtns = {};
     const TABS = [
-      { key: 'all',     label: 'ALL'      },
-      { key: 'heroes',  label: '⚔ HEROES' },
+      { key: 'all',     label: 'ALL'       },
+      { key: 'heroes',  label: '⚔ HEROES'  },
       { key: 'enemies', label: '🐱 ENEMIES' },
+      { key: 'bosses',  label: '👑 BOSSES'  },
     ];
-    const TAB_W = 136, TAB_H = 28, TAB_Y = 88, TAB_GAP = 4;
+    const TAB_W = 100, TAB_H = 28, TAB_Y = 88, TAB_GAP = 4;
     const tabRowW = TABS.length * TAB_W + (TABS.length - 1) * TAB_GAP;
     let tabX = W/2 - tabRowW/2 + TAB_W/2;
 
@@ -243,6 +244,7 @@ class InnScene extends Phaser.Scene {
     const enemies = Object.values(ENEMY_DEFS);
     if (this._filter === 'heroes')  return heroes;
     if (this._filter === 'enemies') return enemies;
+    if (this._filter === 'bosses')  return enemies.filter(e => e.isBoss);
     return [...heroes, ...enemies];
   }
 
