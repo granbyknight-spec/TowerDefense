@@ -273,11 +273,12 @@ async function generateHero(hero) {
 
       try {
         console.log(`  [${styleMode}] v${v}: requesting…`);
-        const result = await pixellabRequest('generate-image', {
-          description:         `${fullPrompt} ### NEG: ${NEG}`,
-          image_size:          { width: 128, height: 128 },
-          no_background:       true,
-          text_guidance_scale: 7.5,
+        const result = await pixellabRequest('generate-image-pixflux', {
+          description:  `${fullPrompt}`,
+          image_size:   { width: 128, height: 128 },
+          no_background: true,
+          negative_description: NEG,
+          outline: 'single color black outline',
         });
 
         const b64 = extractB64(result);
