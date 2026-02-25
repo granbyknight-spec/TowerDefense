@@ -1,0 +1,72 @@
+name: Promote Map Variant
+
+# Phone-friendly: pick the best generated variant from the Actions tab.
+# This copies chapter_N_bg_v<variant>.png → chapter_N_bg.png (the canonical
+# file the game loads) and commits it to the branch.
+#
+# How to use on mobile:
+#   1. github.com → repo → Actions → "Promote Map Variant" → Run workflow
+#   2. Enter chapter number and which variant looked best
+#   3. Done — the game will use that image next time you pull/deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      chapter:
+        description: 'Chapter number (1-7)'
+        required: true
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
+          - '7'
+      variant:
+        description: 'Which variant to promote as the canonical map'
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote variant
+        run: |
+          SRC="assets/maps/chapter_${{ inputs.chapter }}_bg_v${{ inputs.variant }}.png"
+          DST="assets/maps/chapter_${{ inputs.chapter }}_bg.png"
+
+          if [ ! -f "$SRC" ]; then
+            echo "ERROR: $SRC does not exist. Run 'Generate Map Backgrounds' first."
+            exit 1
+          fi
+
+          cp "$SRC" "$DST"
+          echo "Promoted: $SRC → $DST"
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/maps/chapter_${{ inputs.chapter }}_bg.png
+          git commit -m "Promote chapter ${{ inputs.chapter }} map: variant ${{ inputs.variant }} → chapter_${{ inputs.chapter }}_bg.png"
+          for i in 1 2 3 4; do
+            git pull --rebase origin HEAD && git push origin HEAD && break
+            echo "Push attempt $i failed, retrying in $((i * 2))s..."
+            sleep $((i * 2))
+          done
