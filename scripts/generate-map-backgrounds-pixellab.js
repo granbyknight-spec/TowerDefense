@@ -22,11 +22,9 @@
  * After reviewing variants, promote best to canonical name:
  *   cp assets/maps/chapter_1_bg_v2.png assets/maps/chapter_1_bg.png
  *
- * Image dimensions: 512×640 px (portrait, ratio ≈ 0.8 matching 26-col × 32-row map)
+ * Image dimensions: 320×400 px (portrait, ratio 0.8 ≈ 26-col × 32-row map)
+ * PixelLab generate-image-pixflux hard cap: 400×400 max per dimension.
  * BattleScene will call setDisplaySize(mapW, mapH) to fill the exact tile grid.
- *
- * NOTE: If PixelLab returns a size error, try reducing to 512×512 and let the
- * game scale it — pixel art upscaling still looks correct with nearest-neighbor.
  */
 'use strict';
 
@@ -39,11 +37,11 @@ const VARIANTS      = parseInt(process.env.VARIANTS || '2', 10);
 const SKIP_EXISTING = process.env.SKIP_EXISTING !== 'false';
 const OUT_DIR       = path.join(__dirname, '..', 'assets', 'maps');
 
-// Map pixel dimensions at 32px per tile (PixelLab-friendly portrait size)
-// 26 cols × 32 = 832 wide,  32 rows × 32 = 1024 tall
-// Closest clean PixelLab size: 512×640 (ratio 0.8 ≈ 26/32 = 0.8125)
-const IMG_W = 512;
-const IMG_H = 640;
+// PixelLab generate-image-pixflux max: 400×400
+// Best portrait fit for 26-col × 32-row map (ratio 26/32 = 0.8125):
+//   320×400  (ratio 0.8 — close enough; game scales to exact map size at runtime)
+const IMG_W = 320;
+const IMG_H = 400;
 
 // ── Shared style suffix ─────────────────────────────────────────────────────
 // Applied to every chapter prompt to enforce visual coherence.
@@ -247,7 +245,7 @@ async function main() {
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log(`Chapter: ${CHAPTER}  |  Variants: ${VARIANTS}  |  Skip existing: ${SKIP_EXISTING}`);
   console.log(`Output:  ${OUT_DIR}`);
-  console.log(`Size:    ${IMG_W}×${IMG_H}px (game scales to 936×1152 at runtime)\n`);
+  console.log(`Size:    ${IMG_W}×${IMG_H}px (PixelLab max 400×400; game scales to fit at runtime)\n`);
 
   const toGenerate = CHAPTER === 'all'
     ? CHAPTERS
