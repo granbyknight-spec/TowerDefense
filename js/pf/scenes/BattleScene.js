@@ -175,11 +175,21 @@ class BattleScene extends Phaser.Scene {
     this._totalDamageDealt = 0;
     this._unitsLost        = 0;
 
-    // ── Solid dark background behind the tile grid ────────────────────────────
-    // Tiles define the map visually (Shining Force style) — no background image.
+    // ── Dark background behind everything (visible at map edges) ─────────────
     this.add.graphics().setDepth(-20)
       .fillStyle(PAL.BG, 1)
-      .fillRect(0, 0, GAME_W, GAME_H);
+      .fillRect(0, 0, this.mapGrid[0].length * TILE + GRID_X * 2,
+                      this.mapGrid.length    * TILE + GRID_Y * 2);
+
+    // ── Chapter background image — units walk on this ─────────────────────────
+    const _mapW  = this.mapGrid[0].length * TILE;
+    const _mapH  = this.mapGrid.length    * TILE;
+    const _bgKey = `bg_ch${this.chapterId}`;
+    if (this.textures.exists(_bgKey)) {
+      this.add.image(GRID_X + _mapW / 2, GRID_Y + _mapH / 2, _bgKey)
+        .setDisplaySize(_mapW, _mapH)
+        .setDepth(-10);
+    }
 
     // ── Build map and sprites ────────────────────────────────────────────────
     this._buildMap();
@@ -300,32 +310,9 @@ class BattleScene extends Phaser.Scene {
   // ==========================================================================
 
   _buildMap() {
-    this._tileGfx = this.add.graphics().setDepth(-4); // above terrain PNG images (-5)
-    const g = this._tileGfx;
-
-    for (let row = 0; row < this.mapGrid.length; row++) {
-      for (let col = 0; col < this.mapGrid[0].length; col++) {
-        const tid = this.mapGrid[row][col];
-        const td  = TERRAIN[tid];
-        const x   = GRID_X + col * TILE;
-        const y   = GRID_Y + row * TILE;
-
-        // Base tile — always draw as solid colored rectangle with detail icons.
-        // AI-generated terrain PNGs are full scene images, not isolated tiles,
-        // so we rely entirely on programmatic drawing for clear per-tile visuals.
-        g.fillStyle(td.color, 1);
-        g.fillRect(x, y, TILE, TILE);
-        this._drawTerrainDetail(g, tid, x, y);
-
-        // Subtle highlight top-left / shadow bottom-right (1px, not overpowering)
-        g.fillStyle(td.hi, 0.3);
-        g.fillRect(x, y, TILE, 1);
-        g.fillRect(x, y, 1, TILE);
-        g.fillStyle(0x000000, 0.15);
-        g.fillRect(x + TILE - 1, y, 1, TILE);
-        g.fillRect(x, y + TILE - 1, TILE, 1);
-      }
-    }
+    // Tiles are invisible — the chapter background image provides all terrain visuals.
+    // This graphics object is kept for any future per-tile drawing needs.
+    this._tileGfx = this.add.graphics().setDepth(-4);
   }
 
   _drawTerrainDetail(g, tid, x, y) {
@@ -450,7 +437,7 @@ class BattleScene extends Phaser.Scene {
 
   _buildGridOverlay() {
     const g = this.add.graphics();
-    g.lineStyle(1, 0x000000, 0.12);
+    g.lineStyle(1, 0x000000, 0.08);
     const mapCols = this.mapGrid[0].length;
     const mapRows = this.mapGrid.length;
     for (let col = 0; col <= mapCols; col++) {
