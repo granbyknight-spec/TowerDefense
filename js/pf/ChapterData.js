@@ -275,7 +275,7 @@ const CHAPTERS = [
       { defId:'TIGER_GENERAL',    col:1,  row:0, level:4 },
       { defId:'TIGER_GENERAL',    col:11, row:0, level:4 },
       { defId:'PERSIAN_SORCERER', col:5,  row:0, level:4 },
-      { defId:'RIVER_PANTHER',    col:6,  row:5, level:5 },
+      { defId:'RIVER_PANTHER',    col:5,  row:0, level:5 },
     ],
 
     recruitable: [
