@@ -36,6 +36,10 @@ const CHAPTER       = process.env.CHAPTER       || 'all';
 const VARIANTS      = parseInt(process.env.VARIANTS || '2', 10);
 const SKIP_EXISTING = process.env.SKIP_EXISTING !== 'false';
 const OUT_DIR       = path.join(__dirname, '..', 'assets', 'maps');
+// RUN_TAG is injected by the workflow (e.g. "r42" from $GITHUB_RUN_NUMBER).
+// Embedding it in filenames ensures every workflow run writes new files so
+// PixelLab never serves a cached result and old files never block re-generation.
+const RUN_TAG       = process.env.RUN_TAG ? `_${process.env.RUN_TAG}` : '';
 
 // PixelLab generate-image-pixflux max: 400×400
 // Best portrait fit for 26-col × 32-row map (ratio 26/32 = 0.8125):
@@ -210,7 +214,7 @@ async function generateChapter(chapter) {
   console.log(`\n[Ch${chapter.id}] ${chapter.title}  (${VARIANTS} variants)`);
 
   for (let v = 1; v <= VARIANTS; v++) {
-    const outPath = path.join(OUT_DIR, `chapter_${chapter.id}_bg_v${v}.png`);
+    const outPath = path.join(OUT_DIR, `chapter_${chapter.id}_bg${RUN_TAG}_v${v}.png`);
 
     if (SKIP_EXISTING && fs.existsSync(outPath)) {
       console.log(`  v${v}: SKIP (exists → ${path.basename(outPath)})`);
@@ -278,10 +282,11 @@ async function main() {
   console.log('\n──────────────────────────────────────────────────────');
   console.log(`Done: ${ok} chapters ok, ${fail} failed`);
   console.log('');
+  const tag = RUN_TAG || '_vN';
   console.log('Next steps:');
-  console.log('  1. Review variants: chapter_N_bg_v1.png, _v2.png');
+  console.log(`  1. Review variants: chapter_N_bg${RUN_TAG || '_<run>'}_v1.png, _v2.png`);
   console.log('  2. Promote best variant to canonical name:');
-  console.log('       cp assets/maps/chapter_1_bg_v1.png assets/maps/chapter_1_bg.png');
+  console.log(`       cp assets/maps/chapter_1_bg${RUN_TAG || '_<run>'}_v1.png assets/maps/chapter_1_bg.png`);
   console.log('  3. Run /analyze-map <N> in Claude Code to generate the terrain grid');
   console.log('     (Claude reads the image and writes the mapGrid to ChapterData.js)');
 }

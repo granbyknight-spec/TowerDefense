@@ -32,13 +32,13 @@ on:
           - '2'
           - '3'
       skip_existing:
-        description: 'Skip chapters that already have a generated image'
+        description: 'Skip chapters that already have a generated image (rarely needed — each run uses unique filenames)'
         required: false
-        default: 'true'
+        default: 'false'
         type: choice
         options:
-          - 'true'
           - 'false'
+          - 'true'
 
 jobs:
   generate:
@@ -67,6 +67,9 @@ jobs:
           CHAPTER: ${{ inputs.chapter }}
           VARIANTS: ${{ inputs.variants }}
           SKIP_EXISTING: ${{ inputs.skip_existing }}
+          # Embed the run number so every run writes fresh files (e.g. chapter_1_bg_r42_v1.png).
+          # This bypasses any PixelLab response caching and prevents stale files from blocking re-generation.
+          RUN_TAG: r${{ github.run_number }}
         run: node scripts/generate-map-backgrounds-pixellab.js
 
       - name: Commit generated images
@@ -95,7 +98,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Pull the branch to get the generated images" >> $GITHUB_STEP_SUMMARY
-          echo "2. Review variants: \`assets/maps/chapter_N_bg_v1.png\`, \`_v2.png\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. Promote best variant: \`cp assets/maps/chapter_1_bg_v1.png assets/maps/chapter_1_bg.png\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Review variants: \`assets/maps/chapter_N_bg_r${{ github.run_number }}_v1.png\`, \`_v2.png\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Promote best variant: \`cp assets/maps/chapter_1_bg_r${{ github.run_number }}_v1.png assets/maps/chapter_1_bg.png\`" >> $GITHUB_STEP_SUMMARY
           echo "4. Run \`/analyze-map <N>\` in Claude Code — Claude reads the image" >> $GITHUB_STEP_SUMMARY
           echo "   and writes the terrain obstacle grid (mapGrid) to ChapterData.js" >> $GITHUB_STEP_SUMMARY

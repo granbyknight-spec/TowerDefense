@@ -5,6 +5,36 @@ Branch: `claude/puppy-force-game-BhoEA`
 
 ---
 
+## Token Budget — Stop and Rethink
+
+**Before starting any task that will produce long output, ask: is there a more compact approach?**
+
+### Red flags — stop and reconsider if you see these patterns
+- About to enumerate **every item in a large list/grid** one by one (e.g. all 832 cells of a map, every line of a large file)
+- Planning to output **>200 lines of analysis** before producing the actual result
+- A single agent is about to do **multi-pass reasoning** over a large dataset
+- Response is growing very long and the actual edit/output hasn't been written yet
+
+### How to compress
+| Instead of...                            | Do this instead                                |
+|------------------------------------------|------------------------------------------------|
+| Analyzing every cell individually        | Identify zones/regions; default + exceptions   |
+| Enumerating all files to find one thing  | Use Grep or Glob directly                      |
+| One agent doing everything sequentially  | Split into parallel agents, each with one job  |
+| Verbose per-item commentary in output    | Compact format (numbers only, zone ranges)     |
+| Reasoning through all cases in prose     | Decision table or rule list, then apply        |
+
+### The rethink trigger
+If you catch yourself mid-task doing any of the above, **stop immediately**:
+1. Do NOT continue the expensive approach
+2. State what you were doing and why it was going to be too large
+3. Propose the compressed approach
+4. Ask for confirmation if the new approach changes the output format
+
+Use `/rethink` to walk through this structured re-evaluation.
+
+---
+
 ## Agent Orchestration Philosophy
 
 **Always use parallel agents.** Any time a task can be split across files or subsystems that don't write to the same files, launch multiple agents in parallel in a single message. Claude Code is always the orchestrator — it assigns work, tracks progress, and integrates results.
