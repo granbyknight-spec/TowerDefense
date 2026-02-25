@@ -10,119 +10,155 @@ grid (mapGrid) for that chapter, then writes it directly into ChapterData.js.
 
 ## What this skill does
 
-1. Reads `assets/maps/chapter_$ARGUMENTS_bg.png` using vision
-2. Analyzes each cell of the 32-row × 26-col logical grid
-3. Classifies every cell with a terrain type ID (0-11)
-4. Pays special attention to IMPASSABLE terrain: rivers/water (ID 3) and walls (ID 10)
-5. Writes the resulting mapGrid into ChapterData.js for the specified chapter
-6. Reports what was found and any uncertain cells for human review
+1. Reads the chapter map image using vision
+2. Identifies terrain **zones** (regions, not individual cells) — much more token-efficient
+3. Builds the 32×26 mapGrid by starting from a default and patching exception zones
+4. Validates against ChapterData.js spawn positions
+5. Writes the mapGrid and reports
+
+---
+
+## Terrain ID reference
+
+| ID | Name     | Visual cue                                     | movCost |
+|----|----------|------------------------------------------------|---------|
+|  0 | GRASS    | Open green field, meadow                       | 1       |
+|  1 | FOREST   | Dark green tree canopy, woods                  | 2       |
+|  2 | MOUNTAIN | Rocky brown/grey peaks, cliffs                 | 3       |
+|  3 | WATER    | Blue river, lake, moat — **IMPASSABLE**        | 99      |
+|  4 | ROAD     | Tan/brown dirt path, trail                     | 1       |
+|  5 | SAND     | Golden yellow sand, desert                     | 2       |
+|  6 | CASTLE   | Grey stone floor, courtyard, flagstone         | 1       |
+|  7 | VILLAGE  | Buildings, houses, structures                  | 1       |
+|  8 | SNOW     | Pale white/blue snow-covered ground            | 2       |
+|  9 | BRIDGE   | Wooden planks crossing over water              | 1       |
+| 10 | WALL     | Dark stone walls, fortress walls — **IMPASSABLE** | 99   |
+| 11 | OASIS    | Small pool + palm trees amid desert            | 1       |
 
 ---
 
 ## Instructions
 
-When this skill is invoked with a chapter number argument ($ARGUMENTS):
+### Step 0 — Parallel setup (launch both in one message)
 
-### Step 1 — Read the image
+Launch **two agents in parallel**:
+- **Agent A (image):** Read `assets/maps/chapter_$ARGUMENTS_bg.png` and return terrain zone descriptions (see Step 1)
+- **Agent B (data):** Read `js/pf/ChapterData.js` and return: (a) existing mapGrid for chapter $ARGUMENTS, (b) all playerStart positions, (c) all enemy spawn positions
 
-Read the file `assets/maps/chapter_$ARGUMENTS_bg.png` using the Read tool (it supports
-image files). Look at the full image carefully before starting cell-by-cell analysis.
+Do NOT proceed to Step 2 until both return.
 
-### Step 2 — Understand the grid layout
+### Step 1 — Zone identification (Agent A's job)
 
-The logical game grid maps onto the image like this:
-- **Grid size:** 32 rows (top to bottom) × 26 cols (left to right)
-- **Image size:** 512×640 px (generated) — stretched to ~936×1152 in-game
-- **Each cell occupies:** approximately (512/26) ≈ 19.7 px wide × (640/32) = 20 px tall in the raw image
-- Row 0 is at the TOP of the image; row 31 is at the BOTTOM
-- Col 0 is at the LEFT; col 25 is at the RIGHT
+**Do NOT analyze cell-by-cell.** Instead, identify terrain **zones** — contiguous rectangles or strips of the same terrain type.
 
-### Step 3 — Terrain classification rules
+Grid layout:
+- **32 rows** (row 0 = top, row 31 = bottom) × **26 cols** (col 0 = left, col 25 = right)
+- Image is ~512×640 px → each cell ≈ 19.7 px wide × 20 px tall
+- Style: 3/4 top-down oblique (like Shining Force) — rectangular tiles, no grid lines
+- Color is the primary cue: blue=water, dark green=forest, brown=road, grey=wall/castle
 
-Classify each cell using these IDs. When in doubt between two types, pick the one
-that most affects gameplay (always classify rivers as WATER, walls as WALL):
+**Zone format to return** (compact text, NOT a grid):
+```
+DEFAULT: 0 (GRASS)
+ZONES:
+  FOREST   rows 0-6,   cols 0-5
+  WALL     rows 11-12, cols 0-6
+  WALL     rows 11-12, col 9
+  WALL     rows 11-12, cols 12-25
+  ROAD     rows 0-31,  cols 10-11   (vertical road)
+  ROAD     rows 8-9,   cols 0-25    (horizontal road)
+  WATER    rows 14-18, cols 3-8
+  BRIDGE   rows 16-17, cols 10-11
+  ...
+```
 
-| ID | Name     | Visual cue                                     | movCost | Notes              |
-|----|----------|------------------------------------------------|---------|--------------------|
-|  0 | GRASS    | Open green field, meadow                       | 1       | Default open terrain |
-|  1 | FOREST   | Dark green tree canopy, woods                  | 2       | Slows movement     |
-|  2 | MOUNTAIN | Rocky brown/grey peaks, cliffs, high terrain   | 3       | Very slow          |
-|  3 | WATER    | Blue river, lake, moat, any body of water      | 99      | **IMPASSABLE**     |
-|  4 | ROAD     | Tan/brown dirt path, road, trail               | 1       | Fast movement      |
-|  5 | SAND     | Golden yellow sand, desert floor               | 2       | Slows movement     |
-|  6 | CASTLE   | Grey stone floor, courtyard interior, flagstone| 1       | Bonus defense      |
-|  7 | VILLAGE  | Buildings, houses, thatched roofs, structures  | 1       | Bonus defense      |
-|  8 | SNOW     | Pale white/blue snow-covered ground            | 2       | Slows movement     |
-|  9 | BRIDGE   | Wooden planks or stone arch crossing over water| 1       | Passable over water|
-| 10 | WALL     | Dark stone walls, fortress walls, cliff faces  | 99      | **IMPASSABLE**     |
-| 11 | OASIS    | Small pool + palm trees, green amid desert     | 1       | Bonus              |
+Rules for zones:
+- Err toward WATER/WALL for anything impassable — blocking too much beats letting units walk through walls
+- A BRIDGE zone must be adjacent to WATER zones
+- Where road and another terrain meet, ROAD takes priority (it's a passable corridor)
+- List zones in order from top to bottom, left to right
+- If a zone is a single cell, write `row X, col Y`
+- If uncertain about exact row/col boundaries, give your best estimate and mark it `[?]`
 
-**Critical rules:**
-- A BRIDGE (9) cell must be adjacent to or surrounded by WATER (3) cells
-- WALL (10) should be used for any barrier that a unit clearly could not walk through
-- When a cell is on the boundary between two terrain types, use whichever covers more than half
-- Err toward WATER/WALL for anything that looks impassable — it's better to block too much than to let units walk through rivers
+Agent A returns ONLY the zone list and a brief visual description of the map. No grid output.
 
-### Step 4 — Analyze the image systematically
+### Step 2 — Build the mapGrid
 
-Work through the image in horizontal strips:
-- **Strip A:** rows 0-7   (top of image, where enemies typically start)
-- **Strip B:** rows 8-15  (upper middle)
-- **Strip C:** rows 16-23 (lower middle)
-- **Strip D:** rows 24-31 (bottom, where player typically deploys)
+From Agent A's zone list, mechanically construct the 32×26 grid:
 
-For each strip, describe what terrain features you see, then assign IDs row by row.
+1. Fill all 32×26 cells with the DEFAULT value
+2. Apply each zone in order (later zones overwrite earlier ones)
+3. For irregular zones marked `[?]`, use the given estimate — it will be reviewed
 
-### Step 5 — Output the mapGrid
-
-Output the complete 32×26 array in this exact JavaScript format:
+Output the complete grid as a JavaScript array. **Keep comments minimal** — one comment per row with just the row number:
 
 ```javascript
 mapGrid: [
-  // col: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
-  [/* row 0  */ 0, 0, 0, ...],
-  [/* row 1  */ 0, 0, 0, ...],
-  // ... all 32 rows
+  /* r0  */ [0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  /* r1  */ [1,1,1,1,1,0,0,0,0,0,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  ...
 ],
 ```
 
-### Step 6 — Validate
+Do NOT add column-by-column comments or per-cell reasoning inside the array — just numbers.
 
-Before writing to ChapterData.js, verify:
-- Exactly 32 rows
-- Each row has exactly 26 values
-- All values are integers 0-11
-- No BRIDGE (9) cells exist without adjacent WATER (3) cells
-- playerStart positions from ChapterData.js are NOT on WATER or WALL cells
-- Enemy spawn positions from ChapterData.js are NOT on WATER or WALL cells
+### Step 3 — Validate
 
-If any playerStart or enemy position falls on an impassable cell, flag it clearly
-and suggest the nearest passable alternative.
+Using Agent B's data, verify:
+- Exactly 32 rows, each with exactly 26 values, all integers 0–11
+- No BRIDGE (9) cell without an adjacent WATER (3) cell
+- No playerStart position falls on WATER (3) or WALL (10)
+- No enemy spawn position falls on WATER (3) or WALL (10)
 
-### Step 7 — Write to ChapterData.js
+If any spawn is on an impassable cell, flag it and suggest the nearest passable neighbor.
 
-Read `/home/user/TowerDefense/js/pf/ChapterData.js` and find the chapter with
-`id: $ARGUMENTS`. Replace its existing `mapGrid:` array entirely with the new one.
+### Step 4 — Confirm with user before writing
 
-Use the Edit tool to make the replacement — match from the `mapGrid: [` line through
-the closing `],` of that chapter's mapGrid.
+**Before writing to ChapterData.js**, output a brief summary:
+```
+ZONE SUMMARY for chapter $ARGUMENTS:
+  Dominant: GRASS (~X%), FOREST (~X%)
+  Obstacles: WALL at [list zones], WATER at [list zones]
+  Roads: [list zones]
+  Uncertain cells: [list any [?] zones]
+  Spawn check: all clear / [any conflicts]
 
-### Step 8 — Report
+Ready to write mapGrid — confirm? (or adjust zones above)
+```
 
-After writing, report:
-- Summary of terrain distribution (e.g. "60% grass, 20% forest, 8% water...")
-- Any cells you were uncertain about and why
-- Which WATER and WALL cells were found (these are the critical obstacle cells)
-- Confirmation that playerStart and enemy positions are all on passable terrain
+Wait for user confirmation before proceeding to Step 5.
+
+### Step 5 — Write to ChapterData.js
+
+Read `js/pf/ChapterData.js` (if Agent B hasn't already returned it). Find the chapter
+with `id: $ARGUMENTS`. Replace its `mapGrid:` array entirely with the new one.
+
+Use the Edit tool — match from the `mapGrid: [` line through the closing `],` of that
+chapter's mapGrid only.
+
+### Step 6 — Report
+
+After writing:
+- Confirm the write succeeded
+- List WALL and WATER zones (the critical obstacle cells)
+- Note any uncertain cells that may need manual review
+- Note any spawn conflicts that were found (even if passable, flag close calls)
 
 ---
 
-## Notes for this project
+## Token budget guidance
 
-- The map image is **3/4 top-down oblique** style (like classic Shining Force, NOT true isometric)
-- Tiles are rectangular in the image — there are no diagonal diamond tiles
-- The image has **no grid lines** — you must estimate cell boundaries from the image dimensions
-- Color is the primary indicator: blue = water, dark green = forest, brown = road, grey = castle/wall
-- When unsure, check ChapterData.js for the chapter title and description — it gives terrain hints
-- The existing mapGrid in ChapterData.js for that chapter is the REFERENCE design; the new one
-  should match the visual content of the actual generated image
+This skill is designed to stay well under token limits:
+- Agent A returns a zone list (~20-40 lines), NOT a 832-cell analysis
+- The grid is generated mechanically from zones — no per-cell reasoning
+- Grid output is numbers only (~700 chars), not commented prose
+- If the zone list exceeds ~50 zones, look for opportunities to merge adjacent same-type zones
+
+---
+
+## Notes
+
+- The image has **no grid lines** — estimate cell boundaries from image dimensions
+- When uncertain between two terrain types, always pick the one that most affects gameplay
+- The existing mapGrid in ChapterData.js is the REFERENCE design; the new one should match the actual generated image
+- After writing, the user may adjust individual cells manually by editing ChapterData.js directly
