@@ -244,7 +244,7 @@ class TitleScene extends Phaser.Scene {
 
     // ── Chapter-select panel — always visible TODO: remove before release ─────
     this.add.text(W / 2, 496, '── DEV: JUMP TO CHAPTER ──', {
-      fontSize: '11px', color: '#bb8800',
+      fontSize: '11px', color: '#ccaa22',
       fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
     }).setOrigin(0.5);
 
@@ -295,7 +295,7 @@ class TitleScene extends Phaser.Scene {
 
     // ── Version & credits ────────────────────────────────────────────────────
     this.add.text(W / 2, H - 30, 'v1.0  ·  7 Chapters  ·  Dogs vs Cats', {
-      fontSize: '13px', color: '#556677',
+      fontSize: '13px', color: '#7788aa',
       fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
     }).setOrigin(0.5);
 
@@ -366,11 +366,11 @@ class TitleScene extends Phaser.Scene {
     bg.strokeRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 4);
 
     this.add.text(x, y - 4, `Ch${chapNum}`, {
-      fontSize: '10px', color: '#7799cc',
+      fontSize: '10px', color: '#aaccff',
       fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(1);
     this.add.text(x, y + 5, `Lv${targetLv}`, {
-      fontSize: '8px', color: '#445566',
+      fontSize: '9px', color: '#7799bb',
       fontFamily: 'Nunito, Courier New, monospace',
     }).setOrigin(0.5).setDepth(1);
 
@@ -389,7 +389,7 @@ class TitleScene extends Phaser.Scene {
     bg.strokeRoundedRect(x - W_btn / 2, y - H_btn / 2, W_btn, H_btn, 5);
 
     const txt = this.add.text(x, y, label, {
-      fontSize: '11px', color: '#556677',
+      fontSize: '11px', color: '#8899bb',
       fontFamily: 'Nunito, Courier New, monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5);
