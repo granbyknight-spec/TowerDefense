@@ -91,26 +91,20 @@ class BattleScene extends Phaser.Scene {
         }
       }
     });
-    // Art style variants (dark / chibi) — load gracefully for battle map display
-    const heroIds = Object.keys(HERO_DEFS || {});
-    heroIds.forEach(id => {
+    // Inn art-style variants — match InnScene's file naming exactly
+    Object.keys(HERO_DEFS || {}).forEach(id => {
       const lc = id.toLowerCase();
-      ['dark','chibi'].forEach(style => {
-        const key = `inn_${style}_${id}`;
-        if (!this.textures.exists(key)) {
-          this.load.image(key, `assets/characters/${lc}_${style}_v1.png`);
-        }
-      });
+      if (!this.textures.exists(`inn_dark_${id}`))
+        this.load.image(`inn_dark_${id}`,  `assets/characters/${lc}_sprite_v1.png`);
+      if (!this.textures.exists(`inn_chibi_${id}`))
+        this.load.image(`inn_chibi_${id}`, `assets/characters/${lc}_chibi_v1.png`);
     });
-    const enemyIds = Object.keys(ENEMY_DEFS || {});
-    enemyIds.forEach(id => {
+    Object.keys(ENEMY_DEFS || {}).forEach(id => {
       const lc = id.toLowerCase();
-      ['dark','chibi'].forEach(style => {
-        const key = `inn_${style}_${id}`;
-        if (!this.textures.exists(key)) {
-          this.load.image(key, `assets/enemies/${lc}_${style}_v1.png`);
-        }
-      });
+      if (!this.textures.exists(`inn_dark_${id}`))
+        this.load.image(`inn_dark_${id}`,  `assets/enemies/${lc}_pl_v1.png`);
+      if (!this.textures.exists(`inn_chibi_${id}`))
+        this.load.image(`inn_chibi_${id}`, `assets/enemies/${lc}_chibi_v1.png`);
     });
   }
 

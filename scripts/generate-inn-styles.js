@@ -52,7 +52,6 @@ const TYPES  = (typeArg === 'characters' || typeArg === 'enemies') ? [typeArg] :
 // ---------------------------------------------------------------------------
 const STYLE_DEFS = {
   dark: {
-    suffix:  'dark_v1.png',
     models:  ['Deliberate', 'Anything Diffusion', 'Animagine XL 3.1'],
     params:  { width: 512, height: 512, steps: 30, cfg_scale: 7.5, sampler_name: 'k_euler_a', karras: true, clip_skip: 2, n: 1 },
     promptWrapper: (subject) =>
@@ -224,7 +223,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // ---------------------------------------------------------------------------
 async function generateOne(unitId, subject, style, outDir) {
   const styleDef   = STYLE_DEFS[style];
-  const filename   = unitId.toLowerCase() + '_' + styleDef.suffix;
+  let filename;
+  if (style === 'chibi') {
+    filename = unitId.toLowerCase() + '_chibi_v1.png';
+  } else if (outDir === CHAR_DIR) {
+    filename = unitId.toLowerCase() + '_sprite_v1.png';
+  } else {
+    filename = unitId.toLowerCase() + '_pl_v1.png';
+  }
   const outputPath = path.join(outDir, filename);
 
   if (fs.existsSync(outputPath)) {
