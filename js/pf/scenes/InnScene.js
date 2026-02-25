@@ -66,11 +66,11 @@ class InnScene extends Phaser.Scene {
 
     // Back button
     const backLabel = this.add.text(14, 20, '◀ BACK', {
-      fontSize: '13px', color: '#887755',
+      fontSize: '13px', color: '#aa9966',
       fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
     }).setInteractive({ useHandCursor: true }).setOrigin(0, 0);
     backLabel.on('pointerover', () => backLabel.setColor('#f8d030'));
-    backLabel.on('pointerout',  () => backLabel.setColor('#887755'));
+    backLabel.on('pointerout',  () => backLabel.setColor('#aa9966'));
     backLabel.on('pointerdown', () => this.scene.start('TitleScene'));
 
     // Title
@@ -81,7 +81,7 @@ class InnScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
 
     this.add.text(W/2, 42, 'CHARACTER GALLERY  —  PUPPY FORCE', {
-      fontSize: '10px', color: '#6a5030',
+      fontSize: '10px', color: '#9a7a50',
       fontFamily: 'Courier New, monospace', letterSpacing: 1,
     }).setOrigin(0.5, 0);
 
@@ -89,7 +89,7 @@ class InnScene extends Phaser.Scene {
     const darkCount  = this._countLoaded('dark');
     const chibiCount = this._countLoaded('chibi');
     this.add.text(W/2, 56, `⚡ ${darkCount} dark  ✨ ${chibiCount} chibi  sprites generated`, {
-      fontSize: '10px', color: '#4a3820',
+      fontSize: '10px', color: '#886644',
       fontFamily: 'Courier New, monospace',
     }).setOrigin(0.5, 0);
 
@@ -382,7 +382,7 @@ class InnScene extends Phaser.Scene {
       // SVG fallback — show pending status
       this._grid.add(
         this.add.text(cx, cy - CARD_H/2 + 112, '⟳ SVG FALLBACK', {
-          fontSize: '8px', color: '#3a2a14',
+          fontSize: '8px', color: '#887755',
           fontFamily: 'Courier New, monospace',
         }).setOrigin(0.5, 0)
       );
@@ -403,7 +403,7 @@ class InnScene extends Phaser.Scene {
     const lvl = def.baseStats ? def.baseStats.level : 1;
     this._grid.add(
       this.add.text(cx, cy - CARD_H/2 + 141, `${def.unitClass}  Lv.${lvl}`, {
-        fontSize: '10px', color: '#5a4a30',
+        fontSize: '11px', color: '#aa9977',
         fontFamily: 'Courier New, monospace',
       }).setOrigin(0.5, 0)
     );
@@ -414,7 +414,7 @@ class InnScene extends Phaser.Scene {
       this._grid.add(
         this.add.text(cx, cy - CARD_H/2 + 154,
           `HP ${hp}  ATK ${atk}  DEF ${df}`, {
-          fontSize: '9px', color: '#3a2a14',
+          fontSize: '11px', color: '#9a8866',
           fontFamily: 'Courier New, monospace',
         }).setOrigin(0.5, 0)
       );
@@ -429,7 +429,7 @@ class InnScene extends Phaser.Scene {
     if (badges.length === 0) {
       this._grid.add(
         this.add.text(cx, badgeY, 'NO ART YET — GENERATE ↑', {
-          fontSize: '8px', color: '#2a1a08',
+          fontSize: '10px', color: '#887755',
           fontFamily: 'Courier New, monospace',
         }).setOrigin(0.5)
       );
