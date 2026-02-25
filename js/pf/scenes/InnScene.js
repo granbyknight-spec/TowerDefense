@@ -342,6 +342,14 @@ class InnScene extends Phaser.Scene {
     const sprY = cy - CARD_H/2 + 66;
     const texInfo = this._getBestSpriteKey(def);
 
+    // Light backdrop so transparent sprites are visible on dark cards
+    const sprBg = this.add.graphics();
+    sprBg.fillStyle(0xd8c8a8, 0.12);
+    sprBg.fillRoundedRect(cx - 46, sprY - 46, 92, 92, 6);
+    sprBg.lineStyle(1, 0xc8a060, 0.18);
+    sprBg.strokeRoundedRect(cx - 46, sprY - 46, 92, 92, 6);
+    this._grid.add(sprBg);
+
     let sprObj;
     if (texInfo) {
       // Base display size — bosses slightly larger, PixelLab art larger
