@@ -170,6 +170,24 @@ class BattleScene extends Phaser.Scene {
     this._buildUnitSprites();
     this._buildGridOverlay();
 
+    // ── Camera bounds (support large maps) ───────────────────────────────────
+    const mapPixelW = this.mapGrid[0].length * TILE + GRID_X * 2;
+    const mapPixelH = this.mapGrid.length    * TILE + GRID_Y * 2;
+    this.cameras.main.setBounds(0, 0, mapPixelW, mapPixelH);
+
+    // ── Pan state ────────────────────────────────────────────────────────────
+    this._panStart = null;   // {x, y, camX, camY} when drag begins
+    this._panning  = false;
+
+    // ── Center camera on player units at start ───────────────────────────────
+    const players = this.units.filter(u => u.team === 'player' && !u.dead);
+    if (players.length > 0) {
+      const avgCol = players.reduce((s, u) => s + u.col, 0) / players.length;
+      const avgRow = players.reduce((s, u) => s + u.row, 0) / players.length;
+      const { x, y } = this._tileCenter(Math.round(avgCol), Math.round(avgRow));
+      this.cameras.main.centerOn(x, y);
+    }
+
     // ── Battle music ─────────────────────────────────────────────────────────
     if (this.cache.audio.exists('battle')) {
       AudioManager.playMusic(this, 'battle');
@@ -186,6 +204,15 @@ class BattleScene extends Phaser.Scene {
     }
 
     // ── Input ────────────────────────────────────────────────────────────────
+    this.input.on('pointerdown', (pointer) => {
+      // Record pan start position for drag-to-pan detection
+      this._panStart = {
+        x: pointer.x, y: pointer.y,
+        camX: this.cameras.main.scrollX,
+        camY: this.cameras.main.scrollY,
+      };
+      this._panning = false;
+    }, this);
     this.input.on('pointerdown', this._onTap, this);
 
     // ── Pinch-to-zoom (two-finger) ───────────────────────────────────────────
@@ -193,9 +220,26 @@ class BattleScene extends Phaser.Scene {
     this._pinchActive = false;
     this._pinchDist0  = 0;
     this._pinchZoom0  = 1;
-    this.input.on('pointermove', () => {
+    this.input.on('pointermove', (pointer) => {
       const down = this.input.manager.pointers.filter(p => p.isDown);
-      if (down.length < 2) { this._pinchActive = false; return; }
+      if (down.length < 2) {
+        this._pinchActive = false;
+        // Single-finger drag-to-pan
+        if (this._panStart) {
+          const dx = pointer.x - this._panStart.x;
+          const dy = pointer.y - this._panStart.y;
+          if (!this._panning && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+            this._panning = true;
+          }
+          if (this._panning) {
+            this.cameras.main.setScroll(
+              this._panStart.camX - dx,
+              this._panStart.camY - dy
+            );
+          }
+        }
+        return;
+      }
       const dx   = down[0].x - down[1].x;
       const dy   = down[0].y - down[1].y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -208,6 +252,12 @@ class BattleScene extends Phaser.Scene {
         this.cameras.main.setZoom(z);
       }
     });
+
+    // ── Pointer up — clear pan state ─────────────────────────────────────────
+    this.input.on('pointerup', () => {
+      this._panStart = null;
+      this._panning  = false;
+    }, this);
 
     // ── Opening dialogue → boss intro → IDLE ─────────────────────────────────
     const intro    = chapter.intro || [];
@@ -649,6 +699,7 @@ class BattleScene extends Phaser.Scene {
 
   _onTap(ptr) {
     if (this._pinchActive) return;          // don't select during two-finger pinch
+    if (this._panning)     return;          // don't select when finger was dragging
     if (this._state === BS.DIALOGUE)  { this._advanceDialogue(); return; }
     if (this._state === BS.ANIMATING) return;
     if (this._state === BS.ENEMY_TURN)return;
