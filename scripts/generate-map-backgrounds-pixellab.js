@@ -77,6 +77,9 @@ const NEG = [
   '3D render',
   'blurry',
   'low quality',
+  'buildings',
+  'houses',
+  'cottages',
   'modern buildings',
   'cars',
   'vehicles',
@@ -90,12 +93,16 @@ const NEG = [
 
 const CHAPTERS = [
   // ── Chapter 1: Barkville Siege ──────────────────────────────────────────────
-  // Village center-north; walls flanking village; forest on east/west; road N-S
-  // Player deploys at south rows 20-22, enemies at north rows 0-4
+  // Stone defensive wall line at rows 4-6 (impassable WALL tiles), two gate gaps
+  // at cols 5 and 12; dense forest east/west edges (impassable FOREST tiles);
+  // open grassy ground north and south of wall; player deploys south rows 20-22.
+  // NO BUILDINGS — wall line is the only large structure, no cottages or houses.
+  // Depth trick: narrow sky horizon strip at very top fading to distant treeline,
+  // then open ground receding from north to south — makes 320×400px feel vast.
   {
     id: 1,
     title: 'Barkville Siege',
-    prompt: `medieval village under siege, cluster of thatched-roof stone cottages in center-north of map, solid stone defensive walls flanking east and west sides of village block, two dirt road corridors running north-south through the center toward village gates, dense dark green forest treeline packed along far east and west map edges, wide open grassy deployment meadow at the southern third of the map, early morning golden light, long diagonal shadows, warm amber and green color palette, ${STYLE}`,
+    prompt: `open siege battlefield, long crumbling stone defensive wall running horizontally across the upper third of the map with two narrow gate gaps, NO buildings NO houses NO cottages, wide open grassy ground both north and south of the wall, twin worn dirt roads running north-south converging on the gate gaps, dense dark pine forest treeline tight against far east and west edges only, thin pale sky horizon strip at top edge fading into distant forest silhouette suggesting vast space beyond, southern third is a broad flat grassy deployment plain, subtle tile-grid ground texture suggesting scale with many small terrain tiles, warm morning amber-green palette with long low shadows, ${STYLE}`,
   },
 
   // ── Chapter 2: Howling Woods ─────────────────────────────────────────────────
