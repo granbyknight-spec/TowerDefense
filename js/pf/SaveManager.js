@@ -77,6 +77,14 @@ const SaveManager = {
     prefs[unitId] = style;
     localStorage.setItem('pf_unit_styles', JSON.stringify(prefs));
   },
+
+  // Global sprite style for battle map display ('chibi' | 'dark'). Defaults to 'chibi'.
+  getArtStyle() {
+    return localStorage.getItem('pf_art_style') || 'chibi';
+  },
+  setArtStyle(style) {
+    localStorage.setItem('pf_art_style', style);
+  },
 };
 
 // Build the starting roster from hero definitions

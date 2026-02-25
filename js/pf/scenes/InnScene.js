@@ -353,14 +353,12 @@ class InnScene extends Phaser.Scene {
     // ── Determine available styles for this card ──────────────────────────
     const availStyles = this._getCardStyles(def);
 
-    // Load saved preference; if none (or saved style unavailable), pick best.
-    let savedStyle = SaveManager.getUnitStyle(def.id);
-    if (!savedStyle || !availStyles.includes(savedStyle)) {
-      savedStyle = availStyles[0]; // best available (dark > chibi > svg)
-    }
+    // Use global art style as initial display; fall back to best available.
+    const globalStyle = SaveManager.getArtStyle();
+    const initialStyle = availStyles.includes(globalStyle) ? globalStyle : availStyles[0];
 
     // Mutable state for this card (mutated by the tap handler via closure)
-    const cardState = { style: savedStyle };
+    const cardState = { style: initialStyle };
 
     // ── Style glow overlay (drawn under sprite, above bg) ─────────────────
     // Redrawn on each style cycle. Only visible for non-SVG styles.
@@ -556,9 +554,6 @@ class InnScene extends Phaser.Scene {
       const curIdx  = availStyles.indexOf(cardState.style);
       const nextIdx = (curIdx + 1) % availStyles.length;
       cardState.style = availStyles[nextIdx];
-
-      // Persist selection
-      SaveManager.setUnitStyle(def.id, cardState.style);
 
       // Resolve new texture
       const newTex = this._getSpriteKeyForStyle(def, cardState.style);

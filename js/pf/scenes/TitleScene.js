@@ -312,6 +312,21 @@ class TitleScene extends Phaser.Scene {
       muteBtn.setText(this.sound.mute ? '🔇 Sound OFF' : '🔊 Sound ON');
     });
 
+    // ── Sprites style toggle button ──────────────────────────────────────────
+    const _artStyleLabel = (s) => 'Sprites: ' + (s === 'dark' ? 'Dark' : 'Chibi');
+    const spriteBtn = this.add.text(12, H - 12, _artStyleLabel(SaveManager.getArtStyle()), {
+      fontSize: '13px', color: '#aabbcc',
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+      backgroundColor: '#11223388', padding: { x: 6, y: 3 },
+    }).setOrigin(0, 1).setAlpha(0.75).setInteractive({ useHandCursor: true });
+    spriteBtn.on('pointerover',  () => spriteBtn.setAlpha(1));
+    spriteBtn.on('pointerout',   () => spriteBtn.setAlpha(0.75));
+    spriteBtn.on('pointerdown',  () => {
+      const next = SaveManager.getArtStyle() === 'dark' ? 'chibi' : 'dark';
+      SaveManager.setArtStyle(next);
+      spriteBtn.setText(_artStyleLabel(next));
+    });
+
     // ── Floating paw prints ───────────────────────────────────────────────────
     this.time.addEvent({ delay: 1200, loop: true, callback: this._spawnPaw, callbackScope: this });
 
