@@ -581,7 +581,7 @@ class BattleScene extends Phaser.Scene {
       const naturalW = (this.textures.getFrame(sprKey) || { realWidth: 64 }).realWidth;
       sprScale = TILE / naturalW;
     } else {
-      const spriteSize = (r * 2 - 4); // leave 2px padding inside ring
+      const spriteSize = (r * 2 + 2); // fill ~94% of ring (ringR diameter - 2)
       sprScale = spriteSize / 64;
     }
 
@@ -589,7 +589,7 @@ class BattleScene extends Phaser.Scene {
     if (this.textures.exists(sprKey)) {
       sprite = this.add.image(x, y - 1, sprKey).setOrigin(0.5).setScale(sprScale);
     } else {
-      sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: sz === 2 ? '40px' : '22px' }).setOrigin(0.5);
+      sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: sz === 2 ? '40px' : '26px' }).setOrigin(0.5);
     }
 
     // 1x1 boss units render 60% larger; 2x2 bosses already fill their footprint via sprScale
