@@ -28,6 +28,8 @@ class BattleScene extends Phaser.Scene {
     // Audio (graceful — files are optional and may not exist yet)
     AudioManager.preloadMusic(this);
     AudioManager.preloadSFX(this);
+    // Suppress load errors for missing optional art assets
+    this.load.on('loaderror', () => {}); // silently skip missing optional assets
     // Battle background for current chapter (graceful — file may not exist)
     try {
       const bgKey = `bg_ch${this.chapterId}`;
@@ -88,6 +90,27 @@ class BattleScene extends Phaser.Scene {
           // silently skip — colored rectangle fallback used in _buildMap
         }
       }
+    });
+    // Art style variants (dark / chibi) — load gracefully for battle map display
+    const heroIds = Object.keys(HERO_DEFS || {});
+    heroIds.forEach(id => {
+      const lc = id.toLowerCase();
+      ['dark','chibi'].forEach(style => {
+        const key = `inn_${style}_${id}`;
+        if (!this.textures.exists(key)) {
+          this.load.image(key, `assets/characters/${lc}_${style}_v1.png`);
+        }
+      });
+    });
+    const enemyIds = Object.keys(ENEMY_DEFS || {});
+    enemyIds.forEach(id => {
+      const lc = id.toLowerCase();
+      ['dark','chibi'].forEach(style => {
+        const key = `inn_${style}_${id}`;
+        if (!this.textures.exists(key)) {
+          this.load.image(key, `assets/enemies/${lc}_${style}_v1.png`);
+        }
+      });
     });
   }
 
@@ -468,7 +491,7 @@ class BattleScene extends Phaser.Scene {
     // Portrait PNGs (player_png_* / enemy_png_*) are 512×256px portrait art
     // and are only used by UIScene for the info-panel portrait — not as map sprites.
     let sprite;
-    const sprKey = getSpriteKey(unit);
+    const sprKey = getSpriteKey(unit, this);
     if (this.textures.exists(sprKey)) {
       sprite = this.add.image(x, y - 1, sprKey).setOrigin(0.5).setScale(sprScale);
     } else {
@@ -1737,7 +1760,7 @@ class BattleScene extends Phaser.Scene {
     this.time.delayedCall(400, () => {
       unit.promote();
       if (unit.sprite && unit.sprite.setTexture) {
-        unit.sprite.setTexture(getSpriteKey(unit));
+        unit.sprite.setTexture(getSpriteKey(unit, this));
       }
       AudioManager.play(this, 'level_up');
 

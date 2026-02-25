@@ -13,6 +13,7 @@ on:
           - characters
           - backgrounds
           - enemies
+          - inn-styles
           - all
 
 jobs:
@@ -64,6 +65,13 @@ jobs:
         env:
           AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
         run: node scripts/generate-enemies.js
+
+      - name: Generate inn-style portraits (dark + chibi)
+        if: inputs.script == 'inn-styles' || inputs.script == 'all'
+        continue-on-error: true
+        env:
+          AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
+        run: node scripts/generate-inn-styles.js
 
       - name: Commit generated assets
         run: |
