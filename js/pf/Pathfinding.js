@@ -12,7 +12,7 @@
  * Friendly-occupied tiles are allowed (pass-through).
  */
 function _footprintClear(unit, nc, nr, mapGrid, occupied) {
-  const sz = unit.tileSize || 1;
+  const sz = 1; // bosses move as 1x1 (visual 2x2 footprint doesn't restrict movement)
   const rows = mapGrid.length;
   const cols = mapGrid[0].length;
   for (let dc = 0; dc < sz; dc++) {
