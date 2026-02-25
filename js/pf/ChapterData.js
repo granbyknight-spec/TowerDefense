@@ -5,7 +5,7 @@
 // Maps are GROWS x GCOLS arrays (row-major): mapGrid[row][col]
 // Terrain IDs: 0=GRASS 1=FOREST 2=MOUNTAIN 3=WATER 4=ROAD 5=SAND
 //              6=CASTLE 7=VILLAGE 8=SNOW 9=BRIDGE 10=WALL 11=OASIS
-// Grid size: 16 rows x 13 cols
+// Grid size: 32 rows x 26 cols
 // =============================================================================
 
 const CHAPTERS = [
@@ -33,46 +33,62 @@ const CHAPTERS = [
       { speaker: 'Lab Scout',    portrait: '🦮', text: "Reports say they've retreated to the Howling Woods." },
     ],
 
-    // 16 rows x 13 cols
+    // 32 rows x 26 cols (doubled from 16x13)
     // Terrain: village (7) center top; walls (10) flanking village; forests (1) on east/west flanks
     // Road (4) corridors running north-south through center toward village
     mapGrid: [
-      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12
-      [  1,  0,  0,  0,  4,  7,  4,  0,  0,  0,  1,  1,  1 ], // row 0  - enemies start here
-      [  1,  0,  0,  4,  4,  7,  4,  4,  0,  0,  1,  1,  1 ], // row 1
-      [  1,  1,  0,  4, 10,  7, 10,  4,  0,  1,  1,  0,  0 ], // row 2
-      [  0,  1,  0,  4,  7,  7,  7,  4,  0,  1,  0,  0,  0 ], // row 3  - village tiles
-      [  0,  1, 10,  4,  7,  7,  7,  4, 10,  1,  0,  0,  0 ], // row 4  - village flanked by walls
-      [  0,  0, 10,  4,  4,  7,  4,  4, 10,  0,  0,  0,  0 ], // row 5
-      [  0,  0,  0,  4,  0,  0,  0,  4,  0,  0,  0,  0,  0 ], // row 6
-      [  1,  1,  0,  4,  0,  0,  0,  4,  0,  1,  1,  0,  0 ], // row 7
-      [  1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0 ], // row 8
-      [  0,  1,  1,  0,  0,  0,  0,  0,  1,  1,  0,  0,  0 ], // row 9
-      [  0,  0,  1,  1,  0,  0,  0,  1,  1,  0,  0,  0,  0 ], // row 10
-      [  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  0,  0 ], // row 11
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 12
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 13
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 14
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 15 - player start
+      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+      [  1,  1,  0,  0,  0,  0,  0,  0,  4,  4,  7,  7,  4,  4,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1 ], // row 0
+      [  1,  1,  0,  0,  0,  0,  0,  0,  4,  4,  7,  7,  4,  4,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1 ], // row 1
+      [  1,  1,  0,  0,  4,  4,  4,  4,  7,  7,  4,  4,  4,  4,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1 ], // row 2
+      [  1,  1,  0,  0,  4,  4,  4,  4,  7,  7,  4,  4,  4,  4,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1 ], // row 3
+      [  1,  1,  1,  1,  0,  0,  4,  4, 10, 10,  7,  7, 10, 10,  4,  4,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 4
+      [  1,  1,  1,  1,  0,  0,  4,  4, 10, 10,  7,  7, 10, 10,  4,  4,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 5
+      [  0,  0,  1,  1,  0,  0,  4,  4,  7,  7,  7,  7,  7,  7,  4,  4,  0,  0,  1,  1,  0,  0,  0,  0,  0,  0 ], // row 6
+      [  0,  0,  1,  1,  0,  0,  4,  4,  7,  7,  7,  7,  7,  7,  4,  4,  0,  0,  1,  1,  0,  0,  0,  0,  0,  0 ], // row 7
+      [  0,  0,  1,  1, 10, 10,  4,  4,  7,  7,  7,  7,  7,  7,  4,  4, 10, 10,  1,  1,  0,  0,  0,  0,  0,  0 ], // row 8
+      [  0,  0,  1,  1, 10, 10,  4,  4,  7,  7,  7,  7,  7,  7,  4,  4, 10, 10,  1,  1,  0,  0,  0,  0,  0,  0 ], // row 9
+      [  0,  0,  0,  0, 10, 10,  4,  4,  4,  4,  7,  7,  4,  4,  4,  4, 10, 10,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 10
+      [  0,  0,  0,  0, 10, 10,  4,  4,  4,  4,  7,  7,  4,  4,  4,  4, 10, 10,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 11
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 12
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 13
+      [  1,  1,  1,  1,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 14
+      [  1,  1,  1,  1,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 15
+      [  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 16
+      [  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 17
+      [  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0 ], // row 18
+      [  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0 ], // row 19
+      [  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 20
+      [  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 21
+      [  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 22
+      [  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 23
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 24
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 25
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 26
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 27
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 28
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 29
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 30
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 31 - player start
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:5,  row:15 },
-      { unitId:'CORGI_HEALER',   col:6,  row:15 },
-      { unitId:'LABRADOR_SCOUT', col:4,  row:14 },
-      { unitId:'POODLE_MAGE',    col:7,  row:14 },
-      { unitId:'HUSKY_RIDER',    col:3,  row:15 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:15 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
+      { unitId:'CORGI_HEALER',   col:12, row:30 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:28 },
+      { unitId:'POODLE_MAGE',    col:14, row:28 },
+      { unitId:'HUSKY_RIDER',    col:6,  row:30 },
+      { unitId:'BEAGLE_ARCHER',  col:16, row:30 },
     ],
 
     enemies: [
-      { defId:'SCOUT_CAT',  col:1,  row:0, level:1 },
-      { defId:'SCOUT_CAT',  col:11, row:0, level:1 },
-      { defId:'SCOUT_CAT',  col:3,  row:1, level:1 },
-      { defId:'SCOUT_CAT',  col:9,  row:1, level:1 },
-      { defId:'SCOUT_CAT',  col:0,  row:2, level:1 },
-      { defId:'SCOUT_CAT',  col:12, row:2, level:1 },
-      { defId:'ALLEY_CAT',  col:5,  row:0, level:3 },
+      { defId:'SCOUT_CAT',  col:2,  row:0,  level:1 },
+      { defId:'SCOUT_CAT',  col:22, row:0,  level:1 },
+      { defId:'SCOUT_CAT',  col:6,  row:2,  level:1 },
+      { defId:'SCOUT_CAT',  col:18, row:2,  level:1 },
+      { defId:'SCOUT_CAT',  col:0,  row:4,  level:1 },
+      { defId:'SCOUT_CAT',  col:24, row:4,  level:1 },
+      { defId:'ALLEY_CAT',  col:10, row:0,  level:3 },
     ],
 
     recruitable: [],
@@ -100,47 +116,63 @@ const CHAPTERS = [
       { speaker: 'Puppy Knight',  portrait: '🐶', text: "Welcome, Beagle! We head for Peak Paws next." },
     ],
 
-    // Dense forest; river spans rows 7-8 full width; bridges at col 3 and col 9 only
+    // Dense forest; river spans rows 14-16 full width; bridges at col 6 and col 18 only (doubled from 16x13)
     mapGrid: [
-      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12
-      [  1,  1,  1,  4,  1,  1,  1,  1,  4,  1,  1,  1,  1 ], // row 0
-      [  1,  1,  4,  4,  1,  1,  1,  1,  4,  4,  1,  1,  1 ], // row 1
-      [  1,  1,  4,  0,  1,  1,  1,  1,  0,  4,  1,  1,  1 ], // row 2
-      [  1,  1,  4,  0,  0,  4,  4,  0,  0,  4,  1,  1,  1 ], // row 3
-      [ 10,  1,  1,  0,  4,  4,  4,  4,  0,  1,  1, 10,  1 ], // row 4  - rock walls flank
-      [  1,  1,  1,  4,  1,  4,  4,  1,  4,  1,  1,  1,  1 ], // row 5
-      [  1,  1,  4,  4,  1,  1,  1,  1,  4,  4,  1,  1,  1 ], // row 6
-      [  3,  3,  3,  9,  3,  3,  3,  3,  3,  9,  3,  3,  3 ], // row 7  - RIVER with bridges at col 3 & 9
-      [  3,  3,  3,  9,  3,  3,  3,  3,  3,  9,  3,  3,  3 ], // row 8  - RIVER (2 wide)
-      [  0,  1,  4,  4,  1,  1,  1,  1,  4,  4,  1,  0,  0 ], // row 9
-      [  0,  0,  4,  0,  4,  4,  4,  4,  0,  4,  0,  0,  0 ], // row 10
-      [  0,  0,  4,  0,  0,  4,  4,  0,  0,  4,  0,  0,  0 ], // row 11
-      [  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0 ], // row 12
-      [  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0 ], // row 13
-      [  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0 ], // row 14
-      [  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0 ], // row 15 - player start
+      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+      [  1,  1,  1,  1,  1,  1,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1 ], // row 0
+      [  1,  1,  1,  1,  1,  1,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1 ], // row 1
+      [  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1 ], // row 2
+      [  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1 ], // row 3
+      [  1,  1,  1,  1,  4,  4,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  4,  4,  1,  1,  1,  1,  1,  1 ], // row 4
+      [  1,  1,  1,  1,  4,  4,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  4,  4,  1,  1,  1,  1,  1,  1 ], // row 5
+      [  1,  1,  1,  1,  4,  4,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  4,  4,  1,  1,  1,  1,  1,  1 ], // row 6
+      [  1,  1,  1,  1,  4,  4,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  4,  4,  1,  1,  1,  1,  1,  1 ], // row 7
+      [ 10, 10,  1,  1,  1,  1,  0,  0,  4,  4,  4,  4,  4,  4,  4,  4,  0,  0,  1,  1,  1,  1, 10, 10,  1,  1 ], // row 8
+      [ 10, 10,  1,  1,  1,  1,  0,  0,  4,  4,  4,  4,  4,  4,  4,  4,  0,  0,  1,  1,  1,  1, 10, 10,  1,  1 ], // row 9
+      [  1,  1,  1,  1,  1,  1,  4,  4,  1,  1,  4,  4,  4,  4,  1,  1,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1 ], // row 10
+      [  1,  1,  1,  1,  1,  1,  4,  4,  1,  1,  4,  4,  4,  4,  1,  1,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1 ], // row 11
+      [  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1 ], // row 12
+      [  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1 ], // row 13
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 14 - RIVER + bridges
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 15
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 16
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 17
+      [  0,  0,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  0,  0,  0,  0 ], // row 18
+      [  0,  0,  1,  1,  4,  4,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  4,  4,  1,  1,  0,  0,  0,  0 ], // row 19
+      [  0,  0,  0,  0,  4,  4,  0,  0,  4,  4,  4,  4,  4,  4,  4,  4,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0 ], // row 20
+      [  0,  0,  0,  0,  4,  4,  0,  0,  4,  4,  4,  4,  4,  4,  4,  4,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0 ], // row 21
+      [  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0 ], // row 22
+      [  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0 ], // row 23
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 24
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 25
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 26
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 27
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 28
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 29
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 30
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 31 - player start
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:5,  row:15 },
-      { unitId:'CORGI_HEALER',   col:6,  row:15 },
-      { unitId:'LABRADOR_SCOUT', col:4,  row:14 },
-      { unitId:'POODLE_MAGE',    col:7,  row:14 },
-      { unitId:'HUSKY_RIDER',    col:3,  row:15 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
+      { unitId:'CORGI_HEALER',   col:12, row:30 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:28 },
+      { unitId:'POODLE_MAGE',    col:14, row:28 },
+      { unitId:'HUSKY_RIDER',    col:6,  row:30 },
       // Beagle Archer is captured — wait near bridge for rescue
     ],
 
     enemies: [
-      { defId:'SCOUT_CAT',        col:1,  row:0, level:2 },
-      { defId:'SCOUT_CAT',        col:11, row:0, level:2 },
-      { defId:'SIAMESE_ASSASSIN', col:0,  row:3, level:1 },
-      { defId:'SIAMESE_ASSASSIN', col:12, row:3, level:1 },
-      { defId:'PERSIAN_SORCERER', col:5,  row:1, level:2 },
-      { defId:'LYNX_RANGER',      col:6,  row:0, level:3 },
+      { defId:'SCOUT_CAT',        col:2,  row:0,  level:2 },
+      { defId:'SCOUT_CAT',        col:22, row:0,  level:2 },
+      { defId:'SIAMESE_ASSASSIN', col:0,  row:6,  level:1 },
+      { defId:'SIAMESE_ASSASSIN', col:24, row:6,  level:1 },
+      { defId:'PERSIAN_SORCERER', col:10, row:2,  level:2 },
+      { defId:'LYNX_RANGER',      col:12, row:0,  level:3 },
     ],
 
     recruitable: [
-      { unitId:'BEAGLE_ARCHER', col:3, row:7, rescueMsg:'Beagle Archer joins your force!' },
+      { unitId:'BEAGLE_ARCHER', col:6, row:14, rescueMsg:'Beagle Archer joins your force!' },
     ],
   },
 
@@ -167,50 +199,66 @@ const CHAPTERS = [
       { speaker: 'Beagle Archer', portrait: '🐩',   text: "With Tank guarding our flank, we're unstoppable!" },
     ],
 
-    // Mountains wall cols 0-2 and cols 10-12; snow tiles upper half; narrow pass center
+    // Mountains wall cols 0-4 and cols 20-24; snow tiles upper half; narrow pass center (doubled from 16x13)
     mapGrid: [
-      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12
-      [  2,  2,  2,  2,  8,  8,  8,  8,  2,  2,  2,  2,  2 ], // row 0  - snowy summit
-      [  2,  2,  2,  8,  8,  4,  4,  8,  8,  2,  2,  2,  2 ], // row 1
-      [  2,  2,  2,  8,  4,  4,  4,  4,  8,  2,  2,  2,  2 ], // row 2
-      [  2,  2,  8,  8,  4,  2,  2,  4,  8,  8,  2,  2,  2 ], // row 3  - narrow pass flanked by mountains
-      [  2,  2,  8,  2,  4,  2,  2,  4,  2,  8,  2,  2,  2 ], // row 4
-      [  0,  2,  8,  4,  4,  8,  8,  4,  4,  8,  2,  0,  0 ], // row 5
-      [  0,  2,  2,  4,  8,  8,  8,  8,  4,  2,  2,  0,  0 ], // row 6
-      [  0,  0,  2,  4,  0,  8,  8,  0,  4,  2,  0,  0,  0 ], // row 7
-      [  0,  0,  2,  4,  0,  0,  0,  0,  4,  2,  0,  0,  0 ], // row 8
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  0 ], // row 9
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  0 ], // row 10
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  0 ], // row 11
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 12
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 13
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 14
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 15 - player start
+      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+      [  2,  2,  2,  2,  2,  2,  2,  2,  8,  8,  8,  8,  8,  8,  8,  8,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2 ], // row 0
+      [  2,  2,  2,  2,  2,  2,  2,  2,  8,  8,  8,  8,  8,  8,  8,  8,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2 ], // row 1
+      [  2,  2,  2,  2,  2,  2,  8,  8,  8,  8,  4,  4,  4,  4,  8,  8,  8,  8,  2,  2,  2,  2,  2,  2,  2,  2 ], // row 2
+      [  2,  2,  2,  2,  2,  2,  8,  8,  8,  8,  4,  4,  4,  4,  8,  8,  8,  8,  2,  2,  2,  2,  2,  2,  2,  2 ], // row 3
+      [  2,  2,  2,  2,  2,  2,  8,  8,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  2,  2,  2,  2,  2,  2,  2,  2 ], // row 4
+      [  2,  2,  2,  2,  2,  2,  8,  8,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  2,  2,  2,  2,  2,  2,  2,  2 ], // row 5
+      [  2,  2,  2,  2,  8,  8,  8,  8,  4,  4,  2,  2,  2,  2,  4,  4,  8,  8,  8,  8,  2,  2,  2,  2,  2,  2 ], // row 6
+      [  2,  2,  2,  2,  8,  8,  8,  8,  4,  4,  2,  2,  2,  2,  4,  4,  8,  8,  8,  8,  2,  2,  2,  2,  2,  2 ], // row 7
+      [  2,  2,  2,  2,  8,  8,  2,  2,  4,  4,  2,  2,  2,  2,  4,  4,  2,  2,  8,  8,  2,  2,  2,  2,  2,  2 ], // row 8
+      [  2,  2,  2,  2,  8,  8,  2,  2,  4,  4,  2,  2,  2,  2,  4,  4,  2,  2,  8,  8,  2,  2,  2,  2,  2,  2 ], // row 9
+      [  0,  0,  2,  2,  8,  8,  4,  4,  4,  4,  8,  8,  8,  8,  4,  4,  4,  4,  8,  8,  2,  2,  0,  0,  0,  0 ], // row 10
+      [  0,  0,  2,  2,  8,  8,  4,  4,  4,  4,  8,  8,  8,  8,  4,  4,  4,  4,  8,  8,  2,  2,  0,  0,  0,  0 ], // row 11
+      [  0,  0,  2,  2,  2,  2,  4,  4,  8,  8,  8,  8,  8,  8,  8,  8,  4,  4,  2,  2,  2,  2,  0,  0,  0,  0 ], // row 12
+      [  0,  0,  2,  2,  2,  2,  4,  4,  8,  8,  8,  8,  8,  8,  8,  8,  4,  4,  2,  2,  2,  2,  0,  0,  0,  0 ], // row 13
+      [  0,  0,  0,  0,  2,  2,  4,  4,  0,  0,  8,  8,  8,  8,  0,  0,  4,  4,  2,  2,  0,  0,  0,  0,  0,  0 ], // row 14
+      [  0,  0,  0,  0,  2,  2,  4,  4,  0,  0,  8,  8,  8,  8,  0,  0,  4,  4,  2,  2,  0,  0,  0,  0,  0,  0 ], // row 15
+      [  0,  0,  0,  0,  2,  2,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  2,  2,  0,  0,  0,  0,  0,  0 ], // row 16
+      [  0,  0,  0,  0,  2,  2,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  2,  2,  0,  0,  0,  0,  0,  0 ], // row 17
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 18
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 19
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 20
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 21
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 22
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 23
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 24
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 25
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 26
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 27
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 28
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 29
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 30
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 31 - player start
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:5,  row:15 },
-      { unitId:'CORGI_HEALER',   col:6,  row:15 },
-      { unitId:'BEAGLE_ARCHER',  col:4,  row:15 },
-      { unitId:'LABRADOR_SCOUT', col:7,  row:15 },
-      { unitId:'POODLE_MAGE',    col:5,  row:14 },
-      { unitId:'HUSKY_RIDER',    col:6,  row:14 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
+      { unitId:'CORGI_HEALER',   col:12, row:30 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:30 },
+      { unitId:'LABRADOR_SCOUT', col:14, row:30 },
+      { unitId:'POODLE_MAGE',    col:10, row:28 },
+      { unitId:'HUSKY_RIDER',    col:12, row:28 },
     ],
 
     enemies: [
-      { defId:'TIGER_GENERAL',    col:5,  row:8, level:3 },
-      { defId:'TIGER_GENERAL',    col:6,  row:8, level:3 },
-      { defId:'SCOUT_CAT',        col:4,  row:6, level:3 },
-      { defId:'SCOUT_CAT',        col:7,  row:6, level:3 },
-      { defId:'SCOUT_CAT',        col:3,  row:4, level:3 },
-      { defId:'SCOUT_CAT',        col:8,  row:4, level:3 },
-      { defId:'PERSIAN_SORCERER', col:4,  row:2, level:3 },
-      { defId:'PERSIAN_SORCERER', col:7,  row:2, level:3 },
-      { defId:'SNOW_LEOPARD',     col:5,  row:0, level:5 },
+      { defId:'TIGER_GENERAL',    col:10, row:16, level:3 },
+      { defId:'TIGER_GENERAL',    col:12, row:16, level:3 },
+      { defId:'SCOUT_CAT',        col:8,  row:12, level:3 },
+      { defId:'SCOUT_CAT',        col:14, row:12, level:3 },
+      { defId:'SCOUT_CAT',        col:6,  row:8,  level:3 },
+      { defId:'SCOUT_CAT',        col:16, row:8,  level:3 },
+      { defId:'PERSIAN_SORCERER', col:8,  row:4,  level:3 },
+      { defId:'PERSIAN_SORCERER', col:14, row:4,  level:3 },
+      { defId:'SNOW_LEOPARD',     col:10, row:0,  level:5 },
     ],
 
     recruitable: [
-      { unitId:'BULLDOG_TANK', col:2, row:7, rescueMsg:'Bulldog Tank joins the force!' },
+      { unitId:'BULLDOG_TANK', col:4, row:14, rescueMsg:'Bulldog Tank joins the force!' },
     ],
   },
 
@@ -237,49 +285,65 @@ const CHAPTERS = [
       { speaker: 'Puppy Knight', portrait: '🐶', text: "Great work, Otto! The Desert lies ahead..." },
     ],
 
-    // Water rows 5-8 full width; bridges at col 3 (rows 5-8) and col 9 (rows 5-8)
+    // Water rows 10-16 full width; bridges at col 6 (rows 10-16) and col 18 (rows 10-16) (doubled from 16x13)
     mapGrid: [
-      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12
-      [  1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  0 ], // row 0  - forest north bank
-      [  1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  1,  0,  0 ], // row 1
-      [  1,  0,  0,  4,  4,  0,  0,  4,  4,  0,  0,  1,  1 ], // row 2
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  1 ], // row 3
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  0 ], // row 4
-      [  3,  3,  3,  9,  3,  3,  3,  3,  3,  9,  3,  3,  3 ], // row 5  - RIVER + bridge col 3 & 9
-      [  3,  3,  3,  9,  3,  3,  3,  3,  3,  9,  3,  3,  3 ], // row 6  - RIVER
-      [  3,  3,  3,  9,  3,  3,  3,  3,  3,  9,  3,  3,  3 ], // row 7  - RIVER (3 wide)
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  0 ], // row 8  - south bank
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  0 ], // row 9
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 10
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 11
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 12
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 13
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 14
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 15 - player start
+      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+      [  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  0,  0 ], // row 0
+      [  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  0,  0 ], // row 1
+      [  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 2
+      [  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 3
+      [  1,  1,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  1,  1,  1,  1 ], // row 4
+      [  1,  1,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,  0,  1,  1,  1,  1 ], // row 5
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  1,  1 ], // row 6
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  1,  1 ], // row 7
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 8
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 9
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 10 - RIVER
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 11
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 12
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 13
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 14
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 15 - RIVER (3 wide doubled)
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 16 - south bank
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 17
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 18
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 19
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 20
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 21
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 22
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 23
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 24
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 25
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 26
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 27
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 28
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 29
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 30
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 31 - player start
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:5,  row:15 },
-      { unitId:'CORGI_HEALER',   col:6,  row:15 },
-      { unitId:'BEAGLE_ARCHER',  col:4,  row:15 },
-      { unitId:'BULLDOG_TANK',   col:7,  row:15 },
-      { unitId:'LABRADOR_SCOUT', col:5,  row:14 },
-      { unitId:'POODLE_MAGE',    col:6,  row:14 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
+      { unitId:'CORGI_HEALER',   col:12, row:30 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:30 },
+      { unitId:'BULLDOG_TANK',   col:14, row:30 },
+      { unitId:'LABRADOR_SCOUT', col:10, row:28 },
+      { unitId:'POODLE_MAGE',    col:12, row:28 },
     ],
 
     enemies: [
-      { defId:'SCOUT_CAT',        col:2,  row:0, level:4 },
-      { defId:'SCOUT_CAT',        col:10, row:0, level:4 },
-      { defId:'SIAMESE_ASSASSIN', col:4,  row:1, level:4 },
-      { defId:'SIAMESE_ASSASSIN', col:8,  row:1, level:4 },
-      { defId:'TIGER_GENERAL',    col:1,  row:0, level:4 },
-      { defId:'TIGER_GENERAL',    col:11, row:0, level:4 },
-      { defId:'PERSIAN_SORCERER', col:5,  row:0, level:4 },
-      { defId:'RIVER_PANTHER',    col:5,  row:0, level:5 },
+      { defId:'SCOUT_CAT',        col:4,  row:0,  level:4 },
+      { defId:'SCOUT_CAT',        col:20, row:0,  level:4 },
+      { defId:'SIAMESE_ASSASSIN', col:8,  row:2,  level:4 },
+      { defId:'SIAMESE_ASSASSIN', col:16, row:2,  level:4 },
+      { defId:'TIGER_GENERAL',    col:2,  row:0,  level:4 },
+      { defId:'TIGER_GENERAL',    col:22, row:0,  level:4 },
+      { defId:'PERSIAN_SORCERER', col:10, row:0,  level:4 },
+      { defId:'RIVER_PANTHER',    col:10, row:0,  level:5 },
     ],
 
     recruitable: [
-      { unitId:'OTTER_ALLY', col:3, row:5, rescueMsg:'Otto Otter joins your force!' },
+      { unitId:'OTTER_ALLY', col:6, row:10, rescueMsg:'Otto Otter joins your force!' },
     ],
   },
 
@@ -306,52 +370,68 @@ const CHAPTERS = [
       { speaker: 'Corgi Healer', portrait: '🐕', text: "Rest at the oasis. The fortress battle will be our toughest yet." },
     ],
 
-    // Sand dominates; 5 oases provide healing/defense spots; road through center
+    // Sand dominates; 5 oases provide healing/defense spots; road through center (doubled from 16x13)
     mapGrid: [
-      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12
-      [  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 0  - enemies start here
-      [  5,  5, 11,  5,  5,  5,  5,  5,  5, 11,  5,  5,  5 ], // row 1  - oasis col 2 & 9
-      [  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 2
-      [  5,  5,  5,  5,  4,  4,  4,  4,  5,  5,  5,  5,  5 ], // row 3  - road begins
-      [  5,  5,  5,  5,  4,  5,  5,  4,  5,  5,  5,  5,  5 ], // row 4
-      [  5,  5,  5,  5,  4,  5,  5,  4,  5,  5,  5,  5,  5 ], // row 5
-      [  5, 11,  5,  5,  4,  5,  5,  4,  5,  5, 11,  5,  5 ], // row 6  - oasis col 1 & 10
-      [  5,  5,  5,  5,  4,  4,  4,  4,  5,  5,  5,  5,  5 ], // row 7
-      [  5,  5,  5,  5,  4,  5,  5,  4,  5,  5,  5,  5,  5 ], // row 8
-      [  5,  5,  5,  5,  4,  5,  5,  4,  5,  5,  5,  5,  5 ], // row 9
-      [  5,  5,  5,  5,  4,  5,  5,  4,  5,  5,  5,  5,  5 ], // row 10
-      [  5,  5,  5,  5,  4,  5,  5,  4,  5,  5,  5,  5,  5 ], // row 11
-      [  5,  5,  5,  5,  4, 11, 11,  4,  5,  5,  5,  5,  5 ], // row 12 - oasis col 5 & 6 (midpoint rest)
-      [  5,  5,  5,  5,  4,  4,  4,  4,  5,  5,  5,  5,  5 ], // row 13
-      [  5,  5,  5,  5,  4,  5,  5,  4,  5,  5,  5,  5,  5 ], // row 14
-      [  5,  5,  5,  5,  4,  5,  5,  4,  5,  5,  5,  5,  5 ], // row 15 - player start
+      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+      [  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 0
+      [  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 1
+      [  5,  5,  5,  5, 11, 11,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5, 11, 11,  5,  5,  5,  5,  5,  5 ], // row 2 - oasis
+      [  5,  5,  5,  5, 11, 11,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5, 11, 11,  5,  5,  5,  5,  5,  5 ], // row 3
+      [  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 4
+      [  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 5
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 6 - road begins
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 7
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 8
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 9
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 10
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 11
+      [  5,  5, 11, 11,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5, 11, 11,  5,  5,  5,  5 ], // row 12 - oasis
+      [  5,  5, 11, 11,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5, 11, 11,  5,  5,  5,  5 ], // row 13
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 14
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 15
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 16
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 17
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 18
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 19
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 20
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 21
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 22
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 23
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4, 11, 11, 11, 11,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 24 - oasis col 10-13
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4, 11, 11, 11, 11,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 25
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 26
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 27
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 28
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 29
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 30
+      [  5,  5,  5,  5,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5 ], // row 31 - player start
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:5,  row:15 },
-      { unitId:'CORGI_HEALER',   col:6,  row:15 },
-      { unitId:'BEAGLE_ARCHER',  col:4,  row:15 },
-      { unitId:'BULLDOG_TANK',   col:7,  row:15 },
-      { unitId:'LABRADOR_SCOUT', col:5,  row:14 },
-      { unitId:'HUSKY_RIDER',    col:6,  row:14 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
+      { unitId:'CORGI_HEALER',   col:12, row:30 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:30 },
+      { unitId:'BULLDOG_TANK',   col:14, row:30 },
+      { unitId:'LABRADOR_SCOUT', col:10, row:28 },
+      { unitId:'HUSKY_RIDER',    col:12, row:28 },
     ],
 
     enemies: [
-      { defId:'SCOUT_CAT',        col:0,  row:0, level:5 },
-      { defId:'SCOUT_CAT',        col:12, row:0, level:5 },
-      { defId:'SCOUT_CAT',        col:2,  row:2, level:5 },
-      { defId:'SCOUT_CAT',        col:10, row:2, level:5 },
-      { defId:'SIAMESE_ASSASSIN', col:3,  row:3, level:5 },
-      { defId:'SIAMESE_ASSASSIN', col:8,  row:3, level:5 },
-      { defId:'PERSIAN_SORCERER', col:3,  row:1, level:5 },
-      { defId:'PERSIAN_SORCERER', col:9,  row:1, level:5 },
-      { defId:'TIGER_GENERAL',    col:5,  row:4, level:5 },
-      { defId:'SAND_CAT_KING',    col:5,  row:0, level:6 },
+      { defId:'SCOUT_CAT',        col:0,  row:0,  level:5 },
+      { defId:'SCOUT_CAT',        col:24, row:0,  level:5 },
+      { defId:'SCOUT_CAT',        col:4,  row:4,  level:5 },
+      { defId:'SCOUT_CAT',        col:20, row:4,  level:5 },
+      { defId:'SIAMESE_ASSASSIN', col:6,  row:6,  level:5 },
+      { defId:'SIAMESE_ASSASSIN', col:16, row:6,  level:5 },
+      { defId:'PERSIAN_SORCERER', col:6,  row:2,  level:5 },
+      { defId:'PERSIAN_SORCERER', col:18, row:2,  level:5 },
+      { defId:'TIGER_GENERAL',    col:10, row:8,  level:5 },
+      { defId:'SAND_CAT_KING',    col:10, row:0,  level:6 },
     ],
 
     recruitable: [
-      { unitId:'FOX_SCOUT',     col:1,  row:6, rescueMsg:'Foxy Scout joins your force!' },
-      { unitId:'TERRIER_THIEF', col:11, row:6, rescueMsg:'Terrier Thief joins your force!' },
+      { unitId:'FOX_SCOUT',     col:2,  row:12, rescueMsg:'Foxy Scout joins your force!' },
+      { unitId:'TERRIER_THIEF', col:22, row:12, rescueMsg:'Terrier Thief joins your force!' },
     ],
   },
 
@@ -378,47 +458,63 @@ const CHAPTERS = [
       { speaker: 'Persian Queen', portrait: '😺', text: "You... you cannot stop the Emperor. He will destroy you all!" },
     ],
 
-    // Castle exterior walls; interior rooms with corridor chokepoints
-    // Entry gate at bottom center (gap in outer wall row 15)
+    // Castle exterior walls; interior rooms with corridor chokepoints (doubled from 16x13)
+    // Entry gate at bottom center (gap in outer wall rows 28-31)
     mapGrid: [
-      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12
-      [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ], // row 0  - outer wall top
-      [ 10,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6, 10 ], // row 1
-      [ 10,  6, 10,  6,  6,  6,  6,  6,  6, 10,  6,  6, 10 ], // row 2  - throne pillars
-      [ 10,  4,  4,  4,  6,  6,  6,  6,  4,  4,  4,  4, 10 ], // row 3  - corridor
-      [ 10,  6, 10,  4,  6,  6,  6,  6,  4, 10,  6,  6, 10 ], // row 4
-      [ 10,  6,  6,  4,  6,  6,  6,  6,  4,  6,  6,  6, 10 ], // row 5
-      [ 10,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4, 10 ], // row 6  - main corridor
-      [ 10,  6,  6,  4,  6,  6,  6,  6,  4,  6,  6,  6, 10 ], // row 7
-      [ 10,  6, 10,  4,  6,  6,  6,  6,  4, 10,  6,  6, 10 ], // row 8
-      [ 10,  4,  4,  4,  6,  6,  6,  6,  4,  4,  4,  4, 10 ], // row 9  - corridor
-      [ 10,  6,  6,  4,  6,  6,  6,  6,  4,  6,  6,  6, 10 ], // row 10
-      [ 10,  6, 10,  4,  6,  6,  6,  6,  4, 10,  6,  6, 10 ], // row 11
-      [ 10,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4, 10 ], // row 12 - lower corridor
-      [ 10,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6, 10 ], // row 13
-      [ 10, 10, 10, 10, 10,  4,  4, 10, 10, 10, 10, 10, 10 ], // row 14 - outer wall with gate gap
-      [ 10, 10, 10, 10, 10,  4,  4, 10, 10, 10, 10, 10, 10 ], // row 15 - gate entrance (player entry)
+      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+      [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ], // row 0
+      [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ], // row 1
+      [ 10, 10,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 2
+      [ 10, 10,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 3
+      [ 10, 10,  6,  6, 10, 10,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6, 10, 10,  6,  6,  6,  6, 10, 10 ], // row 4
+      [ 10, 10,  6,  6, 10, 10,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6, 10, 10,  6,  6,  6,  6, 10, 10 ], // row 5
+      [ 10, 10,  4,  4,  4,  4,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  4,  4,  4,  4,  4,  4, 10, 10 ], // row 6
+      [ 10, 10,  4,  4,  4,  4,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  4,  4,  4,  4,  4,  4, 10, 10 ], // row 7
+      [ 10, 10,  6,  6, 10, 10,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4, 10, 10,  6,  6,  6,  6, 10, 10 ], // row 8
+      [ 10, 10,  6,  6, 10, 10,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4, 10, 10,  6,  6,  6,  6, 10, 10 ], // row 9
+      [ 10, 10,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 10
+      [ 10, 10,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 11
+      [ 10, 10,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4, 10, 10 ], // row 12 - main corridor
+      [ 10, 10,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4, 10, 10 ], // row 13
+      [ 10, 10,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 14
+      [ 10, 10,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 15
+      [ 10, 10,  6,  6, 10, 10,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4, 10, 10,  6,  6,  6,  6, 10, 10 ], // row 16
+      [ 10, 10,  6,  6, 10, 10,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4, 10, 10,  6,  6,  6,  6, 10, 10 ], // row 17
+      [ 10, 10,  4,  4,  4,  4,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  4,  4,  4,  4,  4,  4, 10, 10 ], // row 18 - corridor
+      [ 10, 10,  4,  4,  4,  4,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  4,  4,  4,  4,  4,  4, 10, 10 ], // row 19
+      [ 10, 10,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 20
+      [ 10, 10,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 21
+      [ 10, 10,  6,  6, 10, 10,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4, 10, 10,  6,  6,  6,  6, 10, 10 ], // row 22
+      [ 10, 10,  6,  6, 10, 10,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4, 10, 10,  6,  6,  6,  6, 10, 10 ], // row 23
+      [ 10, 10,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4, 10, 10 ], // row 24 - lower corridor
+      [ 10, 10,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4, 10, 10 ], // row 25
+      [ 10, 10,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 26
+      [ 10, 10,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6, 10, 10 ], // row 27
+      [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,  4,  4,  4,  4, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ], // row 28 - gate
+      [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,  4,  4,  4,  4, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ], // row 29
+      [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,  4,  4,  4,  4, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ], // row 30
+      [ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,  4,  4,  4,  4, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 ], // row 31 - gate entrance
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:5,  row:15 },
-      { unitId:'CORGI_HEALER',   col:6,  row:15 },
-      { unitId:'BEAGLE_ARCHER',  col:5,  row:14 },
-      { unitId:'BULLDOG_TANK',   col:6,  row:14 },
-      { unitId:'LABRADOR_SCOUT', col:4,  row:13 },
-      { unitId:'TERRIER_THIEF',  col:7,  row:13 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
+      { unitId:'CORGI_HEALER',   col:12, row:30 },
+      { unitId:'BEAGLE_ARCHER',  col:10, row:28 },
+      { unitId:'BULLDOG_TANK',   col:12, row:28 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:26 },
+      { unitId:'TERRIER_THIEF',  col:14, row:26 },
     ],
 
     enemies: [
-      { defId:'TIGER_GENERAL',    col:1,  row:7, level:6 },
-      { defId:'TIGER_GENERAL',    col:11, row:7, level:6 },
-      { defId:'SIAMESE_ASSASSIN', col:3,  row:6, level:6 },
-      { defId:'SIAMESE_ASSASSIN', col:8,  row:6, level:6 },
-      { defId:'PERSIAN_SORCERER', col:4,  row:4, level:6 },
-      { defId:'PERSIAN_SORCERER', col:7,  row:4, level:6 },
-      { defId:'SCOUT_CAT',        col:1,  row:9, level:6 },
-      { defId:'SCOUT_CAT',        col:11, row:9, level:6 },
-      { defId:'PERSIAN_QUEEN',    col:5,  row:1, level:7 },
+      { defId:'TIGER_GENERAL',    col:2,  row:14, level:6 },
+      { defId:'TIGER_GENERAL',    col:22, row:14, level:6 },
+      { defId:'SIAMESE_ASSASSIN', col:6,  row:12, level:6 },
+      { defId:'SIAMESE_ASSASSIN', col:16, row:12, level:6 },
+      { defId:'PERSIAN_SORCERER', col:8,  row:8,  level:6 },
+      { defId:'PERSIAN_SORCERER', col:14, row:8,  level:6 },
+      { defId:'SCOUT_CAT',        col:2,  row:18, level:6 },
+      { defId:'SCOUT_CAT',        col:22, row:18, level:6 },
+      { defId:'PERSIAN_QUEEN',    col:10, row:2,  level:7 },
     ],
 
     recruitable: [],
@@ -448,50 +544,66 @@ const CHAPTERS = [
       { speaker: 'All',          portrait: '🐾', text: "PUPPY FORCE FOREVER! WOOF WOOF WOOF!" },
     ],
 
-    // Castle platform top 4 rows; water moat rows 4-5 with bridges; mixed terrain below
+    // Castle platform top 8 rows; water moat rows 8-11 with bridges; mixed terrain below (doubled from 16x13)
     mapGrid: [
-      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12
-      [  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6 ], // row 0  - throne room (boss here)
-      [  6,  6,  6,  4,  6,  6,  6,  6,  4,  6,  6,  6,  6 ], // row 1
-      [  6,  6,  6,  4,  6,  6,  6,  6,  4,  6,  6,  6,  6 ], // row 2
-      [  2,  6,  6,  4,  4,  4,  4,  4,  4,  6,  6,  6,  2 ], // row 3  - castle edge with mountains
-      [  3,  3,  3,  9,  3,  3,  3,  3,  3,  9,  3,  3,  3 ], // row 4  - WATER MOAT + bridges col 3 & 9
-      [  3,  3,  3,  9,  3,  3,  3,  3,  3,  9,  3,  3,  3 ], // row 5  - MOAT (2 wide)
-      [  2,  2,  0,  4,  1,  1,  1,  1,  4,  0,  2,  2,  2 ], // row 6  - mountains flank, forest center
-      [  2,  0,  0,  4,  1,  1,  1,  1,  4,  0,  0,  2,  2 ], // row 7
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  2 ], // row 8
-      [  0,  0,  0,  4,  0,  0,  0,  0,  4,  0,  0,  0,  0 ], // row 9
-      [  1,  1,  0,  4,  0,  0,  0,  0,  4,  0,  1,  1,  0 ], // row 10 - forest flanks
-      [  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  0 ], // row 11
-      [  0,  1,  1,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0 ], // row 12
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 13
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 14
-      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 15 - player start
+      // col: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+      [  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6 ], // row 0
+      [  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6 ], // row 1
+      [  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6 ], // row 2
+      [  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6 ], // row 3
+      [  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6 ], // row 4
+      [  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6,  4,  4,  6,  6,  6,  6,  6,  6,  6,  6 ], // row 5
+      [  2,  2,  6,  6,  6,  6,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  6,  6,  6,  6,  6,  6,  2,  2 ], // row 6
+      [  2,  2,  6,  6,  6,  6,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  6,  6,  6,  6,  6,  6,  2,  2 ], // row 7
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 8 - MOAT
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 9
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 10
+      [  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  9,  9,  3,  3,  3,  3,  3,  3 ], // row 11
+      [  2,  2,  2,  2,  0,  0,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  0,  0,  2,  2,  2,  2,  2,  2 ], // row 12
+      [  2,  2,  2,  2,  0,  0,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  0,  0,  2,  2,  2,  2,  2,  2 ], // row 13
+      [  2,  2,  0,  0,  0,  0,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  0,  0,  0,  0,  2,  2,  2,  2 ], // row 14
+      [  2,  2,  0,  0,  0,  0,  4,  4,  1,  1,  1,  1,  1,  1,  1,  1,  4,  4,  0,  0,  0,  0,  2,  2,  2,  2 ], // row 15
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  2,  2 ], // row 16
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  2,  2 ], // row 17
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 18
+      [  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 19
+      [  1,  1,  1,  1,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  1,  1,  1,  1,  0,  0 ], // row 20
+      [  1,  1,  1,  1,  0,  0,  4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  0,  0,  1,  1,  1,  1,  0,  0 ], // row 21
+      [  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0 ], // row 22
+      [  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0 ], // row 23
+      [  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 24
+      [  0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  0,  0,  0,  0 ], // row 25
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 26
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 27
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 28
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 29
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 30
+      [  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 ], // row 31 - player start
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:5,  row:15 },
-      { unitId:'CORGI_HEALER',   col:6,  row:15 },
-      { unitId:'BEAGLE_ARCHER',  col:4,  row:15 },
-      { unitId:'BULLDOG_TANK',   col:7,  row:15 },
-      { unitId:'LABRADOR_SCOUT', col:3,  row:15 },
-      { unitId:'POODLE_MAGE',    col:8,  row:15 },
-      { unitId:'HUSKY_RIDER',    col:4,  row:14 },
-      { unitId:'TERRIER_THIEF',  col:7,  row:14 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:30 },
+      { unitId:'CORGI_HEALER',   col:12, row:30 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:30 },
+      { unitId:'BULLDOG_TANK',   col:14, row:30 },
+      { unitId:'LABRADOR_SCOUT', col:6,  row:30 },
+      { unitId:'POODLE_MAGE',    col:16, row:30 },
+      { unitId:'HUSKY_RIDER',    col:8,  row:28 },
+      { unitId:'TERRIER_THIEF',  col:14, row:28 },
     ],
 
     enemies: [
-      { defId:'TIGER_GENERAL',    col:3,  row:3, level:8 },
-      { defId:'TIGER_GENERAL',    col:8,  row:3, level:8 },
-      { defId:'SIAMESE_ASSASSIN', col:2,  row:4, level:8 },
-      { defId:'SIAMESE_ASSASSIN', col:10, row:4, level:8 },
-      { defId:'PERSIAN_SORCERER', col:3,  row:1, level:8 },
-      { defId:'PERSIAN_SORCERER', col:9,  row:1, level:8 },
-      { defId:'SIAMESE_ASSASSIN', col:1,  row:6, level:8 },
-      { defId:'SIAMESE_ASSASSIN', col:11, row:6, level:8 },
-      { defId:'TIGER_GENERAL',    col:4,  row:3, level:8 },
-      { defId:'TIGER_GENERAL',    col:7,  row:3, level:8 },
-      { defId:'CAT_EMPEROR',      col:6,  row:0, level:10 },
+      { defId:'TIGER_GENERAL',    col:6,  row:6,  level:8 },
+      { defId:'TIGER_GENERAL',    col:16, row:6,  level:8 },
+      { defId:'SIAMESE_ASSASSIN', col:4,  row:8,  level:8 },
+      { defId:'SIAMESE_ASSASSIN', col:20, row:8,  level:8 },
+      { defId:'PERSIAN_SORCERER', col:6,  row:2,  level:8 },
+      { defId:'PERSIAN_SORCERER', col:18, row:2,  level:8 },
+      { defId:'SIAMESE_ASSASSIN', col:2,  row:12, level:8 },
+      { defId:'SIAMESE_ASSASSIN', col:22, row:12, level:8 },
+      { defId:'TIGER_GENERAL',    col:8,  row:6,  level:8 },
+      { defId:'TIGER_GENERAL',    col:14, row:6,  level:8 },
+      { defId:'CAT_EMPEROR',      col:12, row:0,  level:10 },
     ],
 
     recruitable: [],
