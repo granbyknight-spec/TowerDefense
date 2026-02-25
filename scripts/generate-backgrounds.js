@@ -12,31 +12,31 @@ const POLL_MS    = 8000;
 const TIMEOUT_MS = 600000;
 const OUT_DIR    = path.join(__dirname, '..', 'assets', 'backgrounds');
 
-const STYLE = 'anime landscape, jRPG battle background, Fire Emblem style, detailed environment, soft lighting, vibrant colors, no characters, no text, tactical RPG battlefield, ';
+const STYLE = 'anime tactical RPG map, overhead top-down aerial view, Fire Emblem GBA map style, isometric battlefield texture, detailed terrain top view, soft lighting, vibrant colors, no characters, no text, no UI, ';
 const NEG_BASE = 'characters, people, animals, cats, dogs, text, watermark, signature, ui elements, hud, blurry, low quality, bad anatomy, cropped, jpeg artifacts, deformed';
 
 const CHAPTERS = [
   { id: 1, file: 'chapter_1', model: 'Anything Diffusion',
-    prompt: STYLE + 'wide isometric countryside view, grassy meadow, dirt roads crossing through village center, thatched-roof wooden houses, stone well, garden fences, tall oak trees at field edges, rolling green hills, smoke rising in background sky, dawn golden hour lighting, warm amber and green palette, peaceful village under siege atmosphere',
-    neg: NEG_BASE + ', urban, cars, futuristic, dark, gloomy' },
+    prompt: STYLE + 'bird\'s eye top-down view of village countryside, grassy meadow fields viewed from directly above, dirt crossroads visible below, small thatched-roof houses seen from top, garden fences and stone walls, tall oak tree canopies, rolling green hills texture, warm amber and green color palette, peaceful village under siege, tactical map texture',
+    neg: NEG_BASE + ', urban, cars, futuristic, dark, gloomy, horizon, sky, perspective, 3d' },
   { id: 2, file: 'chapter_2', model: 'Anything Diffusion',
-    prompt: STYLE + 'ancient dense forest, enormous oak and pine trees, twisted roots, thick canopy overhead, shafts of dappled light through leaves, winding dirt path disappearing into darkness, low ground mist, ferns and undergrowth, mossy stones, dusk lighting, blue-green shadow palette with gold light rays, mysterious atmospheric forest',
-    neg: NEG_BASE + ', open fields, bright sunny, urban, buildings' },
+    prompt: STYLE + 'bird\'s eye top-down aerial view of ancient dense forest, tree canopy viewed from above, green forest treetops covering most of map, winding dirt path visible through gaps in canopy, low ground mist between trees, mossy stones on forest floor, dusk lighting through leaves, blue-green and gold palette, mysterious forest map texture',
+    neg: NEG_BASE + ', open fields, bright sunny, urban, buildings, ground level, horizon, sky' },
   { id: 3, file: 'chapter_3', model: 'Deliberate',
-    prompt: STYLE + 'high mountain pass, alpine scenery, snow-covered rocky peaks, dramatic cliff faces, narrow stone path winding upward, white snow patches on rock ledges, distant mountain range horizon, crisp cold winter atmosphere, grey-blue and white palette, pale sunlight on snow, sparse pine trees on lower slopes, rocky outcrops, epic vertical scale',
-    neg: NEG_BASE + ', desert, tropical, warm colors, green jungle' },
+    prompt: STYLE + 'bird\'s eye top-down view of snowy mountain pass, aerial view of snow-covered rocky terrain, white snow patches on grey rock, narrow stone path winding through mountain ridge seen from above, sparse pine tree tops visible below, crisp cold winter terrain texture, grey-blue and white palette, icy rocky ground texture, tactical map overhead',
+    neg: NEG_BASE + ', desert, tropical, warm colors, green jungle, ground level, horizon, sky, perspective' },
   { id: 4, file: 'chapter_4', model: 'Anything Diffusion',
-    prompt: STYLE + 'wide river valley view, broad rushing river cutting through green landscape, grassy riverbanks, wooden plank bridges spanning the water, forest edges on both shores, cloud reflections shimmering on river surface, sparkling clear water, bright midday sunlight, lush green and blue palette, tall reeds at water edge, gentle current',
-    neg: NEG_BASE + ', desert, snow, mountains, castle, dark, stormy' },
+    prompt: STYLE + 'bird\'s eye top-down aerial view of river crossing, broad blue river seen from directly above, grassy riverbanks on both sides, wooden plank bridge spanning the water viewed from top, forest edges on both shores visible as treetops, cloud reflections on river surface, lush green and blue map texture, midday lighting, tactical overhead battlefield',
+    neg: NEG_BASE + ', desert, snow, mountains, castle, dark, stormy, ground level, horizon, sky' },
   { id: 5, file: 'chapter_5', model: 'Deliberate',
-    prompt: STYLE + 'vast golden desert landscape, rolling sand dunes stretching to horizon, dry sandy road winding through dunes, palm tree oasis with turquoise water pool, ancient sandstone ruins and columns, harsh noon sunlight, shimmering heat haze on horizon, amber gold and burnt orange palette, deep blue sky, bleached rock formations',
-    neg: NEG_BASE + ', forest, snow, mountains, dark, night, urban' },
+    prompt: STYLE + 'bird\'s eye top-down aerial view of desert landscape, vast sandy dunes viewed from directly above, dry sandy road winding through dunes seen from top, circular palm tree oasis with turquoise water pool visible below, ancient sandstone ruins seen from overhead, amber gold and burnt orange sand texture, deep shadows in dune valleys, desert tactical map',
+    neg: NEG_BASE + ', forest, snow, mountains, dark, night, urban, ground level, horizon, sky, perspective' },
   { id: 6, file: 'chapter_6', model: 'Deliberate',
-    prompt: STYLE + 'dark stone fortress interior, massive castle corridors and halls, grey stone-block walls, iron gates and portcullises, burning wall torches casting warm orange light, narrow slit windows, battlements visible beyond, imposing stone pillars, dark purple and grey palette, dramatic torch shadows, gothic architecture, stone-tiled floor',
-    neg: NEG_BASE + ', outdoor, nature, desert, forest, bright sunlight, cheerful' },
+    prompt: STYLE + 'bird\'s eye top-down view of dark stone fortress interior, castle floor plan seen from directly above, grey stone-block walls and corridors viewed from top, stone-tiled floor with iron gate outlines, burning torches casting warm orange glow on stone floor, castle room layout visible from overhead, dark purple and grey stone texture, gothic castle tactical map',
+    neg: NEG_BASE + ', outdoor, nature, desert, forest, bright sunlight, cheerful, ground level, horizon, perspective' },
   { id: 7, file: 'chapter_7', model: 'Anything Diffusion',
-    prompt: STYLE + 'epic final boss throne room, vast ancient throne room with towering stone columns, ornate golden throne on raised dais, magical moat channels with glowing water, giant stained-glass windows depicting forests mountains rivers desert, stone floor with mosaic patterns, magical floating lights, dramatic dark purple and gold palette, ethereal light shafts from above, overwhelming grand scale',
-    neg: NEG_BASE + ', small scale, mundane, plain, outdoor, photorealistic' },
+    prompt: STYLE + 'bird\'s eye top-down view of epic throne room and castle grounds, aerial overhead view of final castle battlefield, ornate stone-tiled throne room floor seen from above, magical glowing moat channels forming cross pattern, castle courtyard stone floor texture, mosaic patterns on floor, magical floating lights casting purple and gold glow, grand castle tactical map seen from directly above',
+    neg: NEG_BASE + ', small scale, mundane, plain, outdoor, photorealistic, ground level, horizon, sky, perspective' },
   { id: 'title_bg', file: 'title_bg', model: 'Anything Diffusion',
     prompt: STYLE + 'atmospheric night sky anime landscape, ancient castle silhouette on distant hill, moonlit battlefield clearing, dark rolling hills with pine tree silhouettes, stars and moon, drifting mist near ground, faint camp lights in valley, deep midnight blue and navy palette, very dark and moody, no foreground subjects, simple open composition for text overlay, cinematic wide shot, JRPG title screen atmosphere',
     neg: NEG_BASE + ', bright day, cheerful, crowded, busy details, foreground clutter, high contrast, cats, dogs, characters' },
@@ -98,9 +98,11 @@ async function generateChapter(ch) {
   const payload = {
     prompt: ch.prompt + ' ### ' + ch.neg,
     models: [ch.model, 'Anything Diffusion', 'Deliberate'],
-    params: { 
-      width:  ch.id === 'title_bg' ? 512 : 768,
-      height: ch.id === 'title_bg' ? 768 : (ch.id === 'title_art' ? 384 : 512),
+    params: {
+      // Chapter maps are portrait 26×32 tiles (0.8125 ratio) → 512×640 fits perfectly.
+      // Title bg is portrait 512×768; title art is landscape 768×384.
+      width:  ch.id === 'title_bg' ? 512 : (ch.id === 'title_art' ? 768 : 512),
+      height: ch.id === 'title_bg' ? 768 : (ch.id === 'title_art' ? 384 : 640),
       steps: 35, cfg_scale: 7, sampler_name: 'k_euler', karras: true, n: 2
     },
     nsfw: false, slow_workers: true
