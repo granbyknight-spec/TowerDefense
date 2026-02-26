@@ -771,8 +771,8 @@ class BattleScene extends Phaser.Scene {
         if (!this._movCostTexts) this._movCostTexts = [];
         this._movCostTexts.push(
           this.add.text(x + TILE/2, y + TILE/2, cost.toString(),
-            { fontSize: '9px', color: '#ffffff', alpha: 0.7 })
-            .setOrigin(0.5).setDepth(4)
+            { fontSize: '9px', color: '#ffffff' })
+            .setAlpha(0.7).setOrigin(0.5).setDepth(4)
         );
       }
     });
@@ -919,7 +919,8 @@ class BattleScene extends Phaser.Scene {
 
     // m1: Show damage preview briefly before combat resolves
     const terrainDef = TERRAIN[this.mapGrid[target.row]?.[target.col]]?.def || 0;
-    this._getUI()?.showDamagePreview(this._selected, target, terrainDef);
+    const effectiveness = this._weaponEffectiveness(this._selected, target);
+    this._getUI()?.showDamagePreview(this._selected, target, terrainDef, effectiveness);
 
     this._executeCombat(this._selected, target, () => {
       const unit = this._selected;
@@ -1078,6 +1079,7 @@ class BattleScene extends Phaser.Scene {
     unit.row = this._preMovPos.row;
     unit.hasMoved = false;
     this._preMovPos = null;
+    this._pendingSkill = null;
     this._updateSpritePos(unit);
     this._selectUnit(unit);
   }
@@ -1104,10 +1106,11 @@ class BattleScene extends Phaser.Scene {
       }
       const isLastStep = (step === path.length - 1);
       const { col, row } = path[step++];
-      if (unit.team === 'enemy') {
+      // Camera pan: only on last step to avoid jitter from per-step panning
+      if (unit.team === 'enemy' && isLastStep) {
         const wx = GRID_X + col * TILE + TILE/2;
         const wy = GRID_Y + row * TILE + TILE/2;
-        this.cameras.main.pan(wx, wy, 250, 'Sine.easeOut', false);
+        this.cameras.main.pan(wx, wy, 400, 'Sine.easeOut', false);
       }
       const { x, y } = this._tileCenter(col, row);
       const hpY  = y + r + 3;
@@ -1341,6 +1344,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   onActionCancel() {
+    if (this._state !== BS.UNIT_MOVED) return;
     this._undoMove();
   }
 
@@ -1521,7 +1525,7 @@ class BattleScene extends Phaser.Scene {
                     } else {
                       this._floatText(attacker.col, attacker.row, `-${cDmg}`, 0xff8844);
                     }
-                    const expGain2 = Math.floor(cDmg / 3);
+                    const expGain2 = 10 + Math.floor(cDmg / 2);
                     const leveled2 = defender.gainExp(expGain2);
                     if (leveled2) this._onLevelUp(defender);
 

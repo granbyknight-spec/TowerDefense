@@ -317,7 +317,6 @@ class UIScene extends Phaser.Scene {
     ];
 
     this._actionBtns = {};
-    const totalBtns = btnData.length;
     btnData.forEach((b, i) => {
       const x = i * btnW;
 
@@ -1254,7 +1253,7 @@ class UIScene extends Phaser.Scene {
   showDamagePreview(attacker, defender, terrainDef, effectiveness = 1.0) {
     const agiDiff  = attacker.agi - defender.agi;
     const hitPct   = Math.min(99, Math.max(55, 88 + agiDiff * 2));
-    const critPct  = Math.min(30, Math.max(2, 5 + Math.max(0, agiDiff)));
+    const critPct  = Math.min(30, Math.max(2, 8 + Math.max(0, agiDiff)));
     const rawDmg   = Math.max(1, attacker.atk - (defender.def + (terrainDef || 0)));
     const minDmg   = rawDmg;
     const maxDmg   = rawDmg + Math.floor(attacker.atk * 0.15);
