@@ -126,6 +126,7 @@ class BattleScene extends Phaser.Scene {
     this._levelUps  = [];      // collected during battle
     this._newUnits  = [];      // newly recruited
     this._battleEnded = false; // latch: prevents _endBattle from firing twice
+    this._battleGen   = (this._battleGen || 0) + 1; // generation counter for setTimeout safety
     this.turnNumber = 1;
     this.playerTurn = true;
   }
@@ -581,7 +582,7 @@ class BattleScene extends Phaser.Scene {
       const naturalW = (this.textures.getFrame(sprKey) || { realWidth: 64 }).realWidth;
       sprScale = TILE / naturalW;
     } else {
-      const spriteSize = (r * 2 - 4); // leave 2px padding inside ring
+      const spriteSize = (r * 2 + 2); // fill ~94% of ring (ringR diameter - 2)
       sprScale = spriteSize / 64;
     }
 
@@ -589,7 +590,7 @@ class BattleScene extends Phaser.Scene {
     if (this.textures.exists(sprKey)) {
       sprite = this.add.image(x, y - 1, sprKey).setOrigin(0.5).setScale(sprScale);
     } else {
-      sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: sz === 2 ? '40px' : '22px' }).setOrigin(0.5);
+      sprite = this.add.text(x, y - 2, unit.emoji, { fontSize: sz === 2 ? '40px' : '26px' }).setOrigin(0.5);
     }
 
     // 1x1 boss units render 60% larger; 2x2 bosses already fill their footprint via sprScale
@@ -1587,8 +1588,12 @@ class BattleScene extends Phaser.Scene {
 
   _killUnit(unit, onDone) {
     AudioManager.play(this, 'unit_death');
+    const deathTargets = [unit.bossGlow, unit.spriteBg, unit.sprite, unit.hpBar, unit.hpBarBg].filter(Boolean);
+    // Kill any pre-existing tweens on these targets (e.g. boss glow repeat:-1)
+    // to prevent them from interfering with the death tween's onComplete.
+    deathTargets.forEach(t => this.tweens.killTweensOf(t));
     this.tweens.add({
-      targets: [unit.bossGlow, unit.spriteBg, unit.sprite, unit.hpBar, unit.hpBarBg].filter(Boolean),
+      targets: deathTargets,
       alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 400,
       ease: 'Power2',
       onComplete: () => {
@@ -1732,6 +1737,8 @@ class BattleScene extends Phaser.Scene {
       this._setState(BS.DEFEAT);
       this._getUI()?.showMessage('All units defeated!');
       this.time.delayedCall(1500, () => this._endBattle(false));
+      const gen = this._battleGen;
+      setTimeout(() => { if (this._battleGen === gen) this._endBattle(false); }, 2000); // safety net
       return;
     }
 
@@ -1758,6 +1765,11 @@ class BattleScene extends Phaser.Scene {
     // no in-battle dialogue loop so the screen never gets stuck.
     this._getUI()?.showMessage('Victory! 🏆');
     this.time.delayedCall(1500, () => this._endBattle(true));
+    // Safety net: if the Phaser timer fails to fire (e.g. scene clock
+    // hiccup), use a raw setTimeout as a fallback so the game never
+    // gets permanently stuck on the victory banner.
+    const gen = this._battleGen;
+    setTimeout(() => { if (this._battleGen === gen) this._endBattle(true); }, 2000);
   }
 
   _endBattle(victory) {
