@@ -40,6 +40,7 @@ class UIScene extends Phaser.Scene {
     this._buildDialogueBox();
     this._buildEndTurnBtn();
     this._buildMuteBtn();
+    this._buildDangerBtn();
     this._buildMessage();
     this._buildDamagePreview();
     // Initialize display
@@ -499,6 +500,61 @@ class UIScene extends Phaser.Scene {
     });
 
     this._muteBtn = { bg, txt, zone };
+  }
+
+
+  // ==========================================================================
+  // DANGER ZONE TOGGLE BUTTON — compact, left of mute button
+  // ==========================================================================
+
+  _buildDangerBtn() {
+    const BAR_Y = 682;
+    const BAR_H = 38;
+    const w = 52, h = 30;
+    // Sit just left of the MUTE button
+    const muteX = GAME_W - 66 - 4 - 30 - 4; // 376
+    const x = muteX - w - 4;                  // 320
+    const y = BAR_Y - h - 4;                  // 648
+
+    this._dangerOn = false;
+
+    const bg = this.add.graphics();
+    const drawBg = (on) => {
+      bg.clear();
+      bg.fillStyle(on ? 0x661111 : 0x113344, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+      bg.lineStyle(1, on ? 0xff4444 : 0x2266aa, 0.9);
+      bg.strokeRoundedRect(x, y, w, h, 6);
+    };
+    drawBg(false);
+
+    const txt = this.add.text(x + w / 2, y + h / 2, '⚠ DANGER', {
+      fontSize: '10px', color: '#ff8888',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+
+    const zone = this.add.zone(x + w / 2, y + h / 2, w, h).setInteractive({ useHandCursor: true });
+    zone.on('pointerover', () => {
+      bg.clear();
+      bg.fillStyle(this._dangerOn ? 0x881111 : 0x1a3a55, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+      bg.lineStyle(1, this._dangerOn ? 0xff6666 : 0x3388cc, 0.9);
+      bg.strokeRoundedRect(x, y, w, h, 6);
+    });
+    zone.on('pointerout', () => {
+      drawBg(this._dangerOn);
+    });
+    zone.on('pointerdown', () => {
+      this._dangerOn = !this._dangerOn;
+      drawBg(this._dangerOn);
+      txt.setColor(this._dangerOn ? '#ffaaaa' : '#ff8888');
+      this.tweens.add({ targets: txt, scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true });
+      const bs = this.scene.get('BattleScene');
+      if (bs && typeof bs.toggleDangerZone === 'function') bs.toggleDangerZone();
+    });
+
+    this._dangerBtn = { bg, txt, zone };
   }
 
   // ==========================================================================

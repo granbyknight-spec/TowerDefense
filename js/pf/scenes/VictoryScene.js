@@ -210,8 +210,25 @@ class VictoryScene extends Phaser.Scene {
       this.tweens.add({ targets:t, y:160, duration:400+i*50, yoyo:true, repeat:-1 });
     });
 
-    // Level up summary
+    // M2: Fallen unit indicator — build a name→hp map from serialized roster
+    const _rosterEntries = (this.saveData && this.saveData.roster) ? this.saveData.roster : [];
+    const _hpByName = {};
+    _rosterEntries.forEach(r => { _hpByName[r.name] = r.hp; });
+    const fallen = _rosterEntries.filter(r => r.hp <= 1);
+
+    // Casualties summary line
     let yOff = 222;
+    if (fallen.length > 0) {
+      this.add.text(W / 2, yOff,
+        `${fallen.length} unit${fallen.length > 1 ? 's' : ''} fell in battle (revived)`, {
+        fontSize: '11px', color: '#ff6644',
+        fontFamily: 'Nunito, Arial, sans-serif',
+        fontStyle: 'italic',
+      }).setOrigin(0.5).setDepth(50);
+      yOff += 20;
+    }
+
+    // Level up summary
     if (this.levelUps.length > 0) {
       this.add.text(W/2, yOff, '⬆ Level Ups:', {
         fontSize:'16px', color:'#ffcc44',
@@ -221,11 +238,20 @@ class VictoryScene extends Phaser.Scene {
       }).setOrigin(0.5);
       yOff += 26;
       this.levelUps.slice(0, 5).forEach(lu => {
-        this.add.text(W/2, yOff, `${lu.emoji} ${lu.name}: Lv ${lu.newLevel}`, {
+        const luText = this.add.text(W/2, yOff, `${lu.emoji} ${lu.name}: Lv ${lu.newLevel}`, {
           fontSize:'15px', color:'#ccdeff',
           fontFamily:'Nunito, Courier New, monospace',
           fontStyle:'bold',
         }).setOrigin(0.5);
+        // M2: KO'd indicator for units revived from death (hp === 1 proxy)
+        if (_hpByName[lu.name] !== undefined && _hpByName[lu.name] <= 1) {
+          const lx = luText.x + luText.width / 2;
+          this.add.text(lx + 6, yOff, "KO'd", {
+            fontSize: '9px', color: '#ff4444',
+            fontFamily: 'Nunito, Arial, sans-serif',
+            fontStyle: 'bold',
+          }).setOrigin(0, 0.5).setDepth(50);
+        }
         yOff += 22;
       });
       yOff += 10;
