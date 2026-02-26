@@ -61,7 +61,7 @@ class UIScene extends Phaser.Scene {
 
   _buildPanel() {
     const FP = this._FP = {
-      x: 264, y: 8, w: 210, h: 124,
+      x: 264, y: 8, w: 210, h: 138,
     };
 
     // Semi-transparent dark background + gold border — redrawn in showUnitInfo
@@ -137,11 +137,27 @@ class UIScene extends Phaser.Scene {
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(1, 0.5).setVisible(false);
 
+    // EXP label
+    this._expLabel = this.add.text(FP.x + 6, FP.y + 92, 'EXP', {
+      fontSize: '10px', color: '#ffdd44',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(0, 0.5).setVisible(false);
+
+    // EXP bars (bg / fg drawn in showUnitInfo)
+    this._expBarBg = this.add.graphics().setVisible(false);
+    this._expBarFg = this.add.graphics().setVisible(false);
+
+    // EXP fraction
+    this._expTxt = this.add.text(FP.x + FP.w - 6, FP.y + 92, '', {
+      fontSize: '10px', color: '#ffdd44', stroke: '#000000', strokeThickness: 2,
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(1, 0.5).setVisible(false);
+
     // Skill chips — created dynamically, tracked in array
     this._skillChips = [];
 
     // Skill text (hidden — kept for API compatibility / click to show skill popup)
-    this._skillsTxt = this.add.text(FP.x + 6, FP.y + 84, '', {
+    this._skillsTxt = this.add.text(FP.x + 6, FP.y + 106, '', {
       fontSize: '10px', color: '#99aacc',
       fontFamily: 'Nunito, Arial, sans-serif',
     }).setOrigin(0, 0).setVisible(false);
@@ -151,7 +167,7 @@ class UIScene extends Phaser.Scene {
     });
 
     // Veteran battle history line — shown inside floating panel
-    this._unitVetTxt = this.add.text(FP.x + 6, FP.y + 96, '', {
+    this._unitVetTxt = this.add.text(FP.x + 6, FP.y + 120, '', {
       fontSize: '9px', color: '#99aabb',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(0, 0).setVisible(false);
@@ -288,7 +304,7 @@ class UIScene extends Phaser.Scene {
     const W = GAME_W;
     const BAR_Y = 682;
     const BAR_H = 38;
-    const btnW = W / 4;          // 120 px each (480/4)
+    const btnW = W / 5;          //  96 px each (480/5)
     const btnH = BAR_H;          // full bar height
     const btnY = BAR_Y;
 
@@ -297,9 +313,11 @@ class UIScene extends Phaser.Scene {
       { key: 'mag',  label: 'Skill',  color: 0x223355, hi: 0x335588 },
       { key: 'item', label: 'Item',   color: 0x223355, hi: 0x335588 },
       { key: 'wait', label: 'Wait',   color: 0x223355, hi: 0x335588 },
+      { key: 'undo', label: '↩ Undo', color: 0x336688, hi: 0x4488aa },
     ];
 
     this._actionBtns = {};
+    const totalBtns = btnData.length;
     btnData.forEach((b, i) => {
       const x = i * btnW;
 
@@ -363,6 +381,7 @@ class UIScene extends Phaser.Scene {
         break;
       }
       case 'wait': bs.onActionWait();   break;
+      case 'undo': bs.onActionCancel?.();  break;
     }
     // Menu visibility is managed entirely by BattleScene action methods —
     // do NOT auto-hide here, so a failed action (e.g. no targets) keeps the
@@ -640,6 +659,30 @@ class UIScene extends Phaser.Scene {
       this._mpTxt?.setVisible(false);
     }
 
+    // EXP  -----------------------------------------------------------------
+    const expBarY = FP.y + 86;
+    const expVal  = unit.team === 'player' ? (unit.exp || 0) : -1;
+
+    this._expBarBg?.clear();
+    this._expBarFg?.clear();
+
+    if (expVal >= 0) {
+      const expRatio = Math.min(1, expVal / 100);
+      this._expLabel?.setPosition(FP.x + 6, FP.y + 92).setVisible(true);
+      this._expBarBg?.fillStyle(0x333333, 1);
+      this._expBarBg?.fillRoundedRect(barX, expBarY, barW, 8, 3);
+      this._expBarBg?.setVisible(true);
+      this._expBarFg?.fillStyle(0xddcc00, 1);
+      this._expBarFg?.fillRoundedRect(barX, expBarY, Math.max(2, barW * expRatio), 8, 3);
+      this._expBarFg?.setVisible(true);
+      this._expTxt?.setText(`${expVal}/100`).setPosition(FP.x + FP.w - 6, FP.y + 92).setVisible(true);
+    } else {
+      this._expLabel?.setVisible(false);
+      this._expBarBg?.setVisible(false);
+      this._expBarFg?.setVisible(false);
+      this._expTxt?.setVisible(false);
+    }
+
     // Status effect icons  ------------------------------------------------
     const icons = [];
     if (unit.guardActive)  icons.push({ icon: '🛡', label: ' Guard', color: '#88aaff' });
@@ -664,7 +707,7 @@ class UIScene extends Phaser.Scene {
     this._unitVetTxt
       ?.setText(vetStr)
       .setStyle({ color: vetColor })
-      .setPosition(FP.x + 6, FP.y + 96)
+      .setPosition(FP.x + 6, FP.y + 120)
       .setVisible(true);
 
     // Skill chips  --------------------------------------------------------
@@ -694,6 +737,10 @@ class UIScene extends Phaser.Scene {
     this._mpBarBg?.clear().setVisible(false);
     this._mpBarFg?.clear().setVisible(false);
     this._mpTxt?.setVisible(false);
+    this._expLabel?.setVisible(false);
+    this._expBarBg?.clear().setVisible(false);
+    this._expBarFg?.clear().setVisible(false);
+    this._expTxt?.setVisible(false);
     this._statusIcon1?.setVisible(false);
     this._statusIcon2?.setVisible(false);
     this._unitVetTxt?.setVisible(false);
@@ -716,7 +763,7 @@ class UIScene extends Phaser.Scene {
 
     const FP = this._FP;
     let chipX = FP.x + 6;
-    const chipY = FP.y + 84;
+    const chipY = FP.y + 106;
     const chipH = 14;
     const maxRight = FP.x + FP.w - 6;
 
@@ -789,6 +836,15 @@ class UIScene extends Phaser.Scene {
       itmBtn.txt.setAlpha(hasItem ? 1 : 0.4);
       if (hasItem) itmBtn.zone.setInteractive({ useHandCursor: true });
       else itmBtn.zone.disableInteractive();
+    }
+
+    const undoBtn = this._actionBtns['undo'];
+    // Show Undo only when unit has moved but hasn't committed an action yet
+    const canUndo = unit.hasMoved && !unit.hasActed;
+    if (undoBtn) {
+      undoBtn.txt.setAlpha(canUndo ? 1 : 0.4);
+      if (canUndo) undoBtn.zone.setInteractive({ useHandCursor: true });
+      else undoBtn.zone.disableInteractive();
     }
   }
 
@@ -1195,11 +1251,20 @@ class UIScene extends Phaser.Scene {
     this._dmgPreviewPanH = panH;
   }
 
-  showDamagePreview(attacker, defender, terrainDef) {
-    const rawDmg = Math.max(0, attacker.atk - (defender.def + (terrainDef || 0)));
-    const agiDiff = attacker.agi - defender.agi;
-    const hitPct = Math.min(99, Math.max(50, 80 + agiDiff * 3));
+  showDamagePreview(attacker, defender, terrainDef, effectiveness = 1.0) {
+    const agiDiff  = attacker.agi - defender.agi;
+    const hitPct   = Math.min(99, Math.max(55, 88 + agiDiff * 2));
+    const critPct  = Math.min(30, Math.max(2, 5 + Math.max(0, agiDiff)));
+    const rawDmg   = Math.max(1, attacker.atk - (defender.def + (terrainDef || 0)));
+    const minDmg   = rawDmg;
+    const maxDmg   = rawDmg + Math.floor(attacker.atk * 0.15);
+    const willDouble = agiDiff >= 7;
     const counterDmg = Math.max(0, defender.atk - attacker.def);
+
+    // Weapon triangle prefix
+    let prefix = '';
+    if (effectiveness > 1.0)      prefix = '▲ ';  // green triangle up
+    else if (effectiveness < 1.0) prefix = '▼ ';  // red triangle down
 
     // Redraw background (in case it was previously hidden/cleared)
     const { _dmgPreviewPanX: panX, _dmgPreviewPanY: panY,
@@ -1211,7 +1276,10 @@ class UIScene extends Phaser.Scene {
     this._dmgPreviewBg.strokeRoundedRect(panX, panY, panW, panH, 7);
     this._dmgPreviewBg.setVisible(true);
 
-    this._dmgPreviewLine1.setText(`EST DMG: ${rawDmg}   HIT: ${hitPct}%`).setVisible(true);
+    // Line 1 — colour the prefix based on effectiveness
+    const line1 = `${prefix}EST: ${minDmg}-${maxDmg}  HIT: ${hitPct}%  CRIT: ${critPct}%${willDouble ? '  ×2' : ''}`;
+    const line1Color = effectiveness > 1.0 ? '#88ff88' : effectiveness < 1.0 ? '#ff8888' : '#ffcc88';
+    this._dmgPreviewLine1.setText(line1).setStyle({ color: line1Color }).setVisible(true);
 
     if (counterDmg > 0) {
       this._dmgPreviewLine2.setText(`COUNTER: ${counterDmg}`).setVisible(true);
