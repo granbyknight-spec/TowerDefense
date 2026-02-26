@@ -1219,7 +1219,7 @@ class UIScene extends Phaser.Scene {
     // Panel sits above the unit info area / action bar, centered
     // Target Y: just above the action bar (682), with padding
     const panW = 240;
-    const panH = 44;
+    const panH = 88;
     const panX = (W - panW) / 2;  // centered: 120
     const panY = 682 - panH - 44; // sits above end-turn / mute buttons area
 
@@ -1244,21 +1244,36 @@ class UIScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5, 0).setVisible(false);
 
+    this._dmgPreviewLine3 = this.add.text(W / 2, panY + 44, '', {
+      fontSize: '12px', color: '#88ccff',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+      align: 'center',
+    }).setOrigin(0.5, 0).setVisible(false);
+
+    this._dmgPreviewLine4 = this.add.text(W / 2, panY + 60, '', {
+      fontSize: '11px', color: '#aaaaaa',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      align: 'center',
+    }).setOrigin(0.5, 0).setVisible(false);
+
     this._dmgPreviewPanX = panX;
     this._dmgPreviewPanY = panY;
     this._dmgPreviewPanW = panW;
     this._dmgPreviewPanH = panH;
   }
 
-  showDamagePreview(attacker, defender, terrainDef, effectiveness = 1.0) {
+  showDamagePreview(attacker, defender, terrainDef, effectiveness = 1.0, options = {}) {
     const agiDiff  = attacker.agi - defender.agi;
-    const hitPct   = Math.min(99, Math.max(55, 88 + agiDiff * 2));
-    const critPct  = Math.min(30, Math.max(2, 8 + Math.max(0, agiDiff)));
+    const hitPct   = Phaser.Math.Clamp(88 + agiDiff * 2, 55, 99);
+    const critPct  = Phaser.Math.Clamp(8 + Math.max(0, agiDiff), 2, 30);
     const rawDmg   = Math.max(1, attacker.atk - (defender.def + (terrainDef || 0)));
     const minDmg   = rawDmg;
     const maxDmg   = rawDmg + Math.floor(attacker.atk * 0.15);
     const willDouble = agiDiff >= 7;
-    const counterDmg = Math.max(0, defender.atk - attacker.def);
+    const willKill = defender.hp <= (maxDmg * (willDouble ? 2 : 1));
 
     // Weapon triangle prefix
     let prefix = '';
@@ -1275,15 +1290,33 @@ class UIScene extends Phaser.Scene {
     this._dmgPreviewBg.strokeRoundedRect(panX, panY, panW, panH, 7);
     this._dmgPreviewBg.setVisible(true);
 
-    // Line 1 — colour the prefix based on effectiveness
-    const line1 = `${prefix}EST: ${minDmg}-${maxDmg}  HIT: ${hitPct}%  CRIT: ${critPct}%${willDouble ? '  ×2' : ''}`;
+    // Line 1 — attacker forecast with double/kill indicators
+    const atkLine = `${prefix}${attacker.name} → ${minDmg === maxDmg ? minDmg : minDmg + '-' + maxDmg}  HIT:${hitPct}%  CRIT:${critPct}%${willDouble ? '  ×2' : ''}${willKill ? '  KILL' : ''}`;
     const line1Color = effectiveness > 1.0 ? '#88ff88' : effectiveness < 1.0 ? '#ff8888' : '#ffcc88';
-    this._dmgPreviewLine1.setText(line1).setStyle({ color: line1Color }).setVisible(true);
+    this._dmgPreviewLine1.setText(atkLine).setStyle({ color: line1Color }).setVisible(true);
 
-    if (counterDmg > 0) {
-      this._dmgPreviewLine2.setText(`COUNTER: ${counterDmg}`).setVisible(true);
+    // Line 2 — hide (was old simple counter; now replaced by line3)
+    this._dmgPreviewLine2.setVisible(false);
+
+    // Counter-attack forecast (m1 fix: use attacker's tile terrain def for counter calc)
+    const dist = Math.abs(attacker.col - defender.col) + Math.abs(attacker.row - defender.row);
+    const canCounter = dist <= (defender.range || 1);
+    if (canCounter) {
+      const atkTDef = options.defenderTerrainDef || 0;
+      const cGuard = attacker.guardActive ? Math.floor(attacker.def * 0.5) : 0;
+      const cRaw = Math.max(1, defender.atk - (attacker.def + cGuard + atkTDef));
+      const cMin = cRaw;
+      const cMax = cRaw + Math.floor(defender.atk * 0.1);
+      const cAgiDiff = defender.agi - attacker.agi;
+      const cHit = Phaser.Math.Clamp(85 + cAgiDiff * 2, 55, 99);
+      const cCrit = Phaser.Math.Clamp(6 + Math.max(0, cAgiDiff), 2, 25);
+      const defDouble = cAgiDiff >= 7;
+      const counterText = `${defender.name} ← ${cMin === cMax ? cMin : cMin + '-' + cMax}  HIT:${cHit}%  CRIT:${cCrit}%${defDouble ? '  ×2' : ''}`;
+      this._dmgPreviewLine3.setText(counterText).setVisible(true);
+      this._dmgPreviewLine4.setVisible(false);
     } else {
-      this._dmgPreviewLine2.setVisible(false);
+      this._dmgPreviewLine3.setText('No counter-attack').setVisible(true);
+      this._dmgPreviewLine4.setVisible(false);
     }
   }
 
@@ -1291,6 +1324,8 @@ class UIScene extends Phaser.Scene {
     this._dmgPreviewBg?.clear().setVisible(false);
     this._dmgPreviewLine1?.setVisible(false);
     this._dmgPreviewLine2?.setVisible(false);
+    this._dmgPreviewLine3?.setVisible(false);
+    this._dmgPreviewLine4?.setVisible(false);
   }
 
   // ==========================================================================
