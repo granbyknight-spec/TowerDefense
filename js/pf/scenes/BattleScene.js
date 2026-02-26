@@ -2565,7 +2565,7 @@ class BattleScene extends Phaser.Scene {
     const dc = (defender.unitClass || '').toLowerCase();
     if (aw === 'bow' && (dc === 'cavalry' || dc === 'champion')) return 1.5;
     // Wand/magic vs armored classes
-    if ((aw === 'wand' || aw === 'mageblade') && (dc === 'knight' || dc === 'baron')) return 1.25;
+    if ((aw === 'wand' || aw === 'mageblade') && (dc === 'knight' || dc === 'baron' || dc === 'general')) return 1.25;
     return 1.0;
   }
 

@@ -210,17 +210,16 @@ class VictoryScene extends Phaser.Scene {
       this.tweens.add({ targets:t, y:160, duration:400+i*50, yoyo:true, repeat:-1 });
     });
 
-    // M2: Fallen unit indicator — build a name→hp map from serialized roster
+    // M2: Fallen unit indicator — use accurate unitsLost count (tracked by BattleScene)
     const _rosterEntries = (this.saveData && this.saveData.roster) ? this.saveData.roster : [];
     const _hpByName = {};
     _rosterEntries.forEach(r => { _hpByName[r.name] = r.hp; });
-    const fallen = _rosterEntries.filter(r => r.hp <= 1);
 
-    // Casualties summary line
+    // Casualties summary line — use this.unitsLost (set by BattleScene._unitsLost)
     let yOff = 222;
-    if (fallen.length > 0) {
+    if (this.unitsLost > 0) {
       this.add.text(W / 2, yOff,
-        `${fallen.length} unit${fallen.length > 1 ? 's' : ''} fell in battle (revived)`, {
+        `${this.unitsLost} unit${this.unitsLost > 1 ? 's' : ''} fell in battle (revived)`, {
         fontSize: '11px', color: '#ff6644',
         fontFamily: 'Nunito, Arial, sans-serif',
         fontStyle: 'italic',

@@ -406,7 +406,7 @@ function _healer(unit, mapGrid, allUnits) {
       }
       if (attackTarget) break;
     }
-    if (attackMove && attackTarget) {
+    if (attackMove && attackTarget && unit.weapon !== 'staff') {
       return { moveTo: attackMove, target: attackTarget, isHeal: false };
     }
     // Move toward nearest player without attacking
