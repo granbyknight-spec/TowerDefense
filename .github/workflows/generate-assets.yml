@@ -14,6 +14,7 @@ on:
           - backgrounds
           - enemies
           - inn-styles
+          - panels
           - all
 
 jobs:
@@ -36,7 +37,7 @@ jobs:
 
       - name: Create output directories
         run: |
-          mkdir -p assets/terrain assets/characters assets/backgrounds assets/enemies
+          mkdir -p assets/terrain assets/characters assets/backgrounds assets/enemies assets/panels
 
       - name: Generate terrain tiles
         if: inputs.script == 'terrain' || inputs.script == 'all'
@@ -72,6 +73,13 @@ jobs:
         env:
           AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
         run: node scripts/generate-inn-styles.js
+
+      - name: Generate manga panel backgrounds (ComicScene)
+        if: inputs.script == 'panels' || inputs.script == 'all'
+        continue-on-error: true
+        env:
+          AIHORDE_API_KEY: ${{ secrets.AIHORDE_API_KEY }}
+        run: node scripts/generate-panels.js
 
       - name: Commit generated assets
         run: |
