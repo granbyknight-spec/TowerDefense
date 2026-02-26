@@ -41,6 +41,7 @@ class UIScene extends Phaser.Scene {
     this._buildEndTurnBtn();
     this._buildMuteBtn();
     this._buildMessage();
+    this._buildDamagePreview();
     // Initialize display
     this.clearUnitInfo();
     this.hideActionMenu();
@@ -190,7 +191,27 @@ class UIScene extends Phaser.Scene {
       fontFamily: 'Nunito, Arial, sans-serif',
       backgroundColor: '#00000099',
       padding: { x: 5, y: 3 },
-    }).setOrigin(0, 0).setVisible(false);
+    }).setOrigin(0, 0).setVisible(true);
+  }
+
+  // ==========================================================================
+  // TERRAIN INFO PANEL
+  // ==========================================================================
+
+  /** Called internally or by BattleScene to update the terrain panel. */
+  showTerrainInfo(terrainId) {
+    const terrain = (typeof TERRAIN !== 'undefined') ? TERRAIN[terrainId] : null;
+    if (!terrain || !this._terrainPanel) return;
+
+    const movStr = terrain.movCost >= 99 ? 'Impassable' : `MOV: ${terrain.movCost}`;
+    const defStr = `DEF: +${terrain.def}`;
+    this._terrainPanel.setText(`${terrain.name}\n${movStr}  ${defStr}`);
+    this._terrainPanel.setVisible(true);
+  }
+
+  /** Public API for BattleScene to call — updates the terrain panel by terrain ID. */
+  updateTerrainPanel(terrainId) {
+    this.showTerrainInfo(terrainId);
   }
 
   _showSkillInfo(unit) {
@@ -1132,6 +1153,77 @@ class UIScene extends Phaser.Scene {
       alpha: 0, duration: 400, delay: 2000,
       onComplete: () => { this._msgBg.setVisible(false); this._msgTxt.setVisible(false); },
     });
+  }
+
+  // ==========================================================================
+  // DAMAGE PREVIEW PANEL
+  // ==========================================================================
+
+  _buildDamagePreview() {
+    const W = GAME_W;
+    // Panel sits above the unit info area / action bar, centered
+    // Target Y: just above the action bar (682), with padding
+    const panW = 240;
+    const panH = 44;
+    const panX = (W - panW) / 2;  // centered: 120
+    const panY = 682 - panH - 44; // sits above end-turn / mute buttons area
+
+    this._dmgPreviewBg = this.add.graphics().setVisible(false);
+    this._dmgPreviewBg.fillStyle(0x000000, 0.82);
+    this._dmgPreviewBg.fillRoundedRect(panX, panY, panW, panH, 7);
+    this._dmgPreviewBg.lineStyle(1, 0xff6644, 0.85);
+    this._dmgPreviewBg.strokeRoundedRect(panX, panY, panW, panH, 7);
+
+    this._dmgPreviewLine1 = this.add.text(W / 2, panY + 11, '', {
+      fontSize: '13px', color: '#ffcc88',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+      align: 'center',
+    }).setOrigin(0.5, 0).setVisible(false);
+
+    this._dmgPreviewLine2 = this.add.text(W / 2, panY + 27, '', {
+      fontSize: '11px', color: '#ff9977',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      align: 'center',
+    }).setOrigin(0.5, 0).setVisible(false);
+
+    this._dmgPreviewPanX = panX;
+    this._dmgPreviewPanY = panY;
+    this._dmgPreviewPanW = panW;
+    this._dmgPreviewPanH = panH;
+  }
+
+  showDamagePreview(attacker, defender, terrainDef) {
+    const rawDmg = Math.max(0, attacker.atk - (defender.def + (terrainDef || 0)));
+    const agiDiff = attacker.agi - defender.agi;
+    const hitPct = Math.min(99, Math.max(50, 80 + agiDiff * 3));
+    const counterDmg = Math.max(0, defender.atk - attacker.def);
+
+    // Redraw background (in case it was previously hidden/cleared)
+    const { _dmgPreviewPanX: panX, _dmgPreviewPanY: panY,
+            _dmgPreviewPanW: panW, _dmgPreviewPanH: panH } = this;
+    this._dmgPreviewBg.clear();
+    this._dmgPreviewBg.fillStyle(0x000000, 0.82);
+    this._dmgPreviewBg.fillRoundedRect(panX, panY, panW, panH, 7);
+    this._dmgPreviewBg.lineStyle(1, 0xff6644, 0.85);
+    this._dmgPreviewBg.strokeRoundedRect(panX, panY, panW, panH, 7);
+    this._dmgPreviewBg.setVisible(true);
+
+    this._dmgPreviewLine1.setText(`EST DMG: ${rawDmg}   HIT: ${hitPct}%`).setVisible(true);
+
+    if (counterDmg > 0) {
+      this._dmgPreviewLine2.setText(`COUNTER: ${counterDmg}`).setVisible(true);
+    } else {
+      this._dmgPreviewLine2.setVisible(false);
+    }
+  }
+
+  hideDamagePreview() {
+    this._dmgPreviewBg?.clear().setVisible(false);
+    this._dmgPreviewLine1?.setVisible(false);
+    this._dmgPreviewLine2?.setVisible(false);
   }
 
   // ==========================================================================
