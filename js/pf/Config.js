@@ -1,4 +1,5 @@
 'use strict';
+// MP_REGEN_RATE = 0.10 — change BattleScene.js _beginPlayerTurn
 // =============================================================================
 // Puppy Force — Config.js
 // Game constants, terrain data, and unit definitions
@@ -77,6 +78,13 @@ const CLASS_RING_COLOR = {
   'General':  0xff2222, // bright red
   'Swimmer':  0x22ccff, // cyan
   'Admiral':  0x44eeff, // light cyan
+  'Scout':       0x88cc44, // yellow-green
+  'Desert Fox':  0xaadd55, // light yellow-green
+  'Fighter':     0xff6644, // orange-red
+  'Assassin':    0xcc44ff, // purple
+  'King':        0xffd700, // gold
+  'Sorceress':   0xff44cc, // magenta
+  'Emperor':     0xffd700, // gold
 };
 
 // Unicode class icons — shown in the badge below each unit's HP bar
@@ -90,6 +98,11 @@ const CLASS_ICON = {
   'Thief':    '◆', 'Ninja':    '◆',
   'General':  '★',
   'Swimmer':  '≈', 'Admiral':  '≈',
+  'Scout':      '⚡', 'Desert Fox': '⚡',
+  'Fighter':    '✊',
+  'Assassin':   '◆',
+  'King':       '♚', 'Emperor':   '♚',
+  'Sorceress':  '✦',
 };
 
 // Maps dialogue speaker names → Phaser texture cache keys for portrait images
@@ -188,14 +201,14 @@ const HERO_DEFS = {
   POODLE_MAGE: {
     id:'POODLE_MAGE', name:'Poodle Mage', emoji:'🐾',
     unitClass:'Mage', team:'player',
-    baseStats:{ maxHp:14, atk:15, def:3, mov:5, agi:8, level:1, exp:0 },
+    baseStats:{ maxHp:14, atk:11, def:3, mov:5, agi:8, level:1, exp:0 },
     growth:{ hp:2, atk:3, def:1, agi:2 },
-    weapon:'wand', range:2, skills:['fireball'],
+    weapon:'wand', range:2, skills:['blaze'],
     items:['herb'],
     promotedData:{ name:'Poodle Wizard', emoji:'🐾', unitClass:'Wizard',
       bonus:{ hp:5, atk:5, def:2, mov:1, agi:2 } },
     maxMp: 14,
-    skillsAtLevel: [{ level: 5, skill: 'guard' }],
+    skillsAtLevel: [{ level: 5, skill: 'fireball' }, { level: 8, skill: 'guard' }],
     promotedSkillsAtLevel: [{ level: 1, skill: 'heal' }],
     expReward:35, chapter:1,
   },
@@ -290,7 +303,7 @@ const ENEMY_DEFS = {
     unitClass:'Scout', team:'enemy',
     baseStats:{ maxHp:14, atk:8, def:4, mov:6, agi:9, level:1 },
     growth:{ hp:1, atk:1, def:1, agi:1 },
-    weapon:'dagger', range:1, ai:'aggressive', expReward:88,  // 1 kill ≈ 1 level in ch1
+    weapon:'dagger', range:1, ai:'aggressive', expReward:38,  // grunt
   },
   ALLEY_CAT: {
     id:'ALLEY_CAT', name:'Alley Cat', emoji:'🐈', isBoss:true,
@@ -298,28 +311,28 @@ const ENEMY_DEFS = {
     unitClass:'Fighter', team:'enemy',
     baseStats:{ maxHp:30, atk:14, def:8, mov:5, agi:7, level:3 },
     growth:{ hp:2, atk:2, def:1, agi:1 },
-    weapon:'claw', range:1, ai:'boss', expReward:185, // boss kill ≈ 2 levels
+    weapon:'claw', range:1, ai:'boss', expReward:95, // chapter boss
   },
   SIAMESE_ASSASSIN: {
     id:'SIAMESE_ASSASSIN', name:'Siamese', emoji:'🐈',
     unitClass:'Assassin', team:'enemy',
     baseStats:{ maxHp:16, atk:14, def:6, mov:6, agi:13, level:2 },
     growth:{ hp:1, atk:2, def:1, agi:2 },
-    weapon:'blade', range:1, ai:'flanker', expReward:90,
+    weapon:'blade', range:1, ai:'flanker', expReward:52,
   },
   PERSIAN_SORCERER: {
     id:'PERSIAN_SORCERER', name:'Persian Sorc', emoji:'😸',
     unitClass:'Mage', team:'enemy',
     baseStats:{ maxHp:14, atk:16, def:4, mov:4, agi:7, level:2 },
     growth:{ hp:1, atk:2, def:0, agi:1 },
-    weapon:'wand', range:2, ai:'ranged', expReward:90,
+    weapon:'wand', range:2, ai:'ranged', expReward:52,
   },
   TIGER_GENERAL: {
     id:'TIGER_GENERAL', name:'Tiger General', emoji:'🐯',
     unitClass:'General', team:'enemy',
     baseStats:{ maxHp:28, atk:13, def:12, mov:4, agi:5, level:3 },
     growth:{ hp:2, atk:1, def:2, agi:0 },
-    weapon:'spear', range:1, ai:'defensive', expReward:95,
+    weapon:'spear', range:1, ai:'defensive', expReward:70,
   },
   LYNX_RANGER: {
     id:'LYNX_RANGER', name:'Lynx Ranger', emoji:'🦁', isBoss:true,
@@ -327,7 +340,7 @@ const ENEMY_DEFS = {
     unitClass:'Ranger', team:'enemy',
     baseStats:{ maxHp:28, atk:15, def:7, mov:5, agi:10, level:4 },
     growth:{ hp:2, atk:2, def:1, agi:1 },
-    weapon:'bow', range:2, ai:'boss', expReward:160, // boss ~1.5 levels
+    weapon:'bow', range:2, ai:'boss', expReward:70, // sub-boss
   },
   SNOW_LEOPARD: {
     id:'SNOW_LEOPARD', name:'Snow Leopard', emoji:'🐆', isBoss:true,
@@ -335,7 +348,7 @@ const ENEMY_DEFS = {
     unitClass:'Knight', team:'enemy',
     baseStats:{ maxHp:34, atk:16, def:11, mov:5, agi:8, level:5 },
     growth:{ hp:3, atk:2, def:2, agi:1 },
-    weapon:'sword', range:1, ai:'boss', expReward:170,
+    weapon:'sword', range:1, ai:'boss', expReward:70,
   },
   RIVER_PANTHER: {
     id:'RIVER_PANTHER', name:'River Panther', emoji:'🐆', isBoss:true,
@@ -343,7 +356,7 @@ const ENEMY_DEFS = {
     unitClass:'Swimmer', team:'enemy',
     baseStats:{ maxHp:36, atk:17, def:10, mov:6, agi:9, level:5 },
     growth:{ hp:3, atk:2, def:1, agi:1 },
-    weapon:'claws', range:1, ai:'boss', expReward:180,
+    weapon:'claws', range:1, ai:'boss', expReward:70,
     specialMovement:['Water'],
   },
   SAND_CAT_KING: {
@@ -352,7 +365,7 @@ const ENEMY_DEFS = {
     unitClass:'King', team:'enemy',
     baseStats:{ maxHp:40, atk:18, def:12, mov:6, agi:10, level:6 },
     growth:{ hp:3, atk:2, def:2, agi:1 },
-    weapon:'blade', range:1, ai:'boss', expReward:190,
+    weapon:'blade', range:1, ai:'boss', expReward:70,
   },
   PERSIAN_QUEEN: {
     id:'PERSIAN_QUEEN', name:'Persian Queen', emoji:'😺', isBoss:true,
@@ -360,7 +373,14 @@ const ENEMY_DEFS = {
     unitClass:'Sorceress', team:'enemy',
     baseStats:{ maxHp:42, atk:22, def:10, mov:5, agi:11, level:7 },
     growth:{ hp:3, atk:3, def:1, agi:1 },
-    weapon:'staff', range:2, ai:'boss', expReward:200,
+    weapon:'staff', range:2, ai:'boss', expReward:70,
+  },
+  HEALER_CAT: {
+    id: 'HEALER_CAT', name: 'Healer Cat', emoji: '😸',
+    unitClass: 'Cleric', team: 'enemy',
+    baseStats: { maxHp: 20, atk: 4, def: 3, mov: 4, agi: 4, level: 1 },
+    growth: { hp: 2, atk: 1, def: 1, agi: 1 },
+    weapon: 'staff', range: 2, ai: 'healer', expReward: 45,
   },
   CAT_EMPEROR: {
     id:'CAT_EMPEROR', name:'Cat Emperor', emoji:'👑', isBoss:true,
@@ -368,7 +388,7 @@ const ENEMY_DEFS = {
     unitClass:'Emperor', team:'enemy',
     baseStats:{ maxHp:62, atk:25, def:18, mov:5, agi:12, level:10 },
     growth:{ hp:4, atk:3, def:2, agi:1 },
-    weapon:'mageblade', range:2, ai:'boss', expReward:250, // final boss ≈ 2.5 levels
+    weapon:'mageblade', range:2, ai:'boss', expReward:95, // chapter boss
   },
 };
 
@@ -388,6 +408,7 @@ const SKILLS = {
   charge:   { name:'Charge',   type:'physical', power:1.6, range:2, knockback:1, mpCost:3, description:'Powerful charge that pushes target 1 tile away (180% ATK)' },
   guard:    { name:'Guard',    type:'buff',      mpCost:2, defBonus:0.5,             description:'Raise DEF by 50% until next turn' },
   heal:     { name:'Heal',     type:'magic',     power:-1.2, range:2, mpCost:3, targetAlly:true, description:'Restore ally HP within 2 tiles (120% ATK)' },
+  blaze:    { name:'Blaze',    type:'magic',     power:0.85, range:1, mpCost:2, description:'Weak fire attack. No splash.' },
   fireball: { name:'Fireball', type:'magic',     power:1.3, range:2, mpCost:4, splash:0.6, burn:3, description:'Fire blast: full damage + splash to adjacent enemies + 3 burn DoT' },
   healall:  { name:'Heal All',  type:'magic', power:-0.7, range:3, mpCost:6, aoe:true, targetAlly:true, description:'Restore HP to all allies within 3 tiles (70% ATK)' },
 };

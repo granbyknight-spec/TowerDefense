@@ -128,6 +128,8 @@ class BattleScene extends Phaser.Scene {
     this._battleEnded = false; // latch: prevents _endBattle from firing twice
     this._battleGen   = (this._battleGen || 0) + 1; // generation counter for setTimeout safety
     this.turnNumber = 1;
+    this._dangerZoneActive = false;
+    this._dangerGfx = null;
     this.playerTurn = true;
   }
 
@@ -157,7 +159,11 @@ class BattleScene extends Phaser.Scene {
     // ── Build enemy units ───────────────────────────────────────────────────
     chapter.enemies.forEach(spawn => {
       const enemy = buildEnemyUnit(spawn, this.units);
-      if (enemy) this.units.push(enemy);
+      if (enemy) {
+        if (spawn.deathQuote) enemy.deathQuote = spawn.deathQuote;
+        if (spawn.isBoss) enemy.isBoss = true;
+        this.units.push(enemy);
+      }
     });
 
     // ── Build recruitable units (neutral, stand still) ─────────────────────
@@ -267,6 +273,25 @@ class BattleScene extends Phaser.Scene {
       } else {
         const z = Phaser.Math.Clamp(this._pinchZoom0 * (dist / this._pinchDist0), 1, 2.5);
         this.cameras.main.setZoom(z);
+      }
+      // M2: Live combat forecast on hover during target selection
+      if (this._state === BS.TARGET_ATK && !this._panning) {
+        const hCol = Math.floor((pointer.worldX - GRID_X) / TILE);
+        const hRow = Math.floor((pointer.worldY - GRID_Y) / TILE);
+        const cols = this.mapGrid[0]?.length || 0;
+        const rows = this.mapGrid.length || 0;
+        if (hCol >= 0 && hCol < cols && hRow >= 0 && hRow < rows) {
+          const hoverTarget = this._unitAt(hCol, hRow);
+          if (hoverTarget && hoverTarget.team === 'enemy' && this._selected) {
+            const tDef = TERRAIN[this.mapGrid[hoverTarget.row]?.[hoverTarget.col]]?.def || 0;
+            const eff = typeof this._weaponEffectiveness === 'function'
+              ? this._weaponEffectiveness(this._selected, hoverTarget) : 1.0;
+            const atkTDef = TERRAIN[this.mapGrid[this._selected.row]?.[this._selected.col]]?.def || 0;
+            this._getUI()?.showDamagePreview(this._selected, hoverTarget, tDef, eff, { defenderTerrainDef: atkTDef });
+          } else {
+            this._getUI()?.hideDamagePreview();
+          }
+        }
       }
     });
 
@@ -753,6 +778,7 @@ class BattleScene extends Phaser.Scene {
     this._hlAtk.clear();
     this._hlHeal.clear();
     this._hlSel.clear();
+    if (this._movCostTexts) { this._movCostTexts.forEach(t => t.destroy()); this._movCostTexts = []; }
   }
 
   _drawMoveHighlights(tiles) {
@@ -764,6 +790,16 @@ class BattleScene extends Phaser.Scene {
       g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
       g.lineStyle(2, 0x88aaff, 0.9);
       g.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+      const terrainId = this.mapGrid[row][col];
+      const cost = getMovCost(terrainId, this._selected && this._selected.unitClass);
+      if (cost > 1) {
+        if (!this._movCostTexts) this._movCostTexts = [];
+        this._movCostTexts.push(
+          this.add.text(x + TILE/2, y + TILE/2, cost.toString(),
+            { fontSize: '9px', color: '#ffffff' })
+            .setAlpha(0.7).setOrigin(0.5).setDepth(4)
+        );
+      }
     });
   }
 
@@ -828,6 +864,10 @@ class BattleScene extends Phaser.Scene {
     const row = Math.floor((ptr.worldY - GRID_Y) / TILE);
     if (col < 0 || col >= this.mapGrid[0].length || row < 0 || row >= this.mapGrid.length) return;
 
+    // M3: Update terrain info panel on every tile tap
+    const _tappedTerrainId = this.mapGrid[row]?.[col];
+    if (_tappedTerrainId !== undefined) this._getUI()?.updateTerrainPanel(_tappedTerrainId);
+
     switch (this._state) {
       case BS.IDLE:       this._handleIdleTap(col, row);     break;
       case BS.UNIT_SEL:   this._handleSelectTap(col, row);   break;
@@ -839,8 +879,14 @@ class BattleScene extends Phaser.Scene {
 
   _handleIdleTap(col, row) {
     const unit = this._unitAt(col, row);
-    if (!unit || unit.dead) return;
+    if (!unit || unit.dead) {
+      // Tapped empty tile — clear enemy range preview
+      this._clearEnemyRange();
+      return;
+    }
     if (unit.team === 'player') {
+      // Clear enemy range when selecting a player unit
+      this._clearEnemyRange();
       // Selectable as long as the unit hasn't both moved AND acted
       if (!(unit.hasMoved && unit.hasActed)) {
         this._selectUnit(unit);
@@ -848,7 +894,9 @@ class BattleScene extends Phaser.Scene {
         this._showUnitInfo(unit);
       }
     } else {
-      // Tap enemy / neutral — show their stats without selecting
+      // M1: Tap enemy — show their attack range preview in red/orange
+      this._showEnemyRange(unit);
+      // Show enemy stats in the unit info panel
       this._showUnitInfo(unit);
     }
   }
@@ -885,10 +933,19 @@ class BattleScene extends Phaser.Scene {
 
   _handleAtkTargetTap(col, row) {
     if (!this._atkTiles.some(t => t.col === col && t.row === row)) {
+      this._getUI()?.hideDamagePreview();
       this._cancelTargeting(); return;
     }
     const target = this._unitAt(col, row);
-    if (!target || target.team !== 'enemy') { this._cancelTargeting(); return; }
+    if (!target || target.team !== 'enemy') {
+      this._getUI()?.hideDamagePreview();
+      this._cancelTargeting(); return;
+    }
+
+    // m1: Show damage preview briefly before combat resolves
+    const terrainDef = TERRAIN[this.mapGrid[target.row]?.[target.col]]?.def || 0;
+    const effectiveness = this._weaponEffectiveness(this._selected, target);
+    this._getUI()?.showDamagePreview(this._selected, target, terrainDef, effectiveness);
 
     this._executeCombat(this._selected, target, () => {
       const unit = this._selected;
@@ -976,10 +1033,14 @@ class BattleScene extends Phaser.Scene {
     this._atkTiles  = [];
     this._healTiles = [];
     this._clearHighlights();
+    this._clearEnemyRange();
     this._setState(BS.IDLE);
     this._getUI()?.hideActionMenu();
     this._getUI()?.clearUnitInfo();
+    this._getUI()?.hideDamagePreview();
     this._dimActedUnits();
+    // m5: auto-end turn if all players have moved and acted
+    this._checkAutoEndTurn();
   }
 
   // Cancel targeting (Attack/Heal) and return to unit-selection state with action menu
@@ -990,6 +1051,7 @@ class BattleScene extends Phaser.Scene {
     this._healTiles   = [];
     this._pendingSkill = null;  // discard any queued skill so it doesn't leak to next attack
     this._clearHighlights();
+    this._getUI()?.hideDamagePreview();
     if (unit.hasMoved) {
       // Was in UNIT_MOVED — just restore sel highlight and menu
       this._drawSelHighlight(unit);
@@ -1042,6 +1104,7 @@ class BattleScene extends Phaser.Scene {
     unit.row = this._preMovPos.row;
     unit.hasMoved = false;
     this._preMovPos = null;
+    this._pendingSkill = null;
     this._updateSpritePos(unit);
     this._selectUnit(unit);
   }
@@ -1068,6 +1131,12 @@ class BattleScene extends Phaser.Scene {
       }
       const isLastStep = (step === path.length - 1);
       const { col, row } = path[step++];
+      // Camera pan: only on last step to avoid jitter from per-step panning
+      if (unit.team === 'enemy' && isLastStep) {
+        const wx = GRID_X + col * TILE + TILE/2;
+        const wy = GRID_Y + row * TILE + TILE/2;
+        this.cameras.main.pan(wx, wy, 400, 'Sine.easeOut', false);
+      }
       const { x, y } = this._tileCenter(col, row);
       const hpY  = y + r + 3;
       const bdgY = y + r + 10;
@@ -1128,6 +1197,10 @@ class BattleScene extends Phaser.Scene {
   onActionAttack() {
     const unit = this._selected;
     if (!unit) return;
+    if (unit.weapon === 'staff') {
+      this._getUI()?.showMessage?.("Can't attack with a staff!");
+      return;
+    }
     const atkTiles = getAttackTiles(unit, this.mapGrid, unit.col, unit.row);
     const hasTarget = atkTiles.some(t => {
       const u = this._unitAt(t.col, t.row);
@@ -1299,9 +1372,16 @@ class BattleScene extends Phaser.Scene {
     this._deselect();
   }
 
+  onActionCancel() {
+    if (this._state !== BS.UNIT_MOVED) return;
+    this._undoMove();
+  }
+
   onEndTurn() {
     if (this._state === BS.ENEMY_TURN || this._state === BS.ANIMATING) return;
     if (this._state === BS.VICTORY   || this._state === BS.DEFEAT)    return;
+    // Cancel any pending auto-end timer to prevent double-fire
+    if (this._autoEndTimer) { this._autoEndTimer.remove(); this._autoEndTimer = null; }
     this._deselect();
     this._beginEnemyTurn();
   }
@@ -1313,6 +1393,16 @@ class BattleScene extends Phaser.Scene {
   _executeCombat(attacker, defender, onDone, hitNum = 1, skillName = null, isDouble = false) {
     this._setState(BS.ANIMATING);
     this._clearHighlights();
+
+    // C1: Wrap onDone to consume guard buffs after full combat chain
+    if (hitNum === 1 && !isDouble) {
+      const _origOnDone = onDone;
+      onDone = () => {
+        attacker.guardActive = false;
+        defender.guardActive = false;
+        _origOnDone && _origOnDone();
+      };
+    }
 
     // On the first hit, consume _pendingSkill; on subsequent hits, reuse the passed-in skillName
     if (hitNum === 1) {
@@ -1347,10 +1437,22 @@ class BattleScene extends Phaser.Scene {
 
     const terrainDef = TERRAIN[this.mapGrid[defender.row][defender.col]]?.def || 0;
     const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
-    const rawDmg = Math.max(1, attacker.atk - (defender.def + guardBonus + terrainDef));
+    // M4: Adjacency support bonus
+    const atkSupportCount = Math.min(3, this.units.filter(u =>
+      !u.dead && u !== attacker && u.team === attacker.team &&
+      Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
+    ).length);
+    const defSupportCount = Math.min(3, this.units.filter(u =>
+      !u.dead && u !== defender && u.team === defender.team &&
+      Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+    ).length);
+    const rawDmg = Math.max(1, (attacker.atk + atkSupportCount) - (defender.def + guardBonus + defSupportCount + terrainDef));
     const variance = Phaser.Math.Between(0, Math.floor(attacker.atk * 0.15));
     // Apply Math.max(1) after atkBonus and variance so skills with power < 1 can't produce 0 damage
-    const baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
+    let baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
+    // C2: Weapon effectiveness multiplier
+    const effectiveness = this._weaponEffectiveness(attacker, defender);
+    if (effectiveness > 1.0) baseDmg = Math.round(baseDmg * effectiveness);
     const dmg = isCrit ? Math.floor(baseDmg * 1.5) : baseDmg;
 
     // Attack animation
@@ -1361,7 +1463,7 @@ class BattleScene extends Phaser.Scene {
         // Still check AGI double-attack after a miss
         const afterMiss = () => {
           if (!isDouble && !attacker.dead && !defender.dead &&
-              (attacker.agi - defender.agi) >= 4) {
+              (attacker.agi - defender.agi) >= 7) {
             this.time.delayedCall(200, () => {
               this._executeCombat(attacker, defender, onDone, 1, null, true);
             });
@@ -1399,6 +1501,14 @@ class BattleScene extends Phaser.Scene {
           } else {
             this._floatText(defender.col, defender.row, `-${dmg}`, PAL.HP_R);
           }
+          // M4: Float support bonus text
+          if (atkSupportCount > 0 && hitNum === 1) {
+            this._floatText(attacker.col, attacker.row, `+${atkSupportCount} support`, 0x88ccff, 12);
+          }
+          // C2: Show "Effective!" flash for weapon effectiveness bonus
+          if (effectiveness > 1.0) {
+            this.time.delayedCall(120, () => this._floatText(defender.col, defender.row, 'Effective!', PAL.GOLD, 15));
+          }
 
           // EXP gain
           const expGain = 10 + Math.floor(dmg / 2);
@@ -1424,7 +1534,7 @@ class BattleScene extends Phaser.Scene {
           // Wrap onDone to check for AGI double-attack after the full sequence resolves
           const afterSequence = () => {
             if (!isDouble && !attacker.dead && !defender.dead &&
-                (attacker.agi - defender.agi) >= 4) {
+                (attacker.agi - defender.agi) >= 7) {
               this._floatText(attacker.col, attacker.row, '2×', PAL.GOLD);
               this.time.delayedCall(200, () => {
                 this._executeCombat(attacker, defender, onDone, 1, null, true);
@@ -1434,25 +1544,93 @@ class BattleScene extends Phaser.Scene {
             }
           };
 
+          // C3: All hits before counter — fire next hit before allowing any counter-attack
+          if (totalHits > 1 && hitNum < totalHits && !defender.dead) {
+            this.time.delayedCall(200, () => {
+              this._executeCombat(attacker, defender, onDone, hitNum + 1, skillName, isDouble);
+            });
+            return;
+          }
+
           const noCounter = this._lastSkillUsed ? (SKILLS[this._lastSkillUsed]?.noCounter || false) : false;
-          const canCounter = !noCounter && dist <= defender.range && defender.team === 'enemy';
+          const canCounter = !noCounter && dist <= defender.range;
           if (canCounter) {
             const cDef = TERRAIN[this.mapGrid[attacker.row][attacker.col]]?.def || 0;
-            const cRaw = Math.max(1, defender.atk - (attacker.def + cDef));
+            const cGuardFirst = attacker.guardActive ? Math.floor(attacker.def * 0.5) : 0;
+            // M4: Counter support bonuses (defender's allies support the counter, attacker's allies defend)
+            const cAtkSupport = Math.min(3, this.units.filter(u =>
+              !u.dead && u !== defender && u.team === defender.team &&
+              Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+            ).length);
+            const cDefSupport = Math.min(3, this.units.filter(u =>
+              !u.dead && u !== attacker && u.team === attacker.team &&
+              Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
+            ).length);
+            const cRaw = Math.max(1, (defender.atk + cAtkSupport) - (attacker.def + cGuardFirst + cDefSupport + cDef));
             const cVar = Phaser.Math.Between(0, Math.floor(defender.atk * 0.1));
+            const cEff = this._weaponEffectiveness(defender, attacker);
             // Counter-attack hit/crit check (enemy counters)
             const cAgiDiff  = defender.agi - attacker.agi;
             const cHitChance = Phaser.Math.Clamp(85 + cAgiDiff * 2, 55, 100);
             const cHit       = Phaser.Math.Between(1, 100) <= cHitChance;
             const cCrit      = cHit && (Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(6 + Math.max(0, cAgiDiff), 2, 25));
-            const cBaseDmg   = cRaw + cVar;
+            const cBaseDmg   = Math.floor((cRaw + cVar) * cEff);
             const cDmg       = cCrit ? Math.floor(cBaseDmg * 1.5) : cBaseDmg;
+
+            // M1: Defender double-attack after counter resolves (AGI advantage >= 7)
+            const afterCounterSequence = () => {
+              if (!attacker.dead && !defender.dead && (defender.agi - attacker.agi) >= 7) {
+                this._floatText(defender.col, defender.row, '2×', 0xffd700);
+                this.time.delayedCall(200, () => {
+                  const cDefTerrain = TERRAIN[this.mapGrid[attacker.row]?.[attacker.col]]?.def || 0;
+                  const cGuard = attacker.guardActive ? Math.floor(attacker.def * 0.5) : 0;
+                  const cAtkSupport2 = Math.min(3, this.units.filter(u =>
+                    !u.dead && u !== defender && u.team === defender.team &&
+                    Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+                  ).length);
+                  const cDefSupport2 = Math.min(3, this.units.filter(u =>
+                    !u.dead && u !== attacker && u.team === attacker.team &&
+                    Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
+                  ).length);
+                  const cRaw = Math.max(1, (defender.atk + cAtkSupport2) - (attacker.def + cGuard + cDefSupport2 + cDefTerrain));
+                  const cVar = Phaser.Math.Between(0, Math.floor(defender.atk * 0.1));
+                  const cEff = this._weaponEffectiveness(defender, attacker);
+                  const cAgiDiff = defender.agi - attacker.agi;
+                  const cHit = Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(85 + cAgiDiff * 2, 55, 100);
+                  if (!cHit) {
+                    this._floatText(attacker.col, attacker.row, 'EVADE!', 0xaaddff, 20);
+                    this.time.delayedCall(400, afterSequence);
+                    return;
+                  }
+                  const cCrit = Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(6 + Math.max(0, cAgiDiff), 2, 25);
+                  const cDmg = Math.floor((cRaw + cVar) * cEff * (cCrit ? 1.5 : 1));
+                  this.tweens.add({
+                    targets: [attacker.spriteBg, attacker.sprite].filter(Boolean),
+                    alpha: 0.2, duration: 60, yoyo: true, repeat: cCrit ? 4 : 2,
+                    onComplete: () => {
+                      const aDied = attacker.takeDamage(cDmg);
+                      this._updateHPBar(attacker);
+                      this._floatText(attacker.col, attacker.row, `-${cDmg}`, cCrit ? 0xffd700 : 0xff8844, cCrit ? 26 : 17);
+                      if (cCrit) this._floatCritBanner && this._floatCritBanner(attacker.col, attacker.row);
+                      if (aDied) {
+                        if (defender.team === 'player') defender.killCount = (defender.killCount || 0) + 1;
+                        this._killUnit(attacker, onDone);
+                      } else {
+                        afterSequence();
+                      }
+                    },
+                  });
+                });
+              } else {
+                afterSequence();
+              }
+            };
 
             this.time.delayedCall(300, () => {
               this._shakeSprite(defender.sprite, () => {
                 if (!cHit) {
                   this._floatText(attacker.col, attacker.row, 'EVADE!', 0xaaddff, 20);
-                  this.time.delayedCall(400, () => this._applyPostCombatEffects(attacker, defender, afterSequence));
+                  this.time.delayedCall(400, () => this._applyPostCombatEffects(attacker, defender, afterCounterSequence));
                   return;
                 }
                 this.tweens.add({
@@ -1467,7 +1645,7 @@ class BattleScene extends Phaser.Scene {
                     } else {
                       this._floatText(attacker.col, attacker.row, `-${cDmg}`, 0xff8844);
                     }
-                    const expGain2 = Math.floor(cDmg / 3);
+                    const expGain2 = 10 + Math.floor(cDmg / 2);
                     const leveled2 = defender.gainExp(expGain2);
                     if (leveled2) this._onLevelUp(defender);
 
@@ -1475,21 +1653,14 @@ class BattleScene extends Phaser.Scene {
                       if (defender.team === 'player') defender.killCount++;
                       this._killUnit(attacker, onDone);
                     } else {
-                      this._applyPostCombatEffects(attacker, defender, afterSequence);
+                      this._applyPostCombatEffects(attacker, defender, afterCounterSequence);
                     }
                   },
                 });
               });
             });
           } else {
-            if (totalHits > 1 && hitNum < totalHits && !defender.dead) {
-              // Fire second hit after short delay
-              this.time.delayedCall(200, () => {
-                this._executeCombat(attacker, defender, onDone, hitNum + 1, skillName, isDouble);
-              });
-            } else {
-              this._applyPostCombatEffects(attacker, defender, afterSequence);
-            }
+            this._applyPostCombatEffects(attacker, defender, afterSequence);
           }
         },
       });
@@ -1564,7 +1735,11 @@ class BattleScene extends Phaser.Scene {
   }
 
   _executeHeal(healer, target) {
-    const sk = SKILLS['heal'];
+    const skillKey = this._pendingSkill || 'heal';
+    const sk = SKILLS[skillKey] || SKILLS['heal'];
+    this._pendingSkill = null;
+    const mpCost = sk.mpCost || 0;
+    if (mpCost > 0) healer.useMp(mpCost);
     // Use skill power magnitude to scale heal (power is negative to denote healing)
     const skillPower = sk ? Math.abs(sk.power) : 1.0;
     const healAmt = Math.floor(healer.atk * skillPower) + Phaser.Math.Between(2, 6);
@@ -1586,6 +1761,20 @@ class BattleScene extends Phaser.Scene {
     this._healEffect(target.col, target.row);
   }
 
+  _executeEnemyHeal(healer, target, onDone) {
+    this._setState(BS.ANIMATING);
+    const healAmt = Math.floor(healer.atk * 1.2) + Phaser.Math.Between(2, 6);
+    const actual = target.heal(healAmt);
+    this._updateHPBar(target);
+    if (target.sprite?.setTint) {
+      target.sprite.setTint(0x44ff88);
+      this.time.delayedCall(300, () => target.sprite?.clearTint());
+    }
+    this._floatText(target.col, target.row, `+${actual}`, 0x44ff88);
+    this._floatText(healer.col, healer.row, 'Heal!', 0x44ff88, 12);
+    this.time.delayedCall(500, () => { onDone && onDone(); });
+  }
+
   _killUnit(unit, onDone) {
     AudioManager.play(this, 'unit_death');
     const deathTargets = [unit.bossGlow, unit.spriteBg, unit.sprite, unit.hpBar, unit.hpBarBg].filter(Boolean);
@@ -1597,9 +1786,27 @@ class BattleScene extends Phaser.Scene {
       alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 400,
       ease: 'Power2',
       onComplete: () => {
+        const portraitKey = unit.sprite?.texture?.key || null;
         this._destroyUnitSprite(unit);
         unit.dead = true;
+        unit.guardActive = false;
         if (unit.team === 'player') this._unitsLost++;
+        // M3: Boss death quote
+        if ((unit.isBoss || unit.deathQuote) && !unit._quotePlayed) {
+          unit._quotePlayed = true;
+          const quote = unit.deathQuote || `${unit.name} has fallen!`;
+          if (typeof this._startDialogue === 'function') {
+            this._startDialogue([{
+              speaker: unit.name,
+              portrait: portraitKey,
+              text: quote,
+            }], () => {
+              this._checkEndCondition();
+              if (typeof onDone === 'function') onDone();
+            });
+            return;
+          }
+        }
         this._checkEndCondition();
         onDone && onDone();
       },
@@ -1616,9 +1823,6 @@ class BattleScene extends Phaser.Scene {
     this._setState(BS.ENEMY_TURN);
     this._getUI()?.showTurnBanner('Enemy Turn', 0xff4444);
 
-    // Clear guard buffs from previous player turn
-    this.units.filter(u => u.team === 'player').forEach(u => { u.guardActive = false; });
-
     // Apply burn DoT to all burning units
     this.units.filter(u => !u.dead && u.burnStacks > 0).forEach(u => {
       const bDmg = u.burnStacks;
@@ -1630,9 +1834,12 @@ class BattleScene extends Phaser.Scene {
       if (died) this._killUnit(u, () => {});
     });
 
-    this._enemyQueue = this.units.filter(u => !u.dead && u.team === 'enemy');
+    // M2: Sort by AGI descending so faster enemies act first
+    this._enemyQueue = this.units.filter(u => !u.dead && u.team === 'enemy')
+      .sort((a, b) => b.agi - a.agi);
     // Enemy units need their turn state reset so they can act this turn
     this._enemyQueue.forEach(u => u.resetTurn());
+    this._enemyQueue.forEach(u => { u.guardActive = false; });
 
     this.time.delayedCall(800, () => this._processNextEnemy());
   }
@@ -1662,11 +1869,19 @@ class BattleScene extends Phaser.Scene {
       this._updateSpritePos(enemy);
 
       if (action.target && !action.target.dead) {
-        this._executeCombat(enemy, action.target, () => {
-          if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
-          enemy.hasActed = true;
-          this.time.delayedCall(200, () => this._processNextEnemy());
-        });
+        if (action.isHeal && enemy.weapon === 'staff') {
+          this._executeEnemyHeal(enemy, action.target, () => {
+            if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
+            enemy.hasActed = true;
+            this.time.delayedCall(200, () => this._processNextEnemy());
+          });
+        } else {
+          this._executeCombat(enemy, action.target, () => {
+            if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
+            enemy.hasActed = true;
+            this.time.delayedCall(200, () => this._processNextEnemy());
+          });
+        }
       } else {
         enemy.hasActed = true;
         this.time.delayedCall(150, () => this._processNextEnemy());
@@ -1678,8 +1893,30 @@ class BattleScene extends Phaser.Scene {
     this.playerTurn = true;
     this.units.filter(u => !u.dead && u.team === 'player').forEach(u => u.resetTurn());
 
-    // MP recovery — each player unit recovers 20% of max MP at the start of their turn
-    this.units.filter(u => !u.dead && u.team === 'player').forEach(u => { u.recoverMp(Math.max(1, Math.round(u.maxMp * 0.20))); });
+    // C3: Clear guard buffs at the START of the player's next turn (was incorrectly in _beginEnemyTurn)
+    this.units.filter(u => u.team === 'player').forEach(u => { u.guardActive = false; });
+
+    // m6: MP recovery — each player unit recovers 10% of max MP at the start of their turn (was 20%)
+    this.units.filter(u => !u.dead && u.team === 'player').forEach(u => { u.recoverMp(Math.max(1, Math.round(u.maxMp * 0.10))); });
+
+    // m10: Village tile healing — player units on VILLAGE tiles (tid=7) heal 3 HP
+    const chapter = CHAPTERS[this.chapterId - 1];
+    this.units.filter(u => !u.dead && u.team === 'player').forEach(unit => {
+      const tid = chapter.mapGrid[unit.row]?.[unit.col];
+      if (tid === 7 /* VILLAGE */ && unit.hp < unit.maxHp) {
+        unit.hp = Math.min(unit.maxHp, unit.hp + 3);
+        this._updateHPBar(unit);
+        this._healEffect(unit.col, unit.row);
+        this._floatText(unit.col, unit.row, '+3 HP', PAL.HP_G);
+      }
+      // m1: Castle tile healing (+5 HP)
+      if (tid === T.CASTLE && unit.hp < unit.maxHp) {
+        unit.hp = Math.min(unit.maxHp, unit.hp + 5);
+        this._updateHPBar(unit);
+        this._floatText(unit.col, unit.row, '+5 HP', 0x44ff44);
+      }
+    });
+
     // Refresh UI panel if a unit is currently selected
     if (this._selected) this._getUI()?.showUnitInfo(this._selected);
 
@@ -1715,6 +1952,18 @@ class BattleScene extends Phaser.Scene {
         }
         // Add to roster
         this.saveData.roster.push(r.toSave());
+        // m7: Start idle bob for newly recruited unit
+        if (typeof r._startIdleBob === 'function') r._startIdleBob();
+        else if (r.sprite) {
+          this.tweens.add({
+            targets: r.sprite,
+            y: r.sprite.y - 3,
+            duration: 700,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        }
         this._floatText(r.col, r.row, r.rescueMsg || 'Joins!', 0x44ff88);
         this._getUI()?.showMessage(r.rescueMsg || `${r.name} joined!`);
       }
@@ -1740,6 +1989,12 @@ class BattleScene extends Phaser.Scene {
       const gen = this._battleGen;
       setTimeout(() => { if (this._battleGen === gen) this._endBattle(false); }, 2000); // safety net
       return;
+    }
+
+    // M3: Survive-turns pre-objective gate
+    const chapter2 = CHAPTERS[this.chapterId - 1];
+    if (chapter2?.preObjective === 'survive_turns' && this.turnNumber <= chapter2.surviveTurns) {
+      return; // Cannot win yet — must survive the required turns
     }
 
     // Victory: chapter's designated boss is dead (prefer bossId, fall back to any isBoss)
@@ -1782,15 +2037,19 @@ class BattleScene extends Phaser.Scene {
       this.saveData.completedChapters = completed;
       this.saveData.currentChapter = Math.min(7, this.chapterId + 1);
       // Update roster with current unit states
-      // Revive any fallen heroes and apply inter-chapter training bonus: +2 maxHp, +1 ATK per hero
+      // M7: Dead units revive at 1 HP with NO training bonus — only living units get +2 HP, +1 ATK
       const survivors = this.units.filter(u => u.team === 'player');
       survivors.forEach(u => {
         if (u.dead) {
+          // Revive with 1 HP, no training bonus (death has consequences)
           u.dead = false;
+          u.hp = 1;
+        } else {
+          // Living survivors get the inter-chapter training bonus
+          u.maxHp += 1;
+          u.hp = u.maxHp;
+          if (this.chapterId % 2 === 1) u.atk += 1;
         }
-        u.maxHp += 2;
-        u.hp = u.maxHp;
-        u.atk += 1;
       });
       this.saveData.roster = SaveManager.serializeRoster(survivors);
       SaveManager.save(this.saveData);
@@ -1886,11 +2145,14 @@ class BattleScene extends Phaser.Scene {
   _showPromotionCard(unit, beforeName, beforeEmoji, beforeStats, onDone) {
     const W = GAME_W, H = GAME_H;
     const cardW = 300, cardH = 220, cardX = (W - cardW) / 2, cardY = (H - cardH) / 2 - 20;
+    const cardObjs = [];
 
     // Semi-transparent dark backdrop
     const backdrop = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.65).setDepth(55).setInteractive();
+    cardObjs.push(backdrop);
 
     const cardBg = this.add.graphics().setDepth(56);
+    cardObjs.push(cardBg);
     cardBg.fillStyle(0x0a1a2e, 0.98);
     cardBg.fillRoundedRect(cardX, cardY, cardW, cardH, 12);
     cardBg.lineStyle(2, 0xffd700, 0.9);
@@ -1898,18 +2160,18 @@ class BattleScene extends Phaser.Scene {
 
     const cx = cardX + cardW / 2;
     // Header
-    this.add.text(cx, cardY + 18, '★  PROMOTION!  ★', {
+    cardObjs.push(this.add.text(cx, cardY + 18, '★  PROMOTION!  ★', {
       fontSize: '18px', color: '#ffd700', fontStyle: 'bold',
       fontFamily: 'Nunito, Courier New, monospace',
       stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(57);
+    }).setOrigin(0.5).setDepth(57));
 
     // Before → After names
-    this.add.text(cx, cardY + 46, `${beforeEmoji} ${beforeName}  →  ${unit.emoji} ${unit.name}`, {
+    cardObjs.push(this.add.text(cx, cardY + 46, `${beforeEmoji} ${beforeName}  →  ${unit.emoji} ${unit.name}`, {
       fontSize: '13px', color: '#aaddff', fontStyle: 'bold',
       fontFamily: 'Nunito, Courier New, monospace',
       stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(57);
+    }).setOrigin(0.5).setDepth(57));
 
     // Stat diff rows
     const stats = [
@@ -1924,16 +2186,16 @@ class BattleScene extends Phaser.Scene {
       const diff = s.after - s.before;
       const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
       const diffCol = diff > 0 ? '#44ff88' : (diff < 0 ? '#ff4444' : '#888888');
-      this.add.text(cardX + 28, sy, `${s.label}:  ${s.before}  →  ${s.after}`, {
+      cardObjs.push(this.add.text(cardX + 28, sy, `${s.label}:  ${s.before}  →  ${s.after}`, {
         fontSize: '14px', color: '#ccddff', fontStyle: 'bold',
         fontFamily: 'Nunito, Courier New, monospace',
         stroke: '#000', strokeThickness: 2,
-      }).setDepth(57);
-      this.add.text(cardX + cardW - 28, sy, diffStr, {
+      }).setDepth(57));
+      cardObjs.push(this.add.text(cardX + cardW - 28, sy, diffStr, {
         fontSize: '14px', color: diffCol, fontStyle: 'bold',
         fontFamily: 'Nunito, Courier New, monospace',
         stroke: '#000', strokeThickness: 2,
-      }).setOrigin(1, 0).setDepth(57);
+      }).setOrigin(1, 0).setDepth(57));
       sy += 22;
     });
 
@@ -1942,14 +2204,13 @@ class BattleScene extends Phaser.Scene {
       fontSize: '12px', color: '#aabbcc', fontStyle: 'bold',
       fontFamily: 'Nunito, Courier New, monospace',
     }).setOrigin(0.5).setDepth(57);
+    cardObjs.push(hint);
     this.tweens.add({ targets: hint, alpha: { from: 0.3, to: 1 }, duration: 600, yoyo: true, repeat: -1 });
 
     // Tap anywhere on card/backdrop to dismiss
-    backdrop.on('pointerdown', dismiss);
     const dismiss = () => {
-      backdrop.destroy();
-      cardBg.destroy();
-      // destroy all text objects we added (use depth tag via getAllChildren is harder, so just schedule cleanup)
+      this.tweens.killTweensOf(hint);
+      cardObjs.forEach(o => o.destroy());
       this.time.delayedCall(50, onDone);
     };
     backdrop.on('pointerdown', dismiss);
@@ -2203,14 +2464,18 @@ class BattleScene extends Phaser.Scene {
   _dimActedUnits() {
     this.units.forEach(u => {
       if (!u.sprite) return;
-      const dim = (u.team === 'player') && (u.hasMoved && u.hasActed);
-      const alpha = dim ? 0.45 : 1.0;
+      const fullyDone = (u.team === 'player') && (u.hasMoved && u.hasActed);
+      const movedOnly = (u.team === 'player') && (u.hasMoved && !u.hasActed);
+      const alpha = fullyDone ? 0.45 : 1.0;
       u.sprite.setAlpha(alpha);
       u.spriteBg?.setAlpha(alpha);
       u.badge?.setAlpha(alpha);
+      if (fullyDone) { u.sprite.setTint(0x888888); }
+      else if (movedOnly) { u.sprite.setTint(0xffff88); }
+      else { u.sprite.clearTint(); }
       // Stop bob for acted units, restart for ready ones
       if (u.team === 'player') {
-        if (dim) {
+        if (fullyDone) {
           this._stopIdleBob(u);
         } else if (!u._bobTween) {
           this._startIdleBob(u);
@@ -2254,5 +2519,138 @@ class BattleScene extends Phaser.Scene {
 
   _showUnitInfo(unit) {
     this._getUI()?.showUnitInfo(unit);
+  }
+
+  // ==========================================================================
+  // m5: AUTO-END TURN
+  // ==========================================================================
+
+  _checkAutoEndTurn() {
+    if (this._battleEnded) return;
+    if (this._autoEndTimer) return;  // already scheduled — prevent double-schedule
+    const state = this._getState();
+    if (state === BS.ENEMY_TURN || state === BS.ANIMATING || state === BS.VICTORY || state === BS.DEFEAT) return;
+    const livingPlayers = this.units.filter(u => !u.dead && u.team === 'player');
+    if (livingPlayers.length > 0 && livingPlayers.every(u => u.hasMoved && u.hasActed)) {
+      this._autoEndTimer = this.time.delayedCall(400, () => {
+        this._autoEndTimer = null;
+        if (!this._battleEnded) this.onEndTurn();
+      });
+    }
+  }
+
+  _getState() { return this._state; }
+
+  // ==========================================================================
+  // C2: WEAPON EFFECTIVENESS
+  // ==========================================================================
+
+  _weaponEffectiveness(attacker, defender) {
+    const aw = (attacker.weapon || '').toLowerCase();
+    const dw = (defender.weapon || '').toLowerCase();
+    // Sword/blade/dagger > Axe > Lance/spear > Sword
+    const swordLike = ['sword', 'blade', 'dagger'];
+    const axeLike   = ['axe'];
+    const lanceLike = ['lance', 'spear'];
+    const isSword = w => swordLike.includes(w);
+    const isAxe   = w => axeLike.includes(w);
+    const isLance = w => lanceLike.includes(w);
+    if (isSword(aw) && isAxe(dw))   return 1.2;
+    if (isAxe(aw)   && isLance(dw)) return 1.2;
+    if (isLance(aw) && isSword(dw)) return 1.2;
+    if (isSword(aw) && isLance(dw)) return 0.8;
+    if (isAxe(aw)   && isSword(dw)) return 0.8;
+    if (isLance(aw) && isAxe(dw))   return 0.8;
+    // Bow vs cavalry (class-based exception — mounts not captured by weapon alone)
+    const dc = (defender.unitClass || '').toLowerCase();
+    if (aw === 'bow' && (dc === 'cavalry' || dc === 'champion')) return 1.5;
+    // Wand/magic vs armored classes
+    if ((aw === 'wand' || aw === 'mageblade') && (dc === 'knight' || dc === 'baron' || dc === 'general')) return 1.25;
+    return 1.0;
+  }
+
+  // ==========================================================================
+  // M1: ENEMY RANGE PREVIEW
+  // ==========================================================================
+
+  _showEnemyRange(enemy) {
+    // Clear any existing enemy range highlights
+    this._clearEnemyRange();
+
+    this._enemyRangeGfx = this.add.graphics().setDepth(1);
+    const g = this._enemyRangeGfx;
+
+    // Compute all tiles the enemy could move to
+    const moveTiles = getReachableTiles(enemy, this.mapGrid, this.units);
+    const highlighted = new Set();
+
+    // For each reachable tile, compute attack tiles from that position
+    moveTiles.forEach(mt => {
+      const atkTiles = getAttackTiles({ ...enemy, col: mt.col, row: mt.row }, this.mapGrid, mt.col, mt.row);
+      atkTiles.forEach(at => {
+        const key = `${at.col},${at.row}`;
+        if (!highlighted.has(key)) {
+          highlighted.add(key);
+          const { x, y } = this._tileTL(at.col, at.row);
+          g.fillStyle(0xff4444, 0.35);
+          g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+          g.lineStyle(1, 0xff6666, 0.7);
+          g.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+        }
+      });
+    });
+    // Also highlight the enemy's current position
+    const { x: ex, y: ey } = this._tileTL(enemy.col, enemy.row);
+    g.fillStyle(0xff2222, 0.25);
+    g.fillRect(ex + 2, ey + 2, TILE - 4, TILE - 4);
+    g.lineStyle(2, 0xff2222, 0.9);
+    g.strokeRect(ex + 2, ey + 2, TILE - 4, TILE - 4);
+  }
+
+  _clearEnemyRange() {
+    if (this._enemyRangeGfx) {
+      this._enemyRangeGfx.destroy();
+      this._enemyRangeGfx = null;
+    }
+  }
+
+  _showAllEnemyRanges() {
+    this._clearDangerZone();
+    this._dangerGfx = this.add.graphics().setDepth(1);
+    const g = this._dangerGfx;
+    const highlighted = new Set();
+    this.units.filter(u => !u.dead && u.team === 'enemy').forEach(enemy => {
+      const moveTiles = getReachableTiles(enemy, this.mapGrid, this.units);
+      const allPositions = [{ col: enemy.col, row: enemy.row }, ...moveTiles];
+      allPositions.forEach(pos => {
+        const atkTiles = getAttackTiles({ ...enemy, col: pos.col, row: pos.row }, this.mapGrid, pos.col, pos.row);
+        atkTiles.forEach(at => {
+          const key = `${at.col},${at.row}`;
+          if (!highlighted.has(key)) {
+            highlighted.add(key);
+            const { x, y } = this._tileTL(at.col, at.row);
+            g.fillStyle(0xff2222, 0.25);
+            g.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+          }
+        });
+      });
+    });
+    this._dangerZoneActive = true;
+  }
+
+  _clearDangerZone() {
+    if (this._dangerGfx) {
+      this._dangerGfx.destroy();
+      this._dangerGfx = null;
+    }
+    this._dangerZoneActive = false;
+  }
+
+  toggleDangerZone() {
+    if (this._dangerZoneActive) {
+      this._clearDangerZone();
+    } else {
+      this._showAllEnemyRanges();
+    }
   }
 }

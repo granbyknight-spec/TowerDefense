@@ -40,7 +40,9 @@ class UIScene extends Phaser.Scene {
     this._buildDialogueBox();
     this._buildEndTurnBtn();
     this._buildMuteBtn();
+    this._buildDangerBtn();
     this._buildMessage();
+    this._buildDamagePreview();
     // Initialize display
     this.clearUnitInfo();
     this.hideActionMenu();
@@ -60,7 +62,7 @@ class UIScene extends Phaser.Scene {
 
   _buildPanel() {
     const FP = this._FP = {
-      x: 264, y: 8, w: 210, h: 124,
+      x: 264, y: 8, w: 210, h: 138,
     };
 
     // Semi-transparent dark background + gold border — redrawn in showUnitInfo
@@ -136,11 +138,27 @@ class UIScene extends Phaser.Scene {
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(1, 0.5).setVisible(false);
 
+    // EXP label
+    this._expLabel = this.add.text(FP.x + 6, FP.y + 92, 'EXP', {
+      fontSize: '10px', color: '#ffdd44',
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(0, 0.5).setVisible(false);
+
+    // EXP bars (bg / fg drawn in showUnitInfo)
+    this._expBarBg = this.add.graphics().setVisible(false);
+    this._expBarFg = this.add.graphics().setVisible(false);
+
+    // EXP fraction
+    this._expTxt = this.add.text(FP.x + FP.w - 6, FP.y + 92, '', {
+      fontSize: '10px', color: '#ffdd44', stroke: '#000000', strokeThickness: 2,
+      fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
+    }).setOrigin(1, 0.5).setVisible(false);
+
     // Skill chips — created dynamically, tracked in array
     this._skillChips = [];
 
     // Skill text (hidden — kept for API compatibility / click to show skill popup)
-    this._skillsTxt = this.add.text(FP.x + 6, FP.y + 84, '', {
+    this._skillsTxt = this.add.text(FP.x + 6, FP.y + 106, '', {
       fontSize: '10px', color: '#99aacc',
       fontFamily: 'Nunito, Arial, sans-serif',
     }).setOrigin(0, 0).setVisible(false);
@@ -150,7 +168,7 @@ class UIScene extends Phaser.Scene {
     });
 
     // Veteran battle history line — shown inside floating panel
-    this._unitVetTxt = this.add.text(FP.x + 6, FP.y + 96, '', {
+    this._unitVetTxt = this.add.text(FP.x + 6, FP.y + 120, '', {
       fontSize: '9px', color: '#99aabb',
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     }).setOrigin(0, 0).setVisible(false);
@@ -184,13 +202,41 @@ class UIScene extends Phaser.Scene {
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     });
 
+    // M3: Objective display
+    this._objectiveLabel = this.add.text(8, 52, '', {
+      fontSize: '10px',
+      color: '#ffcc44',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+    }).setScrollFactor(0).setDepth(100).setVisible(false);
+
     // Small terrain info panel (top-left corner, always visible as a label)
     this._terrainPanel = this.add.text(6, 8, '', {
       fontSize: '11px', color: '#ccddee',
       fontFamily: 'Nunito, Arial, sans-serif',
       backgroundColor: '#00000099',
       padding: { x: 5, y: 3 },
-    }).setOrigin(0, 0).setVisible(false);
+    }).setOrigin(0, 0).setVisible(true);
+  }
+
+  // ==========================================================================
+  // TERRAIN INFO PANEL
+  // ==========================================================================
+
+  /** Called internally or by BattleScene to update the terrain panel. */
+  showTerrainInfo(terrainId) {
+    const terrain = (typeof TERRAIN !== 'undefined') ? TERRAIN[terrainId] : null;
+    if (!terrain || !this._terrainPanel) return;
+
+    const movStr = terrain.movCost >= 99 ? 'Impassable' : `MOV: ${terrain.movCost}`;
+    const defStr = `DEF: +${terrain.def}`;
+    this._terrainPanel.setText(`${terrain.name}\n${movStr}  ${defStr}`);
+    this._terrainPanel.setVisible(true);
+  }
+
+  /** Public API for BattleScene to call — updates the terrain panel by terrain ID. */
+  updateTerrainPanel(terrainId) {
+    this.showTerrainInfo(terrainId);
   }
 
   _showSkillInfo(unit) {
@@ -267,7 +313,7 @@ class UIScene extends Phaser.Scene {
     const W = GAME_W;
     const BAR_Y = 682;
     const BAR_H = 38;
-    const btnW = W / 4;          // 120 px each (480/4)
+    const btnW = W / 5;          //  96 px each (480/5)
     const btnH = BAR_H;          // full bar height
     const btnY = BAR_Y;
 
@@ -276,6 +322,7 @@ class UIScene extends Phaser.Scene {
       { key: 'mag',  label: 'Skill',  color: 0x223355, hi: 0x335588 },
       { key: 'item', label: 'Item',   color: 0x223355, hi: 0x335588 },
       { key: 'wait', label: 'Wait',   color: 0x223355, hi: 0x335588 },
+      { key: 'undo', label: '↩ Undo', color: 0x336688, hi: 0x4488aa },
     ];
 
     this._actionBtns = {};
@@ -342,6 +389,7 @@ class UIScene extends Phaser.Scene {
         break;
       }
       case 'wait': bs.onActionWait();   break;
+      case 'undo': bs.onActionCancel?.();  break;
     }
     // Menu visibility is managed entirely by BattleScene action methods —
     // do NOT auto-hide here, so a failed action (e.g. no targets) keeps the
@@ -454,6 +502,61 @@ class UIScene extends Phaser.Scene {
     this._muteBtn = { bg, txt, zone };
   }
 
+
+  // ==========================================================================
+  // DANGER ZONE TOGGLE BUTTON — compact, left of mute button
+  // ==========================================================================
+
+  _buildDangerBtn() {
+    const BAR_Y = 682;
+    const BAR_H = 38;
+    const w = 52, h = 30;
+    // Sit just left of the MUTE button
+    const muteX = GAME_W - 66 - 4 - 30 - 4; // 376
+    const x = muteX - w - 4;                  // 320
+    const y = BAR_Y - h - 4;                  // 648
+
+    this._dangerOn = false;
+
+    const bg = this.add.graphics();
+    const drawBg = (on) => {
+      bg.clear();
+      bg.fillStyle(on ? 0x661111 : 0x113344, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+      bg.lineStyle(1, on ? 0xff4444 : 0x2266aa, 0.9);
+      bg.strokeRoundedRect(x, y, w, h, 6);
+    };
+    drawBg(false);
+
+    const txt = this.add.text(x + w / 2, y + h / 2, '⚠ DANGER', {
+      fontSize: '10px', color: '#ff8888',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+
+    const zone = this.add.zone(x + w / 2, y + h / 2, w, h).setInteractive({ useHandCursor: true });
+    zone.on('pointerover', () => {
+      bg.clear();
+      bg.fillStyle(this._dangerOn ? 0x881111 : 0x1a3a55, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+      bg.lineStyle(1, this._dangerOn ? 0xff6666 : 0x3388cc, 0.9);
+      bg.strokeRoundedRect(x, y, w, h, 6);
+    });
+    zone.on('pointerout', () => {
+      drawBg(this._dangerOn);
+    });
+    zone.on('pointerdown', () => {
+      this._dangerOn = !this._dangerOn;
+      drawBg(this._dangerOn);
+      txt.setColor(this._dangerOn ? '#ffaaaa' : '#ff8888');
+      this.tweens.add({ targets: txt, scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true });
+      const bs = this.scene.get('BattleScene');
+      if (bs && typeof bs.toggleDangerZone === 'function') bs.toggleDangerZone();
+    });
+
+    this._dangerBtn = { bg, txt, zone };
+  }
+
   // ==========================================================================
   // TURN BANNER
   // ==========================================================================
@@ -505,6 +608,22 @@ class UIScene extends Phaser.Scene {
       this._turnLabel?.setText(`TURN ${bn.turnNumber}`);
       this._phaseLabel?.setText(bn.playerTurn ? 'YOUR TURN' : 'ENEMY TURN');
       this._phaseLabel?.setStyle({ color: bn.playerTurn ? '#4488ff' : '#ff4444' });
+    }
+
+    // M3: Objective banner
+    if (bn && this._objectiveLabel) {
+      const chapter = typeof CHAPTERS !== 'undefined' ? CHAPTERS[bn.chapterId - 1] : null;
+      if (chapter?.preObjective === 'survive_turns' && bn.turnNumber <= chapter.surviveTurns) {
+        const remaining = chapter.surviveTurns - bn.turnNumber + 1;
+        const txt = `Survive ${remaining} more turn${remaining !== 1 ? 's' : ''}!`;
+        const col = remaining <= 2 ? '#ff6644' : '#ffcc44';
+        this._objectiveLabel.setText(txt).setStyle({ color: col }).setVisible(true);
+      } else if (chapter?.objective === 'defeat_boss' || chapter?.bossId) {
+        const bossName = (chapter.bossId || '').replace(/_/g, ' ');
+        this._objectiveLabel.setText(`Objective: Defeat ${bossName || 'the boss'}`).setStyle({ color: '#ffcc44' }).setVisible(true);
+      } else {
+        this._objectiveLabel.setVisible(false);
+      }
     }
   }
 
@@ -619,6 +738,30 @@ class UIScene extends Phaser.Scene {
       this._mpTxt?.setVisible(false);
     }
 
+    // EXP  -----------------------------------------------------------------
+    const expBarY = FP.y + 86;
+    const expVal  = unit.team === 'player' ? (unit.exp || 0) : -1;
+
+    this._expBarBg?.clear();
+    this._expBarFg?.clear();
+
+    if (expVal >= 0) {
+      const expRatio = Math.min(1, expVal / 100);
+      this._expLabel?.setPosition(FP.x + 6, FP.y + 92).setVisible(true);
+      this._expBarBg?.fillStyle(0x333333, 1);
+      this._expBarBg?.fillRoundedRect(barX, expBarY, barW, 8, 3);
+      this._expBarBg?.setVisible(true);
+      this._expBarFg?.fillStyle(0xddcc00, 1);
+      this._expBarFg?.fillRoundedRect(barX, expBarY, Math.max(2, barW * expRatio), 8, 3);
+      this._expBarFg?.setVisible(true);
+      this._expTxt?.setText(`${expVal}/100`).setPosition(FP.x + FP.w - 6, FP.y + 92).setVisible(true);
+    } else {
+      this._expLabel?.setVisible(false);
+      this._expBarBg?.setVisible(false);
+      this._expBarFg?.setVisible(false);
+      this._expTxt?.setVisible(false);
+    }
+
     // Status effect icons  ------------------------------------------------
     const icons = [];
     if (unit.guardActive)  icons.push({ icon: '🛡', label: ' Guard', color: '#88aaff' });
@@ -643,7 +786,7 @@ class UIScene extends Phaser.Scene {
     this._unitVetTxt
       ?.setText(vetStr)
       .setStyle({ color: vetColor })
-      .setPosition(FP.x + 6, FP.y + 96)
+      .setPosition(FP.x + 6, FP.y + 120)
       .setVisible(true);
 
     // Skill chips  --------------------------------------------------------
@@ -673,6 +816,10 @@ class UIScene extends Phaser.Scene {
     this._mpBarBg?.clear().setVisible(false);
     this._mpBarFg?.clear().setVisible(false);
     this._mpTxt?.setVisible(false);
+    this._expLabel?.setVisible(false);
+    this._expBarBg?.clear().setVisible(false);
+    this._expBarFg?.clear().setVisible(false);
+    this._expTxt?.setVisible(false);
     this._statusIcon1?.setVisible(false);
     this._statusIcon2?.setVisible(false);
     this._unitVetTxt?.setVisible(false);
@@ -695,7 +842,7 @@ class UIScene extends Phaser.Scene {
 
     const FP = this._FP;
     let chipX = FP.x + 6;
-    const chipY = FP.y + 84;
+    const chipY = FP.y + 106;
     const chipH = 14;
     const maxRight = FP.x + FP.w - 6;
 
@@ -768,6 +915,15 @@ class UIScene extends Phaser.Scene {
       itmBtn.txt.setAlpha(hasItem ? 1 : 0.4);
       if (hasItem) itmBtn.zone.setInteractive({ useHandCursor: true });
       else itmBtn.zone.disableInteractive();
+    }
+
+    const undoBtn = this._actionBtns['undo'];
+    // Show Undo only when unit has moved but hasn't committed an action yet
+    const canUndo = unit.hasMoved && !unit.hasActed;
+    if (undoBtn) {
+      undoBtn.txt.setAlpha(canUndo ? 1 : 0.4);
+      if (canUndo) undoBtn.zone.setInteractive({ useHandCursor: true });
+      else undoBtn.zone.disableInteractive();
     }
   }
 
@@ -1132,6 +1288,145 @@ class UIScene extends Phaser.Scene {
       alpha: 0, duration: 400, delay: 2000,
       onComplete: () => { this._msgBg.setVisible(false); this._msgTxt.setVisible(false); },
     });
+  }
+
+  // ==========================================================================
+  // DAMAGE PREVIEW PANEL
+  // ==========================================================================
+
+  _buildDamagePreview() {
+    const W = GAME_W;
+    // Panel sits above the unit info area / action bar, centered
+    // Target Y: just above the action bar (682), with padding
+    const panW = 240;
+    const panH = 88;
+    const panX = (W - panW) / 2;  // centered: 120
+    const panY = 682 - panH - 44; // sits above end-turn / mute buttons area
+
+    this._dmgPreviewBg = this.add.graphics().setVisible(false);
+    this._dmgPreviewBg.fillStyle(0x000000, 0.82);
+    this._dmgPreviewBg.fillRoundedRect(panX, panY, panW, panH, 7);
+    this._dmgPreviewBg.lineStyle(1, 0xff6644, 0.85);
+    this._dmgPreviewBg.strokeRoundedRect(panX, panY, panW, panH, 7);
+
+    this._dmgPreviewLine1 = this.add.text(W / 2, panY + 11, '', {
+      fontSize: '13px', color: '#ffcc88',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+      align: 'center',
+    }).setOrigin(0.5, 0).setVisible(false);
+
+    this._dmgPreviewLine2 = this.add.text(W / 2, panY + 27, '', {
+      fontSize: '11px', color: '#ff9977',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      align: 'center',
+    }).setOrigin(0.5, 0).setVisible(false);
+
+    this._dmgPreviewLine3 = this.add.text(W / 2, panY + 44, '', {
+      fontSize: '12px', color: '#88ccff',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+      align: 'center',
+    }).setOrigin(0.5, 0).setVisible(false);
+
+    this._dmgPreviewLine4 = this.add.text(W / 2, panY + 60, '', {
+      fontSize: '11px', color: '#aaaaaa',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      align: 'center',
+    }).setOrigin(0.5, 0).setVisible(false);
+
+    this._dmgPreviewPanX = panX;
+    this._dmgPreviewPanY = panY;
+    this._dmgPreviewPanW = panW;
+    this._dmgPreviewPanH = panH;
+  }
+
+  showDamagePreview(attacker, defender, terrainDef, effectiveness = 1.0, options = {}) {
+    const agiDiff  = attacker.agi - defender.agi;
+    const hitPct   = Phaser.Math.Clamp(88 + agiDiff * 2, 55, 99);
+    const critPct  = Phaser.Math.Clamp(8 + Math.max(0, agiDiff), 2, 30);
+    const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
+
+    // M4: Adjacency support preview
+    const bn = this._battle;
+    const atkSupport = bn ? Math.min(3, bn.units.filter(u =>
+      !u.dead && u !== attacker && u.team === attacker.team &&
+      Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
+    ).length) : 0;
+    const defSupport = bn ? Math.min(3, bn.units.filter(u =>
+      !u.dead && u !== defender && u.team === defender.team &&
+      Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+    ).length) : 0;
+
+    const rawDmg = Math.max(1, (attacker.atk + atkSupport) - (defender.def + guardBonus + defSupport + (terrainDef || 0)));
+    const minDmg   = rawDmg;
+    const maxDmg   = rawDmg + Math.floor(attacker.atk * 0.15);
+    const willDouble = agiDiff >= 7;
+
+    // C2: Pending skill power multiplier
+    const pendingSkill = this._battle?._pendingSkill;
+    const skillPower = pendingSkill && typeof SKILLS !== 'undefined' ? (SKILLS[pendingSkill]?.power || 1) : 1;
+    const skillHits  = pendingSkill && typeof SKILLS !== 'undefined' ? (SKILLS[pendingSkill]?.hits  || 1) : 1;
+    const adjMin = Math.max(1, Math.floor(minDmg * Math.abs(skillPower)));
+    const adjMax = Math.max(1, Math.floor(maxDmg * Math.abs(skillPower)));
+    const willKill = defender.hp <= (adjMax * (willDouble ? 2 : 1) * skillHits);
+    const hitsStr = skillHits > 1 ? `  ×${skillHits}` : '';
+
+    // Weapon triangle prefix
+    let prefix = '';
+    if (effectiveness > 1.0)      prefix = '▲ ';  // green triangle up
+    else if (effectiveness < 1.0) prefix = '▼ ';  // red triangle down
+
+    // Redraw background (in case it was previously hidden/cleared)
+    const { _dmgPreviewPanX: panX, _dmgPreviewPanY: panY,
+            _dmgPreviewPanW: panW, _dmgPreviewPanH: panH } = this;
+    this._dmgPreviewBg.clear();
+    this._dmgPreviewBg.fillStyle(0x000000, 0.82);
+    this._dmgPreviewBg.fillRoundedRect(panX, panY, panW, panH, 7);
+    this._dmgPreviewBg.lineStyle(1, 0xff6644, 0.85);
+    this._dmgPreviewBg.strokeRoundedRect(panX, panY, panW, panH, 7);
+    this._dmgPreviewBg.setVisible(true);
+
+    // Line 1 — attacker forecast with double/kill indicators
+    const atkLine = `${prefix}${attacker.name} → ${adjMin === adjMax ? adjMin : adjMin + '-' + adjMax}  HIT:${hitPct}%  CRIT:${critPct}%${willDouble ? '  ×2' : ''}${hitsStr}${willKill ? '  KILL' : ''}`;
+    const line1Color = effectiveness > 1.0 ? '#88ff88' : effectiveness < 1.0 ? '#ff8888' : '#ffcc88';
+    this._dmgPreviewLine1.setText(atkLine).setStyle({ color: line1Color }).setVisible(true);
+
+    // Line 2 — hide (was old simple counter; now replaced by line3)
+    this._dmgPreviewLine2.setVisible(false);
+
+    // Counter-attack forecast (m1 fix: use attacker's tile terrain def for counter calc)
+    const dist = Math.abs(attacker.col - defender.col) + Math.abs(attacker.row - defender.row);
+    const canCounter = dist <= (defender.range || 1);
+    if (canCounter) {
+      const atkTDef = options.defenderTerrainDef || 0;
+      const cGuard = attacker.guardActive ? Math.floor(attacker.def * 0.5) : 0;
+      const cRaw = Math.max(1, defender.atk - (attacker.def + cGuard + atkTDef));
+      const cMin = cRaw;
+      const cMax = cRaw + Math.floor(defender.atk * 0.1);
+      const cAgiDiff = defender.agi - attacker.agi;
+      const cHit = Phaser.Math.Clamp(85 + cAgiDiff * 2, 55, 99);
+      const cCrit = Phaser.Math.Clamp(6 + Math.max(0, cAgiDiff), 2, 25);
+      const defDouble = cAgiDiff >= 7;
+      const counterText = `${defender.name} ← ${cMin === cMax ? cMin : cMin + '-' + cMax}  HIT:${cHit}%  CRIT:${cCrit}%${defDouble ? '  ×2' : ''}`;
+      this._dmgPreviewLine3.setText(counterText).setVisible(true);
+      this._dmgPreviewLine4.setVisible(false);
+    } else {
+      this._dmgPreviewLine3.setText('No counter-attack').setVisible(true);
+      this._dmgPreviewLine4.setVisible(false);
+    }
+  }
+
+  hideDamagePreview() {
+    this._dmgPreviewBg?.clear().setVisible(false);
+    this._dmgPreviewLine1?.setVisible(false);
+    this._dmgPreviewLine2?.setVisible(false);
+    this._dmgPreviewLine3?.setVisible(false);
+    this._dmgPreviewLine4?.setVisible(false);
   }
 
   // ==========================================================================

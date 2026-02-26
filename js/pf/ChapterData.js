@@ -20,6 +20,8 @@ const CHAPTERS = [
     title: 'Barkville Siege',
     subtitle: 'Defend the village from the cat invaders!',
     objective: 'defeat_boss',
+    preObjective: 'survive_turns',
+    surviveTurns: 4,
     bossId: 'ALLEY_CAT',
     bgColor: 0x1a2a10,
 
@@ -76,12 +78,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
-      { unitId:'CORGI_HEALER',   col:12, row:22 },
-      { unitId:'LABRADOR_SCOUT', col:8,  row:20 },
-      { unitId:'POODLE_MAGE',    col:14, row:20 },
-      { unitId:'HUSKY_RIDER',    col:6,  row:22 },
-      { unitId:'BEAGLE_ARCHER',  col:16, row:22 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:16 },
+      { unitId:'CORGI_HEALER',   col:12, row:16 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:14 },
+      { unitId:'POODLE_MAGE',    col:14, row:14 },
+      { unitId:'HUSKY_RIDER',    col:6,  row:16 },
+      { unitId:'BEAGLE_ARCHER',  col:16, row:16 },
     ],
 
     enemies: [
@@ -91,7 +93,7 @@ const CHAPTERS = [
       { defId:'SCOUT_CAT',  col:18, row:2,  level:1 },
       { defId:'SCOUT_CAT',  col:0,  row:4,  level:1 },
       { defId:'SCOUT_CAT',  col:24, row:4,  level:1 },
-      { defId:'ALLEY_CAT',  col:10, row:0,  level:3 },
+      { defId:'ALLEY_CAT',  col:10, row:0,  level:3, isBoss:true, deathQuote:'Impossible... defeated by mere pups...!' },
     ],
 
     recruitable: [],
@@ -160,11 +162,11 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
-      { unitId:'CORGI_HEALER',   col:12, row:22 },
-      { unitId:'LABRADOR_SCOUT', col:8,  row:20 },
-      { unitId:'POODLE_MAGE',    col:14, row:20 },
-      { unitId:'HUSKY_RIDER',    col:6,  row:22 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:20 },
+      { unitId:'CORGI_HEALER',   col:12, row:20 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:19 },
+      { unitId:'POODLE_MAGE',    col:14, row:19 },
+      { unitId:'HUSKY_RIDER',    col:6,  row:21 },
       // Beagle Archer is captured — wait near bridge for rescue
     ],
 
@@ -174,7 +176,7 @@ const CHAPTERS = [
       { defId:'SIAMESE_ASSASSIN', col:0,  row:6,  level:1 },
       { defId:'SIAMESE_ASSASSIN', col:24, row:6,  level:1 },
       { defId:'PERSIAN_SORCERER', col:10, row:2,  level:2 },
-      { defId:'LYNX_RANGER',      col:12, row:0,  level:3 },
+      { defId:'LYNX_RANGER',      col:12, row:0,  level:3, isBoss:true, deathQuote:'The forest... will remember... my name...' },
     ],
 
     recruitable: [
@@ -246,12 +248,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
-      { unitId:'CORGI_HEALER',   col:12, row:22 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:22 },
-      { unitId:'LABRADOR_SCOUT', col:14, row:22 },
-      { unitId:'POODLE_MAGE',    col:10, row:20 },
-      { unitId:'HUSKY_RIDER',    col:12, row:20 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:18 },
+      { unitId:'CORGI_HEALER',   col:12, row:18 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:18 },
+      { unitId:'LABRADOR_SCOUT', col:14, row:18 },
+      { unitId:'POODLE_MAGE',    col:10, row:17 },
+      { unitId:'HUSKY_RIDER',    col:12, row:17 },
     ],
 
     enemies: [
@@ -263,7 +265,8 @@ const CHAPTERS = [
       { defId:'SCOUT_CAT',        col:16, row:8,  level:3 },
       { defId:'PERSIAN_SORCERER', col:8,  row:4,  level:3 },
       { defId:'PERSIAN_SORCERER', col:14, row:4,  level:3 },
-      { defId:'SNOW_LEOPARD',     col:10, row:0,  level:5 },
+      { defId: 'HEALER_CAT', col:12, row:14, level:3 },
+      { defId:'SNOW_LEOPARD',     col:10, row:0,  level:5, isBoss:true, deathQuote:'The cold... claims us all... eventually...' },
     ],
 
     recruitable: [
@@ -281,6 +284,7 @@ const CHAPTERS = [
     title: 'River Fetch',
     subtitle: 'Cross the river to reach the far shore!',
     objective: 'defeat_boss',
+    reachRow: 4,
     bossId: 'RIVER_PANTHER',
     bgColor: 0x0a1a2a,
 
@@ -337,12 +341,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
-      { unitId:'CORGI_HEALER',   col:12, row:22 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:22 },
-      { unitId:'BULLDOG_TANK',   col:14, row:22 },
-      { unitId:'LABRADOR_SCOUT', col:10, row:20 },
-      { unitId:'POODLE_MAGE',    col:12, row:20 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:18 },
+      { unitId:'CORGI_HEALER',   col:12, row:18 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:17 },
+      { unitId:'BULLDOG_TANK',   col:14, row:17 },
+      { unitId:'LABRADOR_SCOUT', col:10, row:16 },
+      { unitId:'POODLE_MAGE',    col:12, row:16 },
     ],
 
     enemies: [
@@ -352,8 +356,8 @@ const CHAPTERS = [
       { defId:'SIAMESE_ASSASSIN', col:16, row:2,  level:4 },
       { defId:'TIGER_GENERAL',    col:2,  row:0,  level:4 },
       { defId:'TIGER_GENERAL',    col:22, row:0,  level:4 },
-      { defId:'PERSIAN_SORCERER', col:10, row:0,  level:4 },
-      { defId:'RIVER_PANTHER',    col:10, row:0,  level:5 },
+      { defId:'PERSIAN_SORCERER', col:10, row:2,  level:4 },
+      { defId:'RIVER_PANTHER',    col:10, row:0,  level:5, isBoss:true, deathQuote:'The river... carries me away...' },
     ],
 
     recruitable: [
@@ -426,12 +430,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
-      { unitId:'CORGI_HEALER',   col:12, row:22 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:22 },
-      { unitId:'BULLDOG_TANK',   col:14, row:22 },
-      { unitId:'LABRADOR_SCOUT', col:10, row:20 },
-      { unitId:'HUSKY_RIDER',    col:12, row:20 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:17 },
+      { unitId:'CORGI_HEALER',   col:12, row:17 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:16 },
+      { unitId:'BULLDOG_TANK',   col:14, row:16 },
+      { unitId:'LABRADOR_SCOUT', col:10, row:15 },
+      { unitId:'HUSKY_RIDER',    col:12, row:15 },
     ],
 
     enemies: [
@@ -444,7 +448,8 @@ const CHAPTERS = [
       { defId:'PERSIAN_SORCERER', col:6,  row:2,  level:5 },
       { defId:'PERSIAN_SORCERER', col:18, row:2,  level:5 },
       { defId:'TIGER_GENERAL',    col:10, row:8,  level:5 },
-      { defId:'SAND_CAT_KING',    col:10, row:0,  level:6 },
+      { defId: 'HEALER_CAT', col:12, row:6,  level:5 },
+      { defId:'SAND_CAT_KING',    col:10, row:0,  level:6, isBoss:true, deathQuote:'My kingdom... buried in sand...' },
     ],
 
     recruitable: [
@@ -518,12 +523,12 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
-      { unitId:'CORGI_HEALER',   col:12, row:22 },
-      { unitId:'BEAGLE_ARCHER',  col:10, row:20 },
-      { unitId:'BULLDOG_TANK',   col:12, row:20 },
-      { unitId:'LABRADOR_SCOUT', col:8,  row:22 },
-      { unitId:'TERRIER_THIEF',  col:14, row:22 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:26 },
+      { unitId:'CORGI_HEALER',   col:12, row:26 },
+      { unitId:'BEAGLE_ARCHER',  col:10, row:25 },
+      { unitId:'BULLDOG_TANK',   col:12, row:25 },
+      { unitId:'LABRADOR_SCOUT', col:8,  row:26 },
+      { unitId:'TERRIER_THIEF',  col:14, row:26 },
     ],
 
     enemies: [
@@ -535,7 +540,7 @@ const CHAPTERS = [
       { defId:'PERSIAN_SORCERER', col:14, row:8,  level:6 },
       { defId:'SCOUT_CAT',        col:2,  row:18, level:6 },
       { defId:'SCOUT_CAT',        col:22, row:18, level:6 },
-      { defId:'PERSIAN_QUEEN',    col:10, row:2,  level:7 },
+      { defId:'PERSIAN_QUEEN',    col:10, row:2,  level:7, isBoss:true, deathQuote:'You think this changes anything? The Emperor will crush you all!' },
     ],
 
     recruitable: [],
@@ -608,28 +613,29 @@ const CHAPTERS = [
     ],
 
     playerStart: [
-      { unitId:'PUPPY_KNIGHT',   col:10, row:22 },
-      { unitId:'CORGI_HEALER',   col:12, row:22 },
-      { unitId:'BEAGLE_ARCHER',  col:8,  row:22 },
-      { unitId:'BULLDOG_TANK',   col:14, row:22 },
-      { unitId:'LABRADOR_SCOUT', col:6,  row:22 },
-      { unitId:'POODLE_MAGE',    col:16, row:22 },
-      { unitId:'HUSKY_RIDER',    col:8,  row:20 },
-      { unitId:'TERRIER_THIEF',  col:14, row:20 },
+      { unitId:'PUPPY_KNIGHT',   col:10, row:18 },
+      { unitId:'CORGI_HEALER',   col:12, row:18 },
+      { unitId:'BEAGLE_ARCHER',  col:8,  row:18 },
+      { unitId:'BULLDOG_TANK',   col:14, row:18 },
+      { unitId:'LABRADOR_SCOUT', col:6,  row:17 },
+      { unitId:'POODLE_MAGE',    col:16, row:17 },
+      { unitId:'HUSKY_RIDER',    col:8,  row:16 },
+      { unitId:'TERRIER_THIEF',  col:14, row:16 },
     ],
 
     enemies: [
       { defId:'TIGER_GENERAL',    col:6,  row:6,  level:8 },
       { defId:'TIGER_GENERAL',    col:16, row:6,  level:8 },
-      { defId:'SIAMESE_ASSASSIN', col:4,  row:8,  level:8 },
-      { defId:'SIAMESE_ASSASSIN', col:20, row:8,  level:8 },
+      { defId:'SIAMESE_ASSASSIN', col:6,  row:8,  level:8 },  // on left bridge (col 4 was water)
+      { defId:'SIAMESE_ASSASSIN', col:18, row:8,  level:8 },  // on right bridge (col 20 was water)
       { defId:'PERSIAN_SORCERER', col:6,  row:2,  level:8 },
       { defId:'PERSIAN_SORCERER', col:18, row:2,  level:8 },
       { defId:'SIAMESE_ASSASSIN', col:2,  row:12, level:8 },
       { defId:'SIAMESE_ASSASSIN', col:22, row:12, level:8 },
       { defId:'TIGER_GENERAL',    col:8,  row:6,  level:8 },
       { defId:'TIGER_GENERAL',    col:14, row:6,  level:8 },
-      { defId:'CAT_EMPEROR',      col:12, row:0,  level:10 },
+      { defId: 'HEALER_CAT', col:10, row:4,  level:8 },
+      { defId:'CAT_EMPEROR',      col:12, row:0,  level:10, isBoss:true, deathQuote:'No... the empire... was supposed to be... eternal...' },
     ],
 
     recruitable: [],
@@ -651,7 +657,8 @@ function buildEnemyUnit(spawnDef, allUnits) {
   scaledDef.baseStats.maxHp += g.hp  * levelDiff;
   scaledDef.baseStats.atk   += g.atk * levelDiff;
   scaledDef.baseStats.def   += g.def * levelDiff;
-  scaledDef.baseStats.agi   += (g.agi || 0) * levelDiff;
+  // m8: AGI scales at 50% rate (half of other stats) to prevent high-level enemies being easily double-attacked
+  scaledDef.baseStats.agi   += Math.floor((g.agi || 0) * 0.5 * levelDiff);
 
   const unit = new Unit(scaledDef, spawnDef.col, spawnDef.row);
   return unit;

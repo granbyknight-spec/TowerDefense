@@ -4,6 +4,47 @@
 // Flood-fill movement range + A* path finding
 // =============================================================================
 
+// Compact binary min-heap for pathfinding priority queue
+class MinHeap {
+  constructor() { this._d = []; }
+  push(item) {
+    this._d.push(item);
+    let i = this._d.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (this._d[p].cost <= this._d[i].cost) break;
+      [this._d[p], this._d[i]] = [this._d[i], this._d[p]];
+      i = p;
+    }
+  }
+  pop() {
+    const top = this._d[0];
+    const last = this._d.pop();
+    if (this._d.length > 0) {
+      this._d[0] = last;
+      let i = 0;
+      while (true) {
+        let s = i, l = 2*i+1, r = 2*i+2;
+        if (l < this._d.length && this._d[l].cost < this._d[s].cost) s = l;
+        if (r < this._d.length && this._d[r].cost < this._d[s].cost) s = r;
+        if (s === i) break;
+        [this._d[s], this._d[i]] = [this._d[i], this._d[s]];
+        i = s;
+      }
+    }
+    return top;
+  }
+  get size() { return this._d.length; }
+}
+
+// Returns terrain movement cost, with optional per-unit-class overrides
+function getMovCost(terrainId, unitClass) {
+  const base = (TERRAIN[terrainId] || TERRAIN[0]).movCost;
+  // Cavalry (HUSKY_RIDER class) moves through forest at cost 1 instead of 2
+  if ((unitClass === 'Cavalry' || unitClass === 'Champion') && terrainId === 1 /* FOREST */) return 1;
+  return base;
+}
+
 /**
  * Returns true if ALL tiles of `unit`'s footprint anchored at (nc, nr) are:
  *  - within map bounds
@@ -51,15 +92,14 @@ function getReachableTiles(unit, mapGrid, allUnits) {
 
   const visited  = new Map(); // key -> min cost spent
   const reachable = [];
-  const queue = [{ col: unit.col, row: unit.row, cost: 0 }];
+  const queue = new MinHeap();
+  queue.push({ col: unit.col, row: unit.row, cost: 0 });
   visited.set(`${unit.col},${unit.row}`, 0);
 
   const DIR = [[0,1],[0,-1],[1,0],[-1,0]];
 
-  while (queue.length > 0) {
-    // Pop cheapest (simple priority)
-    queue.sort((a,b) => a.cost - b.cost);
-    const cur = queue.shift();
+  while (queue.size > 0) {
+    const cur = queue.pop();
 
     // Can we stop here?
     const occ = occupied.get(`${cur.col},${cur.row}`);
@@ -81,7 +121,7 @@ function getReachableTiles(unit, mapGrid, allUnits) {
       if (!_footprintClear(unit, nc, nr, mapGrid, occupied)) continue;
 
       const terrainId = mapGrid[nr][nc];
-      const movCost   = unit.moveCostFor(terrainId);
+      const movCost   = getMovCost(terrainId, unit && unit.unitClass);
 
       const newCost = cur.cost + movCost;
       if (newCost > unit.mov) continue;
@@ -120,12 +160,17 @@ function findPath(unit, targetCol, targetRow, mapGrid, allUnits, ignoreOccupancy
   const h = (c, r) => Math.abs(c - targetCol) + Math.abs(r - targetRow);
   const key = (c, r) => `${c},${r}`;
 
-  const open   = [{ col: unit.col, row: unit.row, g: 0, f: h(unit.col, unit.row), path: [] }];
+  // A* open set uses .cost field (= f score) for the MinHeap
+  const startNode = { col: unit.col, row: unit.row, g: 0, f: h(unit.col, unit.row), path: [], cost: h(unit.col, unit.row) };
+  const open   = new MinHeap();
+  open.push(startNode);
   const closed = new Set();
+  // Track best g score per tile for duplicate detection
+  const bestG = new Map();
+  bestG.set(key(unit.col, unit.row), 0);
 
-  while (open.length > 0) {
-    open.sort((a,b) => a.f - b.f);
-    const cur = open.shift();
+  while (open.size > 0) {
+    const cur = open.pop();
 
     if (cur.col === targetCol && cur.row === targetRow) {
       return [...cur.path, { col: targetCol, row: targetRow }];
@@ -145,7 +190,7 @@ function findPath(unit, targetCol, targetRow, mapGrid, allUnits, ignoreOccupancy
       if (closed.has(nk)) continue;
 
       const terrainId = mapGrid[nr][nc];
-      const movCost   = unit.moveCostFor(terrainId);
+      const movCost   = getMovCost(terrainId, unit && unit.unitClass);
       const isTarget  = nc === targetCol && nr === targetRow;
 
       // Allow stepping onto target even if impassable terrain (e.g. attack from side)
@@ -155,12 +200,11 @@ function findPath(unit, targetCol, targetRow, mapGrid, allUnits, ignoreOccupancy
       if (!isTarget && !_footprintClear(unit, nc, nr, mapGrid, occupied)) continue;
 
       const g = cur.g + (movCost >= 99 ? 1 : movCost);
-      const existing = open.find(n => n.col === nc && n.row === nr);
-      if (!existing || existing.g > g) {
-        if (existing) open.splice(open.indexOf(existing), 1);
-        open.push({ col: nc, row: nr, g, f: g + h(nc, nr),
-          path: [...cur.path, { col: cur.col, row: cur.row }] });
-      }
+      if (bestG.has(nk) && bestG.get(nk) <= g) continue;
+      bestG.set(nk, g);
+      const f = g + h(nc, nr);
+      open.push({ col: nc, row: nr, g, f, cost: f,
+        path: [...cur.path, { col: cur.col, row: cur.row }] });
     }
   }
   return null;
