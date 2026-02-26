@@ -828,6 +828,10 @@ class BattleScene extends Phaser.Scene {
     const row = Math.floor((ptr.worldY - GRID_Y) / TILE);
     if (col < 0 || col >= this.mapGrid[0].length || row < 0 || row >= this.mapGrid.length) return;
 
+    // M3: Update terrain info panel on every tile tap
+    const _tappedTerrainId = this.mapGrid[row]?.[col];
+    if (_tappedTerrainId !== undefined) this._getUI()?.updateTerrainPanel(_tappedTerrainId);
+
     switch (this._state) {
       case BS.IDLE:       this._handleIdleTap(col, row);     break;
       case BS.UNIT_SEL:   this._handleSelectTap(col, row);   break;
@@ -893,10 +897,18 @@ class BattleScene extends Phaser.Scene {
 
   _handleAtkTargetTap(col, row) {
     if (!this._atkTiles.some(t => t.col === col && t.row === row)) {
+      this._getUI()?.hideDamagePreview();
       this._cancelTargeting(); return;
     }
     const target = this._unitAt(col, row);
-    if (!target || target.team !== 'enemy') { this._cancelTargeting(); return; }
+    if (!target || target.team !== 'enemy') {
+      this._getUI()?.hideDamagePreview();
+      this._cancelTargeting(); return;
+    }
+
+    // m1: Show damage preview briefly before combat resolves
+    const terrainDef = TERRAIN[this.mapGrid[target.row]?.[target.col]]?.def || 0;
+    this._getUI()?.showDamagePreview(this._selected, target, terrainDef);
 
     this._executeCombat(this._selected, target, () => {
       const unit = this._selected;
@@ -988,6 +1000,7 @@ class BattleScene extends Phaser.Scene {
     this._setState(BS.IDLE);
     this._getUI()?.hideActionMenu();
     this._getUI()?.clearUnitInfo();
+    this._getUI()?.hideDamagePreview();
     this._dimActedUnits();
     // m5: auto-end turn if all players have moved and acted
     this._checkAutoEndTurn();
@@ -1001,6 +1014,7 @@ class BattleScene extends Phaser.Scene {
     this._healTiles   = [];
     this._pendingSkill = null;  // discard any queued skill so it doesn't leak to next attack
     this._clearHighlights();
+    this._getUI()?.hideDamagePreview();
     if (unit.hasMoved) {
       // Was in UNIT_MOVED — just restore sel highlight and menu
       this._drawSelHighlight(unit);
@@ -1313,6 +1327,8 @@ class BattleScene extends Phaser.Scene {
   onEndTurn() {
     if (this._state === BS.ENEMY_TURN || this._state === BS.ANIMATING) return;
     if (this._state === BS.VICTORY   || this._state === BS.DEFEAT)    return;
+    // Cancel any pending auto-end timer to prevent double-fire
+    if (this._autoEndTimer) { this._autoEndTimer.remove(); this._autoEndTimer = null; }
     this._deselect();
     this._beginEnemyTurn();
   }
@@ -1364,7 +1380,7 @@ class BattleScene extends Phaser.Scene {
     let baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
     // C2: Weapon effectiveness multiplier
     const effectiveness = this._weaponEffectiveness(attacker, defender);
-    if (effectiveness !== 1.0) baseDmg = Math.round(baseDmg * effectiveness);
+    if (effectiveness > 1.0) baseDmg = Math.round(baseDmg * effectiveness);
     const dmg = isCrit ? Math.floor(baseDmg * 1.5) : baseDmg;
 
     // Attack animation
@@ -2299,11 +2315,13 @@ class BattleScene extends Phaser.Scene {
 
   _checkAutoEndTurn() {
     if (this._battleEnded) return;
+    if (this._autoEndTimer) return;  // already scheduled — prevent double-schedule
     const state = this._getState();
     if (state === BS.ENEMY_TURN || state === BS.ANIMATING || state === BS.VICTORY || state === BS.DEFEAT) return;
     const livingPlayers = this.units.filter(u => !u.dead && u.team === 'player');
     if (livingPlayers.length > 0 && livingPlayers.every(u => u.hasMoved && u.hasActed)) {
-      this.time.delayedCall(400, () => {
+      this._autoEndTimer = this.time.delayedCall(400, () => {
+        this._autoEndTimer = null;
         if (!this._battleEnded) this.onEndTurn();
       });
     }
