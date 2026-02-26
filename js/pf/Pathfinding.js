@@ -41,7 +41,7 @@ class MinHeap {
 function getMovCost(terrainId, unitClass) {
   const base = (TERRAIN[terrainId] || TERRAIN[0]).movCost;
   // Cavalry (HUSKY_RIDER class) moves through forest at cost 1 instead of 2
-  if ((unitClass === 'CAVALRY' || unitClass === 'HUSKY_RIDER') && terrainId === 1 /* FOREST */) return 1;
+  if ((unitClass === 'Cavalry' || unitClass === 'Champion') && terrainId === 1 /* FOREST */) return 1;
   return base;
 }
 

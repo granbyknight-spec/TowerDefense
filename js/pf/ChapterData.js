@@ -624,8 +624,8 @@ const CHAPTERS = [
     enemies: [
       { defId:'TIGER_GENERAL',    col:6,  row:6,  level:8 },
       { defId:'TIGER_GENERAL',    col:16, row:6,  level:8 },
-      { defId:'SIAMESE_ASSASSIN', col:4,  row:8,  level:8 },
-      { defId:'SIAMESE_ASSASSIN', col:20, row:8,  level:8 },
+      { defId:'SIAMESE_ASSASSIN', col:6,  row:8,  level:8 },  // on left bridge (col 4 was water)
+      { defId:'SIAMESE_ASSASSIN', col:18, row:8,  level:8 },  // on right bridge (col 20 was water)
       { defId:'PERSIAN_SORCERER', col:6,  row:2,  level:8 },
       { defId:'PERSIAN_SORCERER', col:18, row:2,  level:8 },
       { defId:'SIAMESE_ASSASSIN', col:2,  row:12, level:8 },
