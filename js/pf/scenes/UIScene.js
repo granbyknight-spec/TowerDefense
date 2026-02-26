@@ -201,6 +201,14 @@ class UIScene extends Phaser.Scene {
       fontFamily: 'Nunito, Arial, sans-serif', fontStyle: 'bold',
     });
 
+    // M3: Objective display
+    this._objectiveLabel = this.add.text(8, 52, '', {
+      fontSize: '10px',
+      color: '#ffcc44',
+      fontFamily: 'Nunito, Arial, sans-serif',
+      fontStyle: 'bold',
+    }).setScrollFactor(0).setDepth(100).setVisible(false);
+
     // Small terrain info panel (top-left corner, always visible as a label)
     this._terrainPanel = this.add.text(6, 8, '', {
       fontSize: '11px', color: '#ccddee',
@@ -544,6 +552,22 @@ class UIScene extends Phaser.Scene {
       this._turnLabel?.setText(`TURN ${bn.turnNumber}`);
       this._phaseLabel?.setText(bn.playerTurn ? 'YOUR TURN' : 'ENEMY TURN');
       this._phaseLabel?.setStyle({ color: bn.playerTurn ? '#4488ff' : '#ff4444' });
+    }
+
+    // M3: Objective banner
+    if (bn && this._objectiveLabel) {
+      const chapter = bn._chapter;
+      if (chapter?.preObjective === 'survive_turns' && bn.turnNumber <= chapter.surviveTurns) {
+        const remaining = chapter.surviveTurns - bn.turnNumber + 1;
+        const txt = `Survive ${remaining} more turn${remaining !== 1 ? 's' : ''}!`;
+        const col = remaining <= 2 ? '#ff6644' : '#ffcc44';
+        this._objectiveLabel.setText(txt).setStyle({ color: col }).setVisible(true);
+      } else if (chapter?.objective === 'defeat_boss' || chapter?.bossId) {
+        const bossName = (chapter.bossId || '').replace(/_/g, ' ');
+        this._objectiveLabel.setText(`Objective: Defeat ${bossName || 'the boss'}`).setStyle({ color: '#ffcc44' }).setVisible(true);
+      } else {
+        this._objectiveLabel.setVisible(false);
+      }
     }
   }
 
@@ -1269,11 +1293,32 @@ class UIScene extends Phaser.Scene {
     const agiDiff  = attacker.agi - defender.agi;
     const hitPct   = Phaser.Math.Clamp(88 + agiDiff * 2, 55, 99);
     const critPct  = Phaser.Math.Clamp(8 + Math.max(0, agiDiff), 2, 30);
-    const rawDmg   = Math.max(1, attacker.atk - (defender.def + (terrainDef || 0)));
+    const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
+
+    // M4: Adjacency support preview
+    const bn = this._battle;
+    const atkSupport = bn ? Math.min(3, bn.units.filter(u =>
+      !u.dead && u !== attacker && u.team === attacker.team &&
+      Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
+    ).length) : 0;
+    const defSupport = bn ? Math.min(3, bn.units.filter(u =>
+      !u.dead && u !== defender && u.team === defender.team &&
+      Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+    ).length) : 0;
+
+    const rawDmg = Math.max(1, (attacker.atk + atkSupport) - (defender.def + guardBonus + defSupport + (terrainDef || 0)));
     const minDmg   = rawDmg;
     const maxDmg   = rawDmg + Math.floor(attacker.atk * 0.15);
     const willDouble = agiDiff >= 7;
-    const willKill = defender.hp <= (maxDmg * (willDouble ? 2 : 1));
+
+    // C2: Pending skill power multiplier
+    const pendingSkill = this._battle?._pendingSkill;
+    const skillPower = pendingSkill && typeof SKILLS !== 'undefined' ? (SKILLS[pendingSkill]?.power || 1) : 1;
+    const skillHits  = pendingSkill && typeof SKILLS !== 'undefined' ? (SKILLS[pendingSkill]?.hits  || 1) : 1;
+    const adjMin = Math.max(1, Math.floor(minDmg * Math.abs(skillPower)));
+    const adjMax = Math.max(1, Math.floor(maxDmg * Math.abs(skillPower)));
+    const willKill = defender.hp <= (adjMax * (willDouble ? 2 : 1) * skillHits);
+    const hitsStr = skillHits > 1 ? `  ×${skillHits}` : '';
 
     // Weapon triangle prefix
     let prefix = '';
@@ -1291,7 +1336,7 @@ class UIScene extends Phaser.Scene {
     this._dmgPreviewBg.setVisible(true);
 
     // Line 1 — attacker forecast with double/kill indicators
-    const atkLine = `${prefix}${attacker.name} → ${minDmg === maxDmg ? minDmg : minDmg + '-' + maxDmg}  HIT:${hitPct}%  CRIT:${critPct}%${willDouble ? '  ×2' : ''}${willKill ? '  KILL' : ''}`;
+    const atkLine = `${prefix}${attacker.name} → ${adjMin === adjMax ? adjMin : adjMin + '-' + adjMax}  HIT:${hitPct}%  CRIT:${critPct}%${willDouble ? '  ×2' : ''}${hitsStr}${willKill ? '  KILL' : ''}`;
     const line1Color = effectiveness > 1.0 ? '#88ff88' : effectiveness < 1.0 ? '#ff8888' : '#ffcc88';
     this._dmgPreviewLine1.setText(atkLine).setStyle({ color: line1Color }).setVisible(true);
 
