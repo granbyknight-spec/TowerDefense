@@ -1519,7 +1519,8 @@ class BattleScene extends Phaser.Scene {
           const canCounter = !noCounter && dist <= defender.range;
           if (canCounter) {
             const cDef = TERRAIN[this.mapGrid[attacker.row][attacker.col]]?.def || 0;
-            const cRaw = Math.max(1, defender.atk - (attacker.def + cDef));
+            const cGuardFirst = attacker.guardActive ? Math.floor(attacker.def * 0.5) : 0;
+            const cRaw = Math.max(1, defender.atk - (attacker.def + cGuardFirst + cDef));
             const cVar = Phaser.Math.Between(0, Math.floor(defender.atk * 0.1));
             // Counter-attack hit/crit check (enemy counters)
             const cAgiDiff  = defender.agi - attacker.agi;
@@ -1719,6 +1720,7 @@ class BattleScene extends Phaser.Scene {
       alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 400,
       ease: 'Power2',
       onComplete: () => {
+        const portraitKey = unit.sprite?.texture?.key || null;
         this._destroyUnitSprite(unit);
         unit.dead = true;
         unit.guardActive = false;
@@ -1730,7 +1732,7 @@ class BattleScene extends Phaser.Scene {
           if (typeof this._startDialogue === 'function') {
             this._startDialogue([{
               speaker: unit.name,
-              portrait: unit.sprite?.texture?.key || null,
+              portrait: portraitKey,
               text: quote,
             }], () => {
               this._checkEndCondition();
@@ -2109,6 +2111,7 @@ class BattleScene extends Phaser.Scene {
 
     // Tap anywhere on card/backdrop to dismiss
     const dismiss = () => {
+      this.tweens.killTweensOf(hint);
       cardObjs.forEach(o => o.destroy());
       this.time.delayedCall(50, onDone);
     };
