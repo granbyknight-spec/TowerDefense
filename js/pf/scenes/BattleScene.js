@@ -128,6 +128,8 @@ class BattleScene extends Phaser.Scene {
     this._battleEnded = false; // latch: prevents _endBattle from firing twice
     this._battleGen   = (this._battleGen || 0) + 1; // generation counter for setTimeout safety
     this.turnNumber = 1;
+    this._dangerZoneActive = false;
+    this._dangerGfx = null;
     this.playerTurn = true;
   }
 
@@ -1195,6 +1197,10 @@ class BattleScene extends Phaser.Scene {
   onActionAttack() {
     const unit = this._selected;
     if (!unit) return;
+    if (unit.weapon === 'staff') {
+      this._getUI()?.showMessage?.("Can't attack with a staff!");
+      return;
+    }
     const atkTiles = getAttackTiles(unit, this.mapGrid, unit.col, unit.row);
     const hasTarget = atkTiles.some(t => {
       const u = this._unitAt(t.col, t.row);
@@ -1562,12 +1568,13 @@ class BattleScene extends Phaser.Scene {
             ).length);
             const cRaw = Math.max(1, (defender.atk + cAtkSupport) - (attacker.def + cGuardFirst + cDefSupport + cDef));
             const cVar = Phaser.Math.Between(0, Math.floor(defender.atk * 0.1));
+            const cEff = this._weaponEffectiveness(defender, attacker);
             // Counter-attack hit/crit check (enemy counters)
             const cAgiDiff  = defender.agi - attacker.agi;
             const cHitChance = Phaser.Math.Clamp(85 + cAgiDiff * 2, 55, 100);
             const cHit       = Phaser.Math.Between(1, 100) <= cHitChance;
             const cCrit      = cHit && (Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(6 + Math.max(0, cAgiDiff), 2, 25));
-            const cBaseDmg   = cRaw + cVar;
+            const cBaseDmg   = Math.floor((cRaw + cVar) * cEff);
             const cDmg       = cCrit ? Math.floor(cBaseDmg * 1.5) : cBaseDmg;
 
             // M1: Defender double-attack after counter resolves (AGI advantage >= 7)
@@ -1577,8 +1584,17 @@ class BattleScene extends Phaser.Scene {
                 this.time.delayedCall(200, () => {
                   const cDefTerrain = TERRAIN[this.mapGrid[attacker.row]?.[attacker.col]]?.def || 0;
                   const cGuard = attacker.guardActive ? Math.floor(attacker.def * 0.5) : 0;
-                  const cRaw = Math.max(1, defender.atk - (attacker.def + cGuard + cDefTerrain));
+                  const cAtkSupport2 = Math.min(3, this.units.filter(u =>
+                    !u.dead && u !== defender && u.team === defender.team &&
+                    Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+                  ).length);
+                  const cDefSupport2 = Math.min(3, this.units.filter(u =>
+                    !u.dead && u !== attacker && u.team === attacker.team &&
+                    Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
+                  ).length);
+                  const cRaw = Math.max(1, (defender.atk + cAtkSupport2) - (attacker.def + cGuard + cDefSupport2 + cDefTerrain));
                   const cVar = Phaser.Math.Between(0, Math.floor(defender.atk * 0.1));
+                  const cEff = this._weaponEffectiveness(defender, attacker);
                   const cAgiDiff = defender.agi - attacker.agi;
                   const cHit = Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(85 + cAgiDiff * 2, 55, 100);
                   if (!cHit) {
@@ -1587,7 +1603,7 @@ class BattleScene extends Phaser.Scene {
                     return;
                   }
                   const cCrit = Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(6 + Math.max(0, cAgiDiff), 2, 25);
-                  const cDmg = cCrit ? Math.floor((cRaw + cVar) * 1.5) : (cRaw + cVar);
+                  const cDmg = Math.floor((cRaw + cVar) * cEff * (cCrit ? 1.5 : 1));
                   this.tweens.add({
                     targets: [attacker.spriteBg, attacker.sprite].filter(Boolean),
                     alpha: 0.2, duration: 60, yoyo: true, repeat: cCrit ? 4 : 2,
@@ -1721,6 +1737,9 @@ class BattleScene extends Phaser.Scene {
   _executeHeal(healer, target) {
     const skillKey = this._pendingSkill || 'heal';
     const sk = SKILLS[skillKey] || SKILLS['heal'];
+    this._pendingSkill = null;
+    const mpCost = sk.mpCost || 0;
+    if (mpCost > 0) healer.useMp(mpCost);
     // Use skill power magnitude to scale heal (power is negative to denote healing)
     const skillPower = sk ? Math.abs(sk.power) : 1.0;
     const healAmt = Math.floor(healer.atk * skillPower) + Phaser.Math.Between(2, 6);
@@ -2527,14 +2546,26 @@ class BattleScene extends Phaser.Scene {
   // ==========================================================================
 
   _weaponEffectiveness(attacker, defender) {
-    const ac = attacker.unitClass || '';
-    const dc = defender.unitClass || '';
-    // Bows effective vs Cavalry
-    if ((ac === 'Archer' || ac === 'Ranger') && (dc === 'Cavalry' || dc === 'Champion')) return 1.5;
-    // Cavalry effective vs foot soldiers (Knight, Warrior, Baron)
-    if ((ac === 'Cavalry' || ac === 'Champion') && (dc === 'Knight' || dc === 'Warrior' || dc === 'Baron')) return 1.25;
-    // Magic effective vs heavily armored (Tank/Baron/Knight)
-    if ((ac === 'Mage' || ac === 'Wizard') && (dc === 'Knight' || dc === 'Baron' || dc === 'Tank')) return 1.25;
+    const aw = (attacker.weapon || '').toLowerCase();
+    const dw = (defender.weapon || '').toLowerCase();
+    // Sword/blade/dagger > Axe > Lance/spear > Sword
+    const swordLike = ['sword', 'blade', 'dagger'];
+    const axeLike   = ['axe'];
+    const lanceLike = ['lance', 'spear'];
+    const isSword = w => swordLike.includes(w);
+    const isAxe   = w => axeLike.includes(w);
+    const isLance = w => lanceLike.includes(w);
+    if (isSword(aw) && isAxe(dw))   return 1.2;
+    if (isAxe(aw)   && isLance(dw)) return 1.2;
+    if (isLance(aw) && isSword(dw)) return 1.2;
+    if (isSword(aw) && isLance(dw)) return 0.8;
+    if (isAxe(aw)   && isSword(dw)) return 0.8;
+    if (isLance(aw) && isAxe(dw))   return 0.8;
+    // Bow vs cavalry (class-based exception — mounts not captured by weapon alone)
+    const dc = (defender.unitClass || '').toLowerCase();
+    if (aw === 'bow' && (dc === 'cavalry' || dc === 'champion')) return 1.5;
+    // Wand/magic vs armored classes
+    if ((aw === 'wand' || aw === 'mageblade') && (dc === 'knight' || dc === 'baron')) return 1.25;
     return 1.0;
   }
 
@@ -2580,6 +2611,46 @@ class BattleScene extends Phaser.Scene {
     if (this._enemyRangeGfx) {
       this._enemyRangeGfx.destroy();
       this._enemyRangeGfx = null;
+    }
+  }
+
+  _showAllEnemyRanges() {
+    this._clearDangerZone();
+    this._dangerGfx = this.add.graphics().setDepth(1);
+    const g = this._dangerGfx;
+    const highlighted = new Set();
+    this.units.filter(u => !u.dead && u.team === 'enemy').forEach(enemy => {
+      const moveTiles = getReachableTiles(enemy, this.mapGrid, this.units);
+      const allPositions = [{ col: enemy.col, row: enemy.row }, ...moveTiles];
+      allPositions.forEach(pos => {
+        const atkTiles = getAttackTiles({ ...enemy, col: pos.col, row: pos.row }, this.mapGrid, pos.col, pos.row);
+        atkTiles.forEach(at => {
+          const key = `${at.col},${at.row}`;
+          if (!highlighted.has(key)) {
+            highlighted.add(key);
+            const { x, y } = this._tileTL(at.col, at.row);
+            g.fillStyle(0xff2222, 0.25);
+            g.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+          }
+        });
+      });
+    });
+    this._dangerZoneActive = true;
+  }
+
+  _clearDangerZone() {
+    if (this._dangerGfx) {
+      this._dangerGfx.destroy();
+      this._dangerGfx = null;
+    }
+    this._dangerZoneActive = false;
+  }
+
+  toggleDangerZone() {
+    if (this._dangerZoneActive) {
+      this._clearDangerZone();
+    } else {
+      this._showAllEnemyRanges();
     }
   }
 }
