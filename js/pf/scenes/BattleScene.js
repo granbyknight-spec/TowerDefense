@@ -753,6 +753,7 @@ class BattleScene extends Phaser.Scene {
     this._hlAtk.clear();
     this._hlHeal.clear();
     this._hlSel.clear();
+    if (this._movCostTexts) { this._movCostTexts.forEach(t => t.destroy()); this._movCostTexts = []; }
   }
 
   _drawMoveHighlights(tiles) {
@@ -764,6 +765,16 @@ class BattleScene extends Phaser.Scene {
       g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
       g.lineStyle(2, 0x88aaff, 0.9);
       g.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+      const terrainId = this.mapGrid[row][col];
+      const cost = getMovCost(terrainId, this._selected && this._selected.unitClass);
+      if (cost > 1) {
+        if (!this._movCostTexts) this._movCostTexts = [];
+        this._movCostTexts.push(
+          this.add.text(x + TILE/2, y + TILE/2, cost.toString(),
+            { fontSize: '9px', color: '#ffffff', alpha: 0.7 })
+            .setOrigin(0.5).setDepth(4)
+        );
+      }
     });
   }
 
@@ -1093,6 +1104,11 @@ class BattleScene extends Phaser.Scene {
       }
       const isLastStep = (step === path.length - 1);
       const { col, row } = path[step++];
+      if (unit.team === 'enemy') {
+        const wx = GRID_X + col * TILE + TILE/2;
+        const wy = GRID_Y + row * TILE + TILE/2;
+        this.cameras.main.pan(wx, wy, 250, 'Sine.easeOut', false);
+      }
       const { x, y } = this._tileCenter(col, row);
       const hpY  = y + r + 3;
       const bdgY = y + r + 10;
@@ -1324,6 +1340,10 @@ class BattleScene extends Phaser.Scene {
     this._deselect();
   }
 
+  onActionCancel() {
+    this._undoMove();
+  }
+
   onEndTurn() {
     if (this._state === BS.ENEMY_TURN || this._state === BS.ANIMATING) return;
     if (this._state === BS.VICTORY   || this._state === BS.DEFEAT)    return;
@@ -1469,7 +1489,7 @@ class BattleScene extends Phaser.Scene {
           };
 
           const noCounter = this._lastSkillUsed ? (SKILLS[this._lastSkillUsed]?.noCounter || false) : false;
-          const canCounter = !noCounter && dist <= defender.range && defender.team === 'enemy';
+          const canCounter = !noCounter && dist <= defender.range;
           if (canCounter) {
             const cDef = TERRAIN[this.mapGrid[attacker.row][attacker.col]]?.def || 0;
             const cRaw = Math.max(1, defender.atk - (attacker.def + cDef));
@@ -1598,7 +1618,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   _executeHeal(healer, target) {
-    const sk = SKILLS['heal'];
+    const skillKey = this._pendingSkill || 'heal';
+    const sk = SKILLS[skillKey] || SKILLS['heal'];
     // Use skill power magnitude to scale heal (power is negative to denote healing)
     const skillPower = sk ? Math.abs(sk.power) : 1.0;
     const healAmt = Math.floor(healer.atk * skillPower) + Phaser.Math.Between(2, 6);
@@ -1840,9 +1861,9 @@ class BattleScene extends Phaser.Scene {
           u.hp = 1;
         } else {
           // Living survivors get the inter-chapter training bonus
-          u.maxHp += 2;
+          u.maxHp += 1;
           u.hp = u.maxHp;
-          u.atk += 1;
+          if (this.chapterId % 2 === 1) u.atk += 1;
         }
       });
       this.saveData.roster = SaveManager.serializeRoster(survivors);
@@ -1998,7 +2019,6 @@ class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: hint, alpha: { from: 0.3, to: 1 }, duration: 600, yoyo: true, repeat: -1 });
 
     // Tap anywhere on card/backdrop to dismiss
-    backdrop.on('pointerdown', dismiss);
     const dismiss = () => {
       backdrop.destroy();
       cardBg.destroy();
@@ -2256,14 +2276,18 @@ class BattleScene extends Phaser.Scene {
   _dimActedUnits() {
     this.units.forEach(u => {
       if (!u.sprite) return;
-      const dim = (u.team === 'player') && (u.hasMoved && u.hasActed);
-      const alpha = dim ? 0.45 : 1.0;
+      const fullyDone = (u.team === 'player') && (u.hasMoved && u.hasActed);
+      const movedOnly = (u.team === 'player') && (u.hasMoved && !u.hasActed);
+      const alpha = fullyDone ? 0.45 : 1.0;
       u.sprite.setAlpha(alpha);
       u.spriteBg?.setAlpha(alpha);
       u.badge?.setAlpha(alpha);
+      if (fullyDone) { u.sprite.setTint(0x888888); }
+      else if (movedOnly) { u.sprite.setTint(0xffff88); }
+      else { u.sprite.clearTint(); }
       // Stop bob for acted units, restart for ready ones
       if (u.team === 'player') {
-        if (dim) {
+        if (fullyDone) {
           this._stopIdleBob(u);
         } else if (!u._bobTween) {
           this._startIdleBob(u);
