@@ -265,6 +265,7 @@ const CHAPTERS = [
       { defId:'SCOUT_CAT',        col:16, row:8,  level:3 },
       { defId:'PERSIAN_SORCERER', col:8,  row:4,  level:3 },
       { defId:'PERSIAN_SORCERER', col:14, row:4,  level:3 },
+      { defId: 'HEALER_CAT', col:12, row:14, level:3 },
       { defId:'SNOW_LEOPARD',     col:10, row:0,  level:5, isBoss:true, deathQuote:'The cold... claims us all... eventually...' },
     ],
 
@@ -447,6 +448,7 @@ const CHAPTERS = [
       { defId:'PERSIAN_SORCERER', col:6,  row:2,  level:5 },
       { defId:'PERSIAN_SORCERER', col:18, row:2,  level:5 },
       { defId:'TIGER_GENERAL',    col:10, row:8,  level:5 },
+      { defId: 'HEALER_CAT', col:12, row:6,  level:5 },
       { defId:'SAND_CAT_KING',    col:10, row:0,  level:6, isBoss:true, deathQuote:'My kingdom... buried in sand...' },
     ],
 
@@ -632,6 +634,7 @@ const CHAPTERS = [
       { defId:'SIAMESE_ASSASSIN', col:22, row:12, level:8 },
       { defId:'TIGER_GENERAL',    col:8,  row:6,  level:8 },
       { defId:'TIGER_GENERAL',    col:14, row:6,  level:8 },
+      { defId: 'HEALER_CAT', col:10, row:4,  level:8 },
       { defId:'CAT_EMPEROR',      col:12, row:0,  level:10, isBoss:true, deathQuote:'No... the empire... was supposed to be... eternal...' },
     ],
 
