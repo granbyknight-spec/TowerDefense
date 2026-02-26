@@ -38,6 +38,7 @@ const config = {
     UIScene,
     VictoryScene,
     CutsceneScene,
+    ComicScene,
     PrepScene,
     InnScene,
   ],
