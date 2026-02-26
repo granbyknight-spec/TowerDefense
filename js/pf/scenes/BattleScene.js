@@ -1496,7 +1496,7 @@ class BattleScene extends Phaser.Scene {
             this._floatText(defender.col, defender.row, `-${dmg}`, PAL.HP_R);
           }
           // M4: Float support bonus text
-          if (atkSupportCount > 0) {
+          if (atkSupportCount > 0 && hitNum === 1) {
             this._floatText(attacker.col, attacker.row, `+${atkSupportCount} support`, 0x88ccff, 12);
           }
           // C2: Show "Effective!" flash for weapon effectiveness bonus
@@ -1973,7 +1973,7 @@ class BattleScene extends Phaser.Scene {
     }
 
     // M3: Survive-turns pre-objective gate
-    const chapter2 = this._chapter || CHAPTERS?.[this._chapterIndex];
+    const chapter2 = CHAPTERS[this.chapterId - 1];
     if (chapter2?.preObjective === 'survive_turns' && this.turnNumber <= chapter2.surviveTurns) {
       return; // Cannot win yet — must survive the required turns
     }

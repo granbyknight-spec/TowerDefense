@@ -556,7 +556,7 @@ class UIScene extends Phaser.Scene {
 
     // M3: Objective banner
     if (bn && this._objectiveLabel) {
-      const chapter = bn._chapter;
+      const chapter = typeof CHAPTERS !== 'undefined' ? CHAPTERS[bn.chapterId - 1] : null;
       if (chapter?.preObjective === 'survive_turns' && bn.turnNumber <= chapter.surviveTurns) {
         const remaining = chapter.surviveTurns - bn.turnNumber + 1;
         const txt = `Survive ${remaining} more turn${remaining !== 1 ? 's' : ''}!`;
