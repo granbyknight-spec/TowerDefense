@@ -382,5 +382,42 @@ function _healer(unit, mapGrid, allUnits) {
     return { moveTo, target: null };
   }
 
+  // m6: No injured allies — fall back to defensive attack behavior
+  const players = allUnits.filter(u => !u.dead && u.team === 'player');
+  if (players.length > 0) {
+    // Move toward nearest player and attack if in range
+    const nearest = players.reduce((n, p) => {
+      const dN = Math.abs(n.col - unit.col) + Math.abs(n.row - unit.row);
+      const dP = Math.abs(p.col - unit.col) + Math.abs(p.row - unit.row);
+      return dP < dN ? p : n;
+    });
+    const reachable = getReachableTiles(unit, mapGrid, allUnits);
+    // Check if any player in attack range from current or reachable position
+    const range = unit.range || 1;
+    let attackMove = null, attackTarget = null;
+    for (const pos of [{ col: unit.col, row: unit.row }, ...reachable]) {
+      for (const player of players) {
+        const dist = Math.abs(pos.col - player.col) + Math.abs(pos.row - player.row);
+        if (dist <= range) {
+          attackMove = pos;
+          attackTarget = player;
+          break;
+        }
+      }
+      if (attackTarget) break;
+    }
+    if (attackMove && attackTarget) {
+      return { moveTo: attackMove, target: attackTarget, isHeal: false };
+    }
+    // Move toward nearest player without attacking
+    const moveTo = reachable.length > 0
+      ? reachable.reduce((best, t) => {
+          const dB = Math.abs(best.col - nearest.col) + Math.abs(best.row - nearest.row);
+          const dT = Math.abs(t.col - nearest.col) + Math.abs(t.row - nearest.row);
+          return dT < dB ? t : best;
+        }, { col: unit.col, row: unit.row })
+      : { col: unit.col, row: unit.row };
+    return { moveTo, target: null };
+  }
   return { moveTo: { col: unit.col, row: unit.row }, target: null };
 }
