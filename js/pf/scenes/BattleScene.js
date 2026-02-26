@@ -157,7 +157,11 @@ class BattleScene extends Phaser.Scene {
     // ── Build enemy units ───────────────────────────────────────────────────
     chapter.enemies.forEach(spawn => {
       const enemy = buildEnemyUnit(spawn, this.units);
-      if (enemy) this.units.push(enemy);
+      if (enemy) {
+        if (spawn.deathQuote) enemy.deathQuote = spawn.deathQuote;
+        if (spawn.isBoss) enemy.isBoss = true;
+        this.units.push(enemy);
+      }
     });
 
     // ── Build recruitable units (neutral, stand still) ─────────────────────
@@ -267,6 +271,25 @@ class BattleScene extends Phaser.Scene {
       } else {
         const z = Phaser.Math.Clamp(this._pinchZoom0 * (dist / this._pinchDist0), 1, 2.5);
         this.cameras.main.setZoom(z);
+      }
+      // M2: Live combat forecast on hover during target selection
+      if (this._state === BS.TARGET_ATK && !this._panning) {
+        const hCol = Math.floor((pointer.worldX - GRID_X) / TILE);
+        const hRow = Math.floor((pointer.worldY - GRID_Y) / TILE);
+        const cols = this.mapGrid[0]?.length || 0;
+        const rows = this.mapGrid.length || 0;
+        if (hCol >= 0 && hCol < cols && hRow >= 0 && hRow < rows) {
+          const hoverTarget = this._unitAt(hCol, hRow);
+          if (hoverTarget && hoverTarget.team === 'enemy' && this._selected) {
+            const tDef = TERRAIN[this.mapGrid[hoverTarget.row]?.[hoverTarget.col]]?.def || 0;
+            const eff = typeof this._weaponEffectiveness === 'function'
+              ? this._weaponEffectiveness(this._selected, hoverTarget) : 1.0;
+            const atkTDef = TERRAIN[this.mapGrid[this._selected.row]?.[this._selected.col]]?.def || 0;
+            this._getUI()?.showDamagePreview(this._selected, hoverTarget, tDef, eff, { defenderTerrainDef: atkTDef });
+          } else {
+            this._getUI()?.hideDamagePreview();
+          }
+        }
       }
     });
 
@@ -1506,11 +1529,51 @@ class BattleScene extends Phaser.Scene {
             const cBaseDmg   = cRaw + cVar;
             const cDmg       = cCrit ? Math.floor(cBaseDmg * 1.5) : cBaseDmg;
 
+            // M1: Defender double-attack after counter resolves (AGI advantage >= 7)
+            const afterCounterSequence = () => {
+              if (!attacker.dead && !defender.dead && (defender.agi - attacker.agi) >= 7) {
+                this._floatText(defender.col, defender.row, '2×', 0xffd700);
+                this.time.delayedCall(200, () => {
+                  const cDefTerrain = TERRAIN[this.mapGrid[attacker.row]?.[attacker.col]]?.def || 0;
+                  const cGuard = attacker.guardActive ? Math.floor(attacker.def * 0.5) : 0;
+                  const cRaw = Math.max(1, defender.atk - (attacker.def + cGuard + cDefTerrain));
+                  const cVar = Phaser.Math.Between(0, Math.floor(defender.atk * 0.1));
+                  const cAgiDiff = defender.agi - attacker.agi;
+                  const cHit = Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(85 + cAgiDiff * 2, 55, 100);
+                  if (!cHit) {
+                    this._floatText(attacker.col, attacker.row, 'EVADE!', 0xaaddff, 20);
+                    this.time.delayedCall(400, afterSequence);
+                    return;
+                  }
+                  const cCrit = Phaser.Math.Between(1, 100) <= Phaser.Math.Clamp(6 + Math.max(0, cAgiDiff), 2, 25);
+                  const cDmg = cCrit ? Math.floor((cRaw + cVar) * 1.5) : (cRaw + cVar);
+                  this.tweens.add({
+                    targets: [attacker.spriteBg, attacker.sprite].filter(Boolean),
+                    alpha: 0.2, duration: 60, yoyo: true, repeat: cCrit ? 4 : 2,
+                    onComplete: () => {
+                      const aDied = attacker.takeDamage(cDmg);
+                      this._updateHPBar(attacker);
+                      this._floatText(attacker.col, attacker.row, `-${cDmg}`, cCrit ? 0xffd700 : 0xff8844, cCrit ? 26 : 17);
+                      if (cCrit) this._floatCritBanner && this._floatCritBanner(attacker.col, attacker.row);
+                      if (aDied) {
+                        if (defender.team === 'player') defender.killCount = (defender.killCount || 0) + 1;
+                        this._killUnit(attacker, onDone);
+                      } else {
+                        afterSequence();
+                      }
+                    },
+                  });
+                });
+              } else {
+                afterSequence();
+              }
+            };
+
             this.time.delayedCall(300, () => {
               this._shakeSprite(defender.sprite, () => {
                 if (!cHit) {
                   this._floatText(attacker.col, attacker.row, 'EVADE!', 0xaaddff, 20);
-                  this.time.delayedCall(400, () => this._applyPostCombatEffects(attacker, defender, afterSequence));
+                  this.time.delayedCall(400, () => this._applyPostCombatEffects(attacker, defender, afterCounterSequence));
                   return;
                 }
                 this.tweens.add({
@@ -1533,7 +1596,7 @@ class BattleScene extends Phaser.Scene {
                       if (defender.team === 'player') defender.killCount++;
                       this._killUnit(attacker, onDone);
                     } else {
-                      this._applyPostCombatEffects(attacker, defender, afterSequence);
+                      this._applyPostCombatEffects(attacker, defender, afterCounterSequence);
                     }
                   },
                 });
@@ -1658,7 +1721,24 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => {
         this._destroyUnitSprite(unit);
         unit.dead = true;
+        unit.guardActive = false;
         if (unit.team === 'player') this._unitsLost++;
+        // M3: Boss death quote
+        if ((unit.isBoss || unit.deathQuote) && !unit._quotePlayed) {
+          unit._quotePlayed = true;
+          const quote = unit.deathQuote || `${unit.name} has fallen!`;
+          if (typeof this._startDialogue === 'function') {
+            this._startDialogue([{
+              speaker: unit.name,
+              portrait: unit.sprite?.texture?.key || null,
+              text: quote,
+            }], () => {
+              this._checkEndCondition();
+              if (typeof onDone === 'function') onDone();
+            });
+            return;
+          }
+        }
         this._checkEndCondition();
         onDone && onDone();
       },
@@ -1691,6 +1771,7 @@ class BattleScene extends Phaser.Scene {
       .sort((a, b) => b.agi - a.agi);
     // Enemy units need their turn state reset so they can act this turn
     this._enemyQueue.forEach(u => u.resetTurn());
+    this._enemyQueue.forEach(u => { u.guardActive = false; });
 
     this.time.delayedCall(800, () => this._processNextEnemy());
   }
@@ -1964,11 +2045,14 @@ class BattleScene extends Phaser.Scene {
   _showPromotionCard(unit, beforeName, beforeEmoji, beforeStats, onDone) {
     const W = GAME_W, H = GAME_H;
     const cardW = 300, cardH = 220, cardX = (W - cardW) / 2, cardY = (H - cardH) / 2 - 20;
+    const cardObjs = [];
 
     // Semi-transparent dark backdrop
     const backdrop = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.65).setDepth(55).setInteractive();
+    cardObjs.push(backdrop);
 
     const cardBg = this.add.graphics().setDepth(56);
+    cardObjs.push(cardBg);
     cardBg.fillStyle(0x0a1a2e, 0.98);
     cardBg.fillRoundedRect(cardX, cardY, cardW, cardH, 12);
     cardBg.lineStyle(2, 0xffd700, 0.9);
@@ -1976,18 +2060,18 @@ class BattleScene extends Phaser.Scene {
 
     const cx = cardX + cardW / 2;
     // Header
-    this.add.text(cx, cardY + 18, '★  PROMOTION!  ★', {
+    cardObjs.push(this.add.text(cx, cardY + 18, '★  PROMOTION!  ★', {
       fontSize: '18px', color: '#ffd700', fontStyle: 'bold',
       fontFamily: 'Nunito, Courier New, monospace',
       stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(57);
+    }).setOrigin(0.5).setDepth(57));
 
     // Before → After names
-    this.add.text(cx, cardY + 46, `${beforeEmoji} ${beforeName}  →  ${unit.emoji} ${unit.name}`, {
+    cardObjs.push(this.add.text(cx, cardY + 46, `${beforeEmoji} ${beforeName}  →  ${unit.emoji} ${unit.name}`, {
       fontSize: '13px', color: '#aaddff', fontStyle: 'bold',
       fontFamily: 'Nunito, Courier New, monospace',
       stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(57);
+    }).setOrigin(0.5).setDepth(57));
 
     // Stat diff rows
     const stats = [
@@ -2002,16 +2086,16 @@ class BattleScene extends Phaser.Scene {
       const diff = s.after - s.before;
       const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
       const diffCol = diff > 0 ? '#44ff88' : (diff < 0 ? '#ff4444' : '#888888');
-      this.add.text(cardX + 28, sy, `${s.label}:  ${s.before}  →  ${s.after}`, {
+      cardObjs.push(this.add.text(cardX + 28, sy, `${s.label}:  ${s.before}  →  ${s.after}`, {
         fontSize: '14px', color: '#ccddff', fontStyle: 'bold',
         fontFamily: 'Nunito, Courier New, monospace',
         stroke: '#000', strokeThickness: 2,
-      }).setDepth(57);
-      this.add.text(cardX + cardW - 28, sy, diffStr, {
+      }).setDepth(57));
+      cardObjs.push(this.add.text(cardX + cardW - 28, sy, diffStr, {
         fontSize: '14px', color: diffCol, fontStyle: 'bold',
         fontFamily: 'Nunito, Courier New, monospace',
         stroke: '#000', strokeThickness: 2,
-      }).setOrigin(1, 0).setDepth(57);
+      }).setOrigin(1, 0).setDepth(57));
       sy += 22;
     });
 
@@ -2020,13 +2104,12 @@ class BattleScene extends Phaser.Scene {
       fontSize: '12px', color: '#aabbcc', fontStyle: 'bold',
       fontFamily: 'Nunito, Courier New, monospace',
     }).setOrigin(0.5).setDepth(57);
+    cardObjs.push(hint);
     this.tweens.add({ targets: hint, alpha: { from: 0.3, to: 1 }, duration: 600, yoyo: true, repeat: -1 });
 
     // Tap anywhere on card/backdrop to dismiss
     const dismiss = () => {
-      backdrop.destroy();
-      cardBg.destroy();
-      // destroy all text objects we added (use depth tag via getAllChildren is harder, so just schedule cleanup)
+      cardObjs.forEach(o => o.destroy());
       this.time.delayedCall(50, onDone);
     };
     backdrop.on('pointerdown', dismiss);
