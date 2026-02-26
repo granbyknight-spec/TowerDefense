@@ -654,7 +654,8 @@ function buildEnemyUnit(spawnDef, allUnits) {
   scaledDef.baseStats.maxHp += g.hp  * levelDiff;
   scaledDef.baseStats.atk   += g.atk * levelDiff;
   scaledDef.baseStats.def   += g.def * levelDiff;
-  scaledDef.baseStats.agi   += (g.agi || 0) * levelDiff;
+  // m8: AGI scales at 50% rate (half of other stats) to prevent high-level enemies being easily double-attacked
+  scaledDef.baseStats.agi   += Math.floor((g.agi || 0) * 0.5 * levelDiff);
 
   const unit = new Unit(scaledDef, spawnDef.col, spawnDef.row);
   return unit;

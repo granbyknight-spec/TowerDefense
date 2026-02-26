@@ -839,8 +839,14 @@ class BattleScene extends Phaser.Scene {
 
   _handleIdleTap(col, row) {
     const unit = this._unitAt(col, row);
-    if (!unit || unit.dead) return;
+    if (!unit || unit.dead) {
+      // Tapped empty tile — clear enemy range preview
+      this._clearEnemyRange();
+      return;
+    }
     if (unit.team === 'player') {
+      // Clear enemy range when selecting a player unit
+      this._clearEnemyRange();
       // Selectable as long as the unit hasn't both moved AND acted
       if (!(unit.hasMoved && unit.hasActed)) {
         this._selectUnit(unit);
@@ -848,7 +854,9 @@ class BattleScene extends Phaser.Scene {
         this._showUnitInfo(unit);
       }
     } else {
-      // Tap enemy / neutral — show their stats without selecting
+      // M1: Tap enemy — show their attack range preview in red/orange
+      this._showEnemyRange(unit);
+      // Show enemy stats in the unit info panel
       this._showUnitInfo(unit);
     }
   }
@@ -976,10 +984,13 @@ class BattleScene extends Phaser.Scene {
     this._atkTiles  = [];
     this._healTiles = [];
     this._clearHighlights();
+    this._clearEnemyRange();
     this._setState(BS.IDLE);
     this._getUI()?.hideActionMenu();
     this._getUI()?.clearUnitInfo();
     this._dimActedUnits();
+    // m5: auto-end turn if all players have moved and acted
+    this._checkAutoEndTurn();
   }
 
   // Cancel targeting (Attack/Heal) and return to unit-selection state with action menu
@@ -1350,7 +1361,10 @@ class BattleScene extends Phaser.Scene {
     const rawDmg = Math.max(1, attacker.atk - (defender.def + guardBonus + terrainDef));
     const variance = Phaser.Math.Between(0, Math.floor(attacker.atk * 0.15));
     // Apply Math.max(1) after atkBonus and variance so skills with power < 1 can't produce 0 damage
-    const baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
+    let baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
+    // C2: Weapon effectiveness multiplier
+    const effectiveness = this._weaponEffectiveness(attacker, defender);
+    if (effectiveness !== 1.0) baseDmg = Math.round(baseDmg * effectiveness);
     const dmg = isCrit ? Math.floor(baseDmg * 1.5) : baseDmg;
 
     // Attack animation
@@ -1361,7 +1375,7 @@ class BattleScene extends Phaser.Scene {
         // Still check AGI double-attack after a miss
         const afterMiss = () => {
           if (!isDouble && !attacker.dead && !defender.dead &&
-              (attacker.agi - defender.agi) >= 4) {
+              (attacker.agi - defender.agi) >= 7) {
             this.time.delayedCall(200, () => {
               this._executeCombat(attacker, defender, onDone, 1, null, true);
             });
@@ -1399,6 +1413,10 @@ class BattleScene extends Phaser.Scene {
           } else {
             this._floatText(defender.col, defender.row, `-${dmg}`, PAL.HP_R);
           }
+          // C2: Show "Effective!" flash for weapon effectiveness bonus
+          if (effectiveness > 1.0) {
+            this.time.delayedCall(120, () => this._floatText(defender.col, defender.row, 'Effective!', PAL.GOLD, 15));
+          }
 
           // EXP gain
           const expGain = 10 + Math.floor(dmg / 2);
@@ -1424,7 +1442,7 @@ class BattleScene extends Phaser.Scene {
           // Wrap onDone to check for AGI double-attack after the full sequence resolves
           const afterSequence = () => {
             if (!isDouble && !attacker.dead && !defender.dead &&
-                (attacker.agi - defender.agi) >= 4) {
+                (attacker.agi - defender.agi) >= 7) {
               this._floatText(attacker.col, attacker.row, '2×', PAL.GOLD);
               this.time.delayedCall(200, () => {
                 this._executeCombat(attacker, defender, onDone, 1, null, true);
@@ -1616,9 +1634,6 @@ class BattleScene extends Phaser.Scene {
     this._setState(BS.ENEMY_TURN);
     this._getUI()?.showTurnBanner('Enemy Turn', 0xff4444);
 
-    // Clear guard buffs from previous player turn
-    this.units.filter(u => u.team === 'player').forEach(u => { u.guardActive = false; });
-
     // Apply burn DoT to all burning units
     this.units.filter(u => !u.dead && u.burnStacks > 0).forEach(u => {
       const bDmg = u.burnStacks;
@@ -1630,7 +1645,9 @@ class BattleScene extends Phaser.Scene {
       if (died) this._killUnit(u, () => {});
     });
 
-    this._enemyQueue = this.units.filter(u => !u.dead && u.team === 'enemy');
+    // M2: Sort by AGI descending so faster enemies act first
+    this._enemyQueue = this.units.filter(u => !u.dead && u.team === 'enemy')
+      .sort((a, b) => b.agi - a.agi);
     // Enemy units need their turn state reset so they can act this turn
     this._enemyQueue.forEach(u => u.resetTurn());
 
@@ -1678,8 +1695,24 @@ class BattleScene extends Phaser.Scene {
     this.playerTurn = true;
     this.units.filter(u => !u.dead && u.team === 'player').forEach(u => u.resetTurn());
 
-    // MP recovery — each player unit recovers 20% of max MP at the start of their turn
-    this.units.filter(u => !u.dead && u.team === 'player').forEach(u => { u.recoverMp(Math.max(1, Math.round(u.maxMp * 0.20))); });
+    // C3: Clear guard buffs at the START of the player's next turn (was incorrectly in _beginEnemyTurn)
+    this.units.filter(u => u.team === 'player').forEach(u => { u.guardActive = false; });
+
+    // m6: MP recovery — each player unit recovers 10% of max MP at the start of their turn (was 20%)
+    this.units.filter(u => !u.dead && u.team === 'player').forEach(u => { u.recoverMp(Math.max(1, Math.round(u.maxMp * 0.10))); });
+
+    // m10: Village tile healing — player units on VILLAGE tiles (tid=7) heal 3 HP
+    const chapter = CHAPTERS[this.chapterId - 1];
+    this.units.filter(u => !u.dead && u.team === 'player').forEach(unit => {
+      const tid = chapter.mapGrid[unit.row]?.[unit.col];
+      if (tid === 7 /* VILLAGE */ && unit.hp < unit.maxHp) {
+        unit.hp = Math.min(unit.maxHp, unit.hp + 3);
+        this._updateHPBar(unit);
+        this._healEffect(unit.col, unit.row);
+        this._floatText(unit.col, unit.row, '+3 HP', PAL.HP_G);
+      }
+    });
+
     // Refresh UI panel if a unit is currently selected
     if (this._selected) this._getUI()?.showUnitInfo(this._selected);
 
@@ -1782,15 +1815,19 @@ class BattleScene extends Phaser.Scene {
       this.saveData.completedChapters = completed;
       this.saveData.currentChapter = Math.min(7, this.chapterId + 1);
       // Update roster with current unit states
-      // Revive any fallen heroes and apply inter-chapter training bonus: +2 maxHp, +1 ATK per hero
+      // M7: Dead units revive at 1 HP with NO training bonus — only living units get +2 HP, +1 ATK
       const survivors = this.units.filter(u => u.team === 'player');
       survivors.forEach(u => {
         if (u.dead) {
+          // Revive with 1 HP, no training bonus (death has consequences)
           u.dead = false;
+          u.hp = 1;
+        } else {
+          // Living survivors get the inter-chapter training bonus
+          u.maxHp += 2;
+          u.hp = u.maxHp;
+          u.atk += 1;
         }
-        u.maxHp += 2;
-        u.hp = u.maxHp;
-        u.atk += 1;
       });
       this.saveData.roster = SaveManager.serializeRoster(survivors);
       SaveManager.save(this.saveData);
@@ -2254,5 +2291,84 @@ class BattleScene extends Phaser.Scene {
 
   _showUnitInfo(unit) {
     this._getUI()?.showUnitInfo(unit);
+  }
+
+  // ==========================================================================
+  // m5: AUTO-END TURN
+  // ==========================================================================
+
+  _checkAutoEndTurn() {
+    if (this._battleEnded) return;
+    const state = this._getState();
+    if (state === BS.ENEMY_TURN || state === BS.ANIMATING || state === BS.VICTORY || state === BS.DEFEAT) return;
+    const livingPlayers = this.units.filter(u => !u.dead && u.team === 'player');
+    if (livingPlayers.length > 0 && livingPlayers.every(u => u.hasMoved && u.hasActed)) {
+      this.time.delayedCall(400, () => {
+        if (!this._battleEnded) this.onEndTurn();
+      });
+    }
+  }
+
+  _getState() { return this._state; }
+
+  // ==========================================================================
+  // C2: WEAPON EFFECTIVENESS
+  // ==========================================================================
+
+  _weaponEffectiveness(attacker, defender) {
+    const ac = attacker.unitClass || '';
+    const dc = defender.unitClass || '';
+    // Bows effective vs Cavalry
+    if ((ac === 'Archer' || ac === 'Ranger') && (dc === 'Cavalry' || dc === 'Champion')) return 1.5;
+    // Cavalry effective vs foot soldiers (Knight, Warrior, Baron)
+    if ((ac === 'Cavalry' || ac === 'Champion') && (dc === 'Knight' || dc === 'Warrior' || dc === 'Baron')) return 1.25;
+    // Magic effective vs heavily armored (Tank/Baron/Knight)
+    if ((ac === 'Mage' || ac === 'Wizard') && (dc === 'Knight' || dc === 'Baron' || dc === 'Tank')) return 1.25;
+    return 1.0;
+  }
+
+  // ==========================================================================
+  // M1: ENEMY RANGE PREVIEW
+  // ==========================================================================
+
+  _showEnemyRange(enemy) {
+    // Clear any existing enemy range highlights
+    this._clearEnemyRange();
+
+    this._enemyRangeGfx = this.add.graphics().setDepth(1);
+    const g = this._enemyRangeGfx;
+
+    // Compute all tiles the enemy could move to
+    const moveTiles = getReachableTiles(enemy, this.mapGrid, this.units);
+    const highlighted = new Set();
+
+    // For each reachable tile, compute attack tiles from that position
+    moveTiles.forEach(mt => {
+      const atkTiles = getAttackTiles({ ...enemy, col: mt.col, row: mt.row }, this.mapGrid, mt.col, mt.row);
+      atkTiles.forEach(at => {
+        const key = `${at.col},${at.row}`;
+        if (!highlighted.has(key)) {
+          highlighted.add(key);
+          const { x, y } = this._tileTL(at.col, at.row);
+          g.fillStyle(0xff4444, 0.35);
+          g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+          g.lineStyle(1, 0xff6666, 0.7);
+          g.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+        }
+      });
+    });
+    // Also highlight the enemy's current position
+    const { x: ex, y: ey } = this._tileTL(enemy.col, enemy.row);
+    g.fillStyle(0xff2222, 0.25);
+    g.fillRect(ex + 2, ey + 2, TILE - 4, TILE - 4);
+    g.lineStyle(2, 0xff2222, 0.9);
+    g.strokeRect(ex + 2, ey + 2, TILE - 4, TILE - 4);
+  }
+
+  _clearEnemyRange() {
+    if (this._enemyRangeGfx) {
+      this._enemyRangeGfx.destroy();
+      this._enemyRangeGfx = null;
+    }
   }
 }
