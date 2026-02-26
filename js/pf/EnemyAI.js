@@ -20,6 +20,7 @@ function computeEnemyAction(unit, mapGrid, allUnits) {
     case 'ranged':     return _ranged(unit, mapGrid, allUnits, players);
     case 'defensive':  return _defensive(unit, mapGrid, allUnits, players);
     case 'boss':       return _boss(unit, mapGrid, allUnits, players);
+    case 'healer':     return _healer(unit, mapGrid, allUnits);
     default:           return _aggressive(unit, mapGrid, allUnits, players);
   }
 }
@@ -338,4 +339,48 @@ function _bodyguardScore(tile, boss, player) {
   const btRow = tile.row - boss.row;
   // Dot product: positive = tile is on the boss→player side
   return bpCol * btCol + bpRow * btRow;
+}
+
+// ---------------------------------------------------------------------------
+// Healer AI — find weakest injured ally in range and heal; else move toward weakest
+function _healer(unit, mapGrid, allUnits) {
+  const allies = allUnits.filter(u => !u.dead && u.team === 'enemy' && u !== unit);
+  const reachable = getReachableTiles(unit, mapGrid, allUnits);
+  const allPositions = [{ col: unit.col, row: unit.row }, ...reachable];
+  const range = unit.range || 2;
+
+  let bestMove = null, bestTarget = null, bestMissing = 0;
+
+  for (const pos of allPositions) {
+    for (const ally of allies) {
+      if (ally.hp >= ally.maxHp) continue;
+      const dist = Math.abs(pos.col - ally.col) + Math.abs(pos.row - ally.row);
+      if (dist > range) continue;
+      const missing = ally.maxHp - ally.hp;
+      if (missing > bestMissing) {
+        bestMissing = missing;
+        bestTarget = ally;
+        bestMove = pos;
+      }
+    }
+  }
+
+  if (bestMove && bestTarget) {
+    return { moveTo: bestMove, target: bestTarget, isHeal: true };
+  }
+
+  // No hurt allies in heal range — move toward weakest ally
+  if (allies.length > 0) {
+    const weakest = allies.reduce((w, a) => (a.hp / a.maxHp < w.hp / w.maxHp ? a : w));
+    const moveTo = reachable.length > 0
+      ? reachable.reduce((best, t) => {
+          const dBest = Math.abs(best.col - weakest.col) + Math.abs(best.row - weakest.row);
+          const dT    = Math.abs(t.col   - weakest.col) + Math.abs(t.row   - weakest.row);
+          return dT < dBest ? t : best;
+        }, { col: unit.col, row: unit.row })
+      : { col: unit.col, row: unit.row };
+    return { moveTo, target: null };
+  }
+
+  return { moveTo: { col: unit.col, row: unit.row }, target: null };
 }

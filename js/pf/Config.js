@@ -375,6 +375,13 @@ const ENEMY_DEFS = {
     growth:{ hp:3, atk:3, def:1, agi:1 },
     weapon:'staff', range:2, ai:'boss', expReward:70,
   },
+  HEALER_CAT: {
+    id: 'HEALER_CAT', name: 'Healer Cat', emoji: '😸',
+    unitClass: 'Cleric', team: 'enemy',
+    baseStats: { maxHp: 20, atk: 4, def: 3, mov: 4, agi: 4, level: 1 },
+    growth: { hp: 2, atk: 1, def: 1, agi: 1 },
+    weapon: 'staff', range: 2, ai: 'healer', expReward: 45,
+  },
   CAT_EMPEROR: {
     id:'CAT_EMPEROR', name:'Cat Emperor', emoji:'👑', isBoss:true,
     tileSize: 2,
