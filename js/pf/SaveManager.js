@@ -58,6 +58,12 @@ const SaveManager = {
       const def = HERO_DEFS[sd.id] || ALLY_DEFS[sd.id];
       if (!def) continue;
       const unit = Unit.fromSave(sd, def);
+      // Backward compatibility: old saves without weapon/range/unitClass for promoted units
+      if (sd.promoted && def.promotedData) {
+        if (!sd.weapon)    unit.weapon    = def.promotedData.weapon    || def.weapon || 'sword';
+        if (!sd.range)     unit.range     = def.promotedData.range     || def.range  || 1;
+        if (!sd.unitClass) unit.unitClass = def.promotedData.unitClass || def.unitClass;
+      }
       unit.hp = unit.maxHp;
       units.push(unit);
     }

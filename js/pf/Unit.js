@@ -279,6 +279,9 @@ class Unit {
       level: this.level,
       exp: this.exp,
       promoted: this.promoted,
+      weapon: this.weapon,
+      range: this.range,
+      unitClass: this.unitClass,
       items: [...this.items],
       skills: [...this.skills],
       mp: this.mp,
@@ -301,6 +304,9 @@ class Unit {
     unit.level    = saveData.level;
     unit.exp      = saveData.exp;
     unit.promoted = saveData.promoted;
+    if (saveData.weapon)    unit.weapon    = saveData.weapon;
+    if (saveData.range)     unit.range     = saveData.range;
+    if (saveData.unitClass) unit.unitClass = saveData.unitClass;
     unit.items    = [...(saveData.items || [])];
     unit.skills   = [...(saveData.skills || [])];
     if (saveData.mp    !== undefined) unit.mp    = saveData.mp;
