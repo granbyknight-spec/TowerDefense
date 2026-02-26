@@ -355,7 +355,7 @@ const CHAPTERS = [
       { defId:'SIAMESE_ASSASSIN', col:16, row:2,  level:4 },
       { defId:'TIGER_GENERAL',    col:2,  row:0,  level:4 },
       { defId:'TIGER_GENERAL',    col:22, row:0,  level:4 },
-      { defId:'PERSIAN_SORCERER', col:10, row:0,  level:4 },
+      { defId:'PERSIAN_SORCERER', col:10, row:2,  level:4 },
       { defId:'RIVER_PANTHER',    col:10, row:0,  level:5, isBoss:true, deathQuote:'The river... carries me away...' },
     ],
 
