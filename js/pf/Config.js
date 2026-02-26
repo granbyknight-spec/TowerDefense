@@ -78,6 +78,13 @@ const CLASS_RING_COLOR = {
   'General':  0xff2222, // bright red
   'Swimmer':  0x22ccff, // cyan
   'Admiral':  0x44eeff, // light cyan
+  'Scout':       0x88cc44, // yellow-green
+  'Desert Fox':  0xaadd55, // light yellow-green
+  'Fighter':     0xff6644, // orange-red
+  'Assassin':    0xcc44ff, // purple
+  'King':        0xffd700, // gold
+  'Sorceress':   0xff44cc, // magenta
+  'Emperor':     0xffd700, // gold
 };
 
 // Unicode class icons — shown in the badge below each unit's HP bar
@@ -91,6 +98,11 @@ const CLASS_ICON = {
   'Thief':    '◆', 'Ninja':    '◆',
   'General':  '★',
   'Swimmer':  '≈', 'Admiral':  '≈',
+  'Scout':      '⚡', 'Desert Fox': '⚡',
+  'Fighter':    '✊',
+  'Assassin':   '◆',
+  'King':       '♚', 'Emperor':   '♚',
+  'Sorceress':  '✦',
 };
 
 // Maps dialogue speaker names → Phaser texture cache keys for portrait images

@@ -93,7 +93,7 @@ const CHAPTERS = [
       { defId:'SCOUT_CAT',  col:18, row:2,  level:1 },
       { defId:'SCOUT_CAT',  col:0,  row:4,  level:1 },
       { defId:'SCOUT_CAT',  col:24, row:4,  level:1 },
-      { defId:'ALLEY_CAT',  col:10, row:0,  level:3 },
+      { defId:'ALLEY_CAT',  col:10, row:0,  level:3, isBoss:true, deathQuote:'Impossible... defeated by mere pups...!' },
     ],
 
     recruitable: [],
@@ -176,7 +176,7 @@ const CHAPTERS = [
       { defId:'SIAMESE_ASSASSIN', col:0,  row:6,  level:1 },
       { defId:'SIAMESE_ASSASSIN', col:24, row:6,  level:1 },
       { defId:'PERSIAN_SORCERER', col:10, row:2,  level:2 },
-      { defId:'LYNX_RANGER',      col:12, row:0,  level:3 },
+      { defId:'LYNX_RANGER',      col:12, row:0,  level:3, isBoss:true, deathQuote:'The forest... will remember... my name...' },
     ],
 
     recruitable: [
@@ -265,7 +265,7 @@ const CHAPTERS = [
       { defId:'SCOUT_CAT',        col:16, row:8,  level:3 },
       { defId:'PERSIAN_SORCERER', col:8,  row:4,  level:3 },
       { defId:'PERSIAN_SORCERER', col:14, row:4,  level:3 },
-      { defId:'SNOW_LEOPARD',     col:10, row:0,  level:5 },
+      { defId:'SNOW_LEOPARD',     col:10, row:0,  level:5, isBoss:true, deathQuote:'The cold... claims us all... eventually...' },
     ],
 
     recruitable: [
@@ -356,7 +356,7 @@ const CHAPTERS = [
       { defId:'TIGER_GENERAL',    col:2,  row:0,  level:4 },
       { defId:'TIGER_GENERAL',    col:22, row:0,  level:4 },
       { defId:'PERSIAN_SORCERER', col:10, row:0,  level:4 },
-      { defId:'RIVER_PANTHER',    col:10, row:0,  level:5 },
+      { defId:'RIVER_PANTHER',    col:10, row:0,  level:5, isBoss:true, deathQuote:'The river... carries me away...' },
     ],
 
     recruitable: [
@@ -447,7 +447,7 @@ const CHAPTERS = [
       { defId:'PERSIAN_SORCERER', col:6,  row:2,  level:5 },
       { defId:'PERSIAN_SORCERER', col:18, row:2,  level:5 },
       { defId:'TIGER_GENERAL',    col:10, row:8,  level:5 },
-      { defId:'SAND_CAT_KING',    col:10, row:0,  level:6 },
+      { defId:'SAND_CAT_KING',    col:10, row:0,  level:6, isBoss:true, deathQuote:'My kingdom... buried in sand...' },
     ],
 
     recruitable: [
@@ -538,7 +538,7 @@ const CHAPTERS = [
       { defId:'PERSIAN_SORCERER', col:14, row:8,  level:6 },
       { defId:'SCOUT_CAT',        col:2,  row:18, level:6 },
       { defId:'SCOUT_CAT',        col:22, row:18, level:6 },
-      { defId:'PERSIAN_QUEEN',    col:10, row:2,  level:7 },
+      { defId:'PERSIAN_QUEEN',    col:10, row:2,  level:7, isBoss:true, deathQuote:'You think this changes anything? The Emperor will crush you all!' },
     ],
 
     recruitable: [],
@@ -632,7 +632,7 @@ const CHAPTERS = [
       { defId:'SIAMESE_ASSASSIN', col:22, row:12, level:8 },
       { defId:'TIGER_GENERAL',    col:8,  row:6,  level:8 },
       { defId:'TIGER_GENERAL',    col:14, row:6,  level:8 },
-      { defId:'CAT_EMPEROR',      col:12, row:0,  level:10 },
+      { defId:'CAT_EMPEROR',      col:12, row:0,  level:10, isBoss:true, deathQuote:'No... the empire... was supposed to be... eternal...' },
     ],
 
     recruitable: [],
