@@ -98,16 +98,66 @@ class Unit {
 
   _applyLevelUp() {
     const g = this.growth;
-    const hpBonus = Math.random() < 0.5 ? 1 : 0;
-    const hpGain = g.hp + hpBonus;
+
+    // Convert raw growth values (scale 0-6) to percentage chances, capped at 95.
+    // Formula: pct = Math.min(growthVal * 25, 95)
+    const toP = v => Math.min((v || 0) * 25, 95);
+
+    // Stats subject to percentage-based rolls (everything except HP and mov).
+    const rollStats = ['atk', 'def', 'agi'];
+    if (this.maxMp > 0) rollStats.push('mp');
+
+    // Helper: roll one attempt, returns gains object { atk, def, agi[, mp] }.
+    const rollOnce = () => {
+      const gains = {};
+      for (const stat of rollStats) {
+        gains[stat] = (Math.random() * 100 < toP(g[stat])) ? 1 : 0;
+      }
+      return gains;
+    };
+
+    // Guarantee at least 2 stat gains (max 3 roll attempts).
+    let gains;
+    let attempts = 0;
+    do {
+      gains = rollOnce();
+      attempts++;
+    } while (Object.values(gains).reduce((a, b) => a + b, 0) < 2 && attempts < 3);
+
+    // If still fewer than 2 gains after 3 attempts, force the top-2 growth-rate stats.
+    if (Object.values(gains).reduce((a, b) => a + b, 0) < 2) {
+      // Sort roll stats by their growth percentage descending, pick top 2.
+      const sorted = [...rollStats].sort((a, b) => toP(g[b]) - toP(g[a]));
+      for (const stat of rollStats) gains[stat] = 0;
+      gains[sorted[0]] = 1;
+      if (sorted.length > 1) gains[sorted[1]] = 1;
+    }
+
+    // Apply non-HP stat gains.
+    for (const stat of rollStats) {
+      if (gains[stat]) {
+        if (stat === 'mp') {
+          this.maxMp += 1;
+          this.mp = Math.min(this.mp + 1, this.maxMp);
+        } else {
+          this[stat] += 1;
+        }
+      }
+    }
+
+    // HP: always +1; roll for bonus +1 (total +2 on success).
+    const hpPct  = toP(g.hp);
+    const hpGain = (Math.random() * 100 < hpPct) ? 2 : 1;
     this.maxHp += hpGain;
-    this.hp    = Math.min(this.hp + Math.ceil(hpGain / 2), this.maxHp);
-    this.atk   += g.atk;
-    this.def   += g.def;
-    this.agi   += g.agi;
+    this.hp     = Math.min(this.hp + Math.ceil(hpGain / 2), this.maxHp);
+
+    // Movement bonus every 4 levels.
     if (this.level % 4 === 0) this.mov = Math.min(this.mov + 1, 9);
 
-    // Unlock skills at level milestones
+    // Store last level-up gains for display by VictoryScene or UI.
+    this.lastLevelGains = { hp: hpGain, ...gains };
+
+    // Unlock skills at level milestones.
     const progressionList = this.promoted ? this._promotedSkillsAtLevel : this._skillsAtLevel;
     progressionList.forEach(entry => {
       if (entry.level === this.level && !this.skills.includes(entry.skill)) {
