@@ -1388,6 +1388,16 @@ class BattleScene extends Phaser.Scene {
     this._setState(BS.ANIMATING);
     this._clearHighlights();
 
+    // C1: Wrap onDone to consume guard buffs after full combat chain
+    if (hitNum === 1 && !isDouble) {
+      const _origOnDone = onDone;
+      onDone = () => {
+        attacker.guardActive = false;
+        defender.guardActive = false;
+        _origOnDone && _origOnDone();
+      };
+    }
+
     // On the first hit, consume _pendingSkill; on subsequent hits, reuse the passed-in skillName
     if (hitNum === 1) {
       skillName = this._pendingSkill;
@@ -1421,7 +1431,16 @@ class BattleScene extends Phaser.Scene {
 
     const terrainDef = TERRAIN[this.mapGrid[defender.row][defender.col]]?.def || 0;
     const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
-    const rawDmg = Math.max(1, attacker.atk - (defender.def + guardBonus + terrainDef));
+    // M4: Adjacency support bonus
+    const atkSupportCount = Math.min(3, this.units.filter(u =>
+      !u.dead && u !== attacker && u.team === attacker.team &&
+      Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
+    ).length);
+    const defSupportCount = Math.min(3, this.units.filter(u =>
+      !u.dead && u !== defender && u.team === defender.team &&
+      Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+    ).length);
+    const rawDmg = Math.max(1, (attacker.atk + atkSupportCount) - (defender.def + guardBonus + defSupportCount + terrainDef));
     const variance = Phaser.Math.Between(0, Math.floor(attacker.atk * 0.15));
     // Apply Math.max(1) after atkBonus and variance so skills with power < 1 can't produce 0 damage
     let baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
@@ -1476,6 +1495,10 @@ class BattleScene extends Phaser.Scene {
           } else {
             this._floatText(defender.col, defender.row, `-${dmg}`, PAL.HP_R);
           }
+          // M4: Float support bonus text
+          if (atkSupportCount > 0) {
+            this._floatText(attacker.col, attacker.row, `+${atkSupportCount} support`, 0x88ccff, 12);
+          }
           // C2: Show "Effective!" flash for weapon effectiveness bonus
           if (effectiveness > 1.0) {
             this.time.delayedCall(120, () => this._floatText(defender.col, defender.row, 'Effective!', PAL.GOLD, 15));
@@ -1515,12 +1538,29 @@ class BattleScene extends Phaser.Scene {
             }
           };
 
+          // C3: All hits before counter — fire next hit before allowing any counter-attack
+          if (totalHits > 1 && hitNum < totalHits && !defender.dead) {
+            this.time.delayedCall(200, () => {
+              this._executeCombat(attacker, defender, onDone, hitNum + 1, skillName, isDouble);
+            });
+            return;
+          }
+
           const noCounter = this._lastSkillUsed ? (SKILLS[this._lastSkillUsed]?.noCounter || false) : false;
           const canCounter = !noCounter && dist <= defender.range;
           if (canCounter) {
             const cDef = TERRAIN[this.mapGrid[attacker.row][attacker.col]]?.def || 0;
             const cGuardFirst = attacker.guardActive ? Math.floor(attacker.def * 0.5) : 0;
-            const cRaw = Math.max(1, defender.atk - (attacker.def + cGuardFirst + cDef));
+            // M4: Counter support bonuses (defender's allies support the counter, attacker's allies defend)
+            const cAtkSupport = Math.min(3, this.units.filter(u =>
+              !u.dead && u !== defender && u.team === defender.team &&
+              Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
+            ).length);
+            const cDefSupport = Math.min(3, this.units.filter(u =>
+              !u.dead && u !== attacker && u.team === attacker.team &&
+              Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
+            ).length);
+            const cRaw = Math.max(1, (defender.atk + cAtkSupport) - (attacker.def + cGuardFirst + cDefSupport + cDef));
             const cVar = Phaser.Math.Between(0, Math.floor(defender.atk * 0.1));
             // Counter-attack hit/crit check (enemy counters)
             const cAgiDiff  = defender.agi - attacker.agi;
@@ -1604,14 +1644,7 @@ class BattleScene extends Phaser.Scene {
               });
             });
           } else {
-            if (totalHits > 1 && hitNum < totalHits && !defender.dead) {
-              // Fire second hit after short delay
-              this.time.delayedCall(200, () => {
-                this._executeCombat(attacker, defender, onDone, hitNum + 1, skillName, isDouble);
-              });
-            } else {
-              this._applyPostCombatEffects(attacker, defender, afterSequence);
-            }
+            this._applyPostCombatEffects(attacker, defender, afterSequence);
           }
         },
       });
@@ -1709,6 +1742,20 @@ class BattleScene extends Phaser.Scene {
     this._healEffect(target.col, target.row);
   }
 
+  _executeEnemyHeal(healer, target, onDone) {
+    this._setState(BS.ANIMATING);
+    const healAmt = Math.floor(healer.atk * 1.2) + Phaser.Math.Between(2, 6);
+    const actual = target.heal(healAmt);
+    this._updateHPBar(target);
+    if (target.sprite?.setTint) {
+      target.sprite.setTint(0x44ff88);
+      this.time.delayedCall(300, () => target.sprite?.clearTint());
+    }
+    this._floatText(target.col, target.row, `+${actual}`, 0x44ff88);
+    this._floatText(healer.col, healer.row, 'Heal!', 0x44ff88, 12);
+    this.time.delayedCall(500, () => { onDone && onDone(); });
+  }
+
   _killUnit(unit, onDone) {
     AudioManager.play(this, 'unit_death');
     const deathTargets = [unit.bossGlow, unit.spriteBg, unit.sprite, unit.hpBar, unit.hpBarBg].filter(Boolean);
@@ -1803,11 +1850,19 @@ class BattleScene extends Phaser.Scene {
       this._updateSpritePos(enemy);
 
       if (action.target && !action.target.dead) {
-        this._executeCombat(enemy, action.target, () => {
-          if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
-          enemy.hasActed = true;
-          this.time.delayedCall(200, () => this._processNextEnemy());
-        });
+        if (action.isHeal && enemy.weapon === 'staff') {
+          this._executeEnemyHeal(enemy, action.target, () => {
+            if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
+            enemy.hasActed = true;
+            this.time.delayedCall(200, () => this._processNextEnemy());
+          });
+        } else {
+          this._executeCombat(enemy, action.target, () => {
+            if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
+            enemy.hasActed = true;
+            this.time.delayedCall(200, () => this._processNextEnemy());
+          });
+        }
       } else {
         enemy.hasActed = true;
         this.time.delayedCall(150, () => this._processNextEnemy());
@@ -1834,6 +1889,12 @@ class BattleScene extends Phaser.Scene {
         this._updateHPBar(unit);
         this._healEffect(unit.col, unit.row);
         this._floatText(unit.col, unit.row, '+3 HP', PAL.HP_G);
+      }
+      // m1: Castle tile healing (+5 HP)
+      if (tid === T.CASTLE && unit.hp < unit.maxHp) {
+        unit.hp = Math.min(unit.maxHp, unit.hp + 5);
+        this._updateHPBar(unit);
+        this._floatText(unit.col, unit.row, '+5 HP', 0x44ff44);
       }
     });
 
@@ -1872,6 +1933,18 @@ class BattleScene extends Phaser.Scene {
         }
         // Add to roster
         this.saveData.roster.push(r.toSave());
+        // m7: Start idle bob for newly recruited unit
+        if (typeof r._startIdleBob === 'function') r._startIdleBob();
+        else if (r.sprite) {
+          this.tweens.add({
+            targets: r.sprite,
+            y: r.sprite.y - 3,
+            duration: 700,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        }
         this._floatText(r.col, r.row, r.rescueMsg || 'Joins!', 0x44ff88);
         this._getUI()?.showMessage(r.rescueMsg || `${r.name} joined!`);
       }
@@ -1897,6 +1970,12 @@ class BattleScene extends Phaser.Scene {
       const gen = this._battleGen;
       setTimeout(() => { if (this._battleGen === gen) this._endBattle(false); }, 2000); // safety net
       return;
+    }
+
+    // M3: Survive-turns pre-objective gate
+    const chapter2 = this._chapter || CHAPTERS?.[this._chapterIndex];
+    if (chapter2?.preObjective === 'survive_turns' && this.turnNumber <= chapter2.surviveTurns) {
+      return; // Cannot win yet — must survive the required turns
     }
 
     // Victory: chapter's designated boss is dead (prefer bossId, fall back to any isBoss)
