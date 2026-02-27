@@ -25,13 +25,18 @@ const CHAPTERS = [
     bgColor: 0x1a2a10,
 
     intro: [
-      { speaker: 'Puppy Knight', portrait: '🐶', text: "Cats are attacking Barkville! We must defend our home!" },
-      { speaker: 'Corgi Healer', portrait: '🐕', text: "I'll keep everyone healed. Don't let them reach the village!" },
-      { speaker: 'Alley Cat',   portrait: '🐈', text: "Surrender, dogs! Barkville belongs to the Cat Empire now!" },
+      { speaker: 'Puppy Knight', portrait: '🐶', text: "The bells — they're ringing! Cats are pouring through the north gate. Everyone, to your positions!" },
+      { speaker: 'Husky Rider',  portrait: '🐶', text: "Ha! At least it's not another drill. I was getting bored." },
+      { speaker: 'Corgi Healer', portrait: '🐕', text: "This isn't a joke, Husky. Look at how many there are. Stay close to me, all of you." },
+      { speaker: 'Puppy Knight', portrait: '🐶', text: "We hold the village square. Nobody gets past us — not today, not ever!" },
+      { speaker: 'Alley Cat',    portrait: '🐈', text: "Surrender, dogs! Barkville belongs to the Cat Empire now! Lay down your weapons and your lives will be spared!" },
+      { speaker: 'Puppy Knight', portrait: '🐶', text: "Barkville has stood for a hundred years. It'll stand a hundred more. CHARGE!" },
     ],
     victory: [
-      { speaker: 'Puppy Knight', portrait: '🐶', text: "The village is safe! But this is only the beginning..." },
-      { speaker: 'Lab Scout',    portrait: '🦮', text: "Reports say they've retreated to the Howling Woods." },
+      { speaker: 'Puppy Knight', portrait: '🐶', text: "They're falling back! Hold the line — make sure every last one is gone." },
+      { speaker: 'Corgi Healer', portrait: '🐕', text: "Easy, easy... let me see that wound. You're going to be fine. You're all going to be fine." },
+      { speaker: 'Lab Scout',    portrait: '🦮', text: "They didn't just retreat — they fell back in formation. Raiders don't do that. Someone was giving orders." },
+      { speaker: 'Puppy Knight', portrait: '🐶', text: "Then we follow them. If there's a commander behind this, we find them before they regroup. Move out — we head for the Howling Woods." },
     ],
 
     // 32 rows x 26 cols (doubled from 16x13)
@@ -111,13 +116,19 @@ const CHAPTERS = [
     bgColor: 0x0d1a08,
 
     intro: [
-      { speaker: 'Lab Scout',        portrait: '🦮', text: "Something's wrong. This forest is too quiet..." },
-      { speaker: 'Siamese Assassin', portrait: '🐈', text: "NOW! Attack from all sides!" },
-      { speaker: 'Puppy Knight',     portrait: '🐶', text: "Ambush! Stay together, don't let them surround us!" },
+      { speaker: 'Lab Scout',        portrait: '🦮', text: "Stop. Everyone hold still. This forest is too quiet — no birds, no wind. Something is very wrong." },
+      { speaker: 'Husky Rider',      portrait: '🐶', text: "Quiet forests are my favorite kind. Peaceful, you know? Maybe we scared all the cats away already." },
+      { speaker: 'Lab Scout',        portrait: '🦮', text: "Husky. Shut. Up. Now." },
+      { speaker: 'Beagle Archer',    portrait: '🐩', text: "Help! In the trees — they've got me pinned down at the river crossing!" },
+      { speaker: 'Siamese Assassin', portrait: '🐈', text: "NOW! Attack from all sides! Leave none of them standing!" },
+      { speaker: 'Puppy Knight',     portrait: '🐶', text: "Ambush! Close ranks, protect your flanks — and someone get to that archer!" },
     ],
     victory: [
-      { speaker: 'Beagle Archer', portrait: '🐩', text: "You saved me! I'll join your force. My arrows will serve Barkville!" },
-      { speaker: 'Puppy Knight',  portrait: '🐶', text: "Welcome, Beagle! We head for Peak Paws next." },
+      { speaker: 'Beagle Archer', portrait: '🐩', text: "You came for me. I don't forget debts. My bow belongs to this cause now — until the end." },
+      { speaker: 'Lab Scout',     portrait: '🦮', text: "Look at how they retreated — covering each other, pulling wounded back. That's not a raid party. That's a military unit." },
+      { speaker: 'Beagle Archer', portrait: '🐩', text: "The ambush was planned before we even entered the woods. They knew our route. Someone told them." },
+      { speaker: 'Poodle Mage',   portrait: '🐩', text: "I found written orders on the commander. They reference 'Phase One' and 'securing the mountain pass.' This is a campaign." },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "A campaign means a general. And a general means a plan we have to stop at its source. We move for Peak Paws." },
     ],
 
     // Improved Ch2: Howling Woods
@@ -199,13 +210,20 @@ const CHAPTERS = [
     bgColor: 0x1a1a2a,
 
     intro: [
-      { speaker: 'Puppy Knight', portrait: '🐶',    text: "The mountain pass is the only way through. We climb!" },
-      { speaker: 'Bulldog Tank', portrait: '🐕‍🦺', text: "Wait—I know this mountain. I used to guard it. I'll help you." },
-      { speaker: 'Snow Leopard', portrait: '🐆',    text: "Foolish dogs. This peak belongs to the Cat Empire. You'll fall here!" },
+      { speaker: 'Puppy Knight', portrait: '🐶',    text: "Three days of climbing and everyone's exhausted. But the pass is the only way through. We don't stop now." },
+      { speaker: 'Bulldog Tank', portrait: '🐕‍🦺', text: "Wait. I know this mountain. Every rock, every switchback. I... guarded this pass once. Before." },
+      { speaker: 'Lab Scout',    portrait: '🦮',    text: "Before? Before what, exactly? Who were you guarding it for?" },
+      { speaker: 'Bulldog Tank', portrait: '🐕‍🦺', text: "That's a conversation for after we're alive. I know where they'll put their archers. Follow me." },
+      { speaker: 'Snow Leopard', portrait: '🐆',    text: "Foolish dogs. This peak has claimed better soldiers than you. The Empire does not yield its high ground!" },
+      { speaker: 'Puppy Knight', portrait: '🐶',    text: "Then we'll just have to be better. On me — we take that ridge!" },
     ],
     victory: [
-      { speaker: 'Bulldog Tank',  portrait: '🐕‍🦺', text: "The pass is ours! My shield will serve your cause, commander." },
-      { speaker: 'Beagle Archer', portrait: '🐩',   text: "With Tank guarding our flank, we're unstoppable!" },
+      { speaker: 'Bulldog Tank',  portrait: '🐕‍🦺', text: "The pass is ours. My shield is yours, commander. For as long as you'll have me." },
+      { speaker: 'Lab Scout',     portrait: '🦮',    text: "You served the Empire, didn't you. That's how you knew the defensive positions." },
+      { speaker: 'Bulldog Tank',  portrait: '🐕‍🦺', text: "I did. Ten years as a gate captain. I left when the Emperor changed — became someone I didn't recognize. He found something, out in the eastern ruins. After that... he was different." },
+      { speaker: 'Corgi Healer',  portrait: '🐕',    text: "Different how? What did he find?" },
+      { speaker: 'Bulldog Tank',  portrait: '🐕‍🦺', text: "I don't know. Only the Queen was there when he touched it. Whatever it was, it hollowed him out." },
+      { speaker: 'Puppy Knight',  portrait: '🐶',    text: "Then the Queen is the one who has answers. We head for the desert. We find a way to the fortress." },
     ],
 
     // Improved Ch3: Peak Paws
@@ -290,13 +308,19 @@ const CHAPTERS = [
     bgColor: 0x0a1a2a,
 
     intro: [
-      { speaker: 'Lab Scout',     portrait: '🦮', text: "The river's too wide to swim. We need those bridges!" },
-      { speaker: 'Otto Otter',    portrait: '🦦', text: "I can cross the water! Let me join your force!" },
-      { speaker: 'River Panther', portrait: '🐆', text: "The bridges are mine! And I swim faster than any dog!" },
+      { speaker: 'Lab Scout',     portrait: '🦮', text: "Both bridges are fortified. The current's too fast to swim across — we need a way through their lines." },
+      { speaker: 'Otto Otter',    portrait: '🦦', text: "Ooh, hello! I've been watching from the reeds. You look like you need a river guide — and I happen to be the best one around!" },
+      { speaker: 'River Panther', portrait: '🐆', text: "Ah. The rebel dogs, at last. The Emperor's grand design anticipated your arrival. These bridges are the Empire's — and so is your fate." },
+      { speaker: 'Otto Otter',    portrait: '🦦', text: "Psst. That's the River Panther — the Empire's finest tactician. If he's here personally, they're worried about you. That's a good sign." },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "Good. Then let's give them something to really worry about. Otto — show us those crossings." },
     ],
     victory: [
-      { speaker: 'Otto Otter',   portrait: '🦦', text: "The river crossing is ours! I know all the waterways ahead." },
-      { speaker: 'Puppy Knight', portrait: '🐶', text: "Great work, Otto! The Desert lies ahead..." },
+      { speaker: 'River Panther', portrait: '🐆', text: "You fight well... but you don't understand what you're walking into. The Emperor's grip tightens because he FEARS something. You should ask yourself what." },
+      { speaker: 'Otto Otter',    portrait: '🦦', text: "I've traveled farther than any dog here — beyond the Empire's borders, to the eastern shores. The Emperor wasn't always like this. Traders who knew him said he was fair, curious. Beloved, even." },
+      { speaker: 'Bulldog Tank',  portrait: '🐕‍🦺', text: "That was before the ruins. Before whatever he brought back with him." },
+      { speaker: 'Corgi Healer',  portrait: '🐕', text: "Otto, have you heard of it? An artifact — something that changes a person?" },
+      { speaker: 'Otto Otter',    portrait: '🦦', text: "The otters call it the Stone of Endless Want. Ancient thing — older than any kingdom. It whispers promises to whoever holds it, and twists them from the inside until there's nothing left but hunger." },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "Then we don't just have to stop the Emperor. We have to free him. We have to destroy that stone." },
     ],
 
     // Improved Ch4: River Fetch
@@ -380,13 +404,21 @@ const CHAPTERS = [
     bgColor: 0x2a1a00,
 
     intro: [
-      { speaker: 'Puppy Knight',  portrait: '🐶', text: "The desert heat is brutal. Stay hydrated at the oases!" },
-      { speaker: 'Foxy Scout',    portrait: '🦊', text: "I know this desert! Let me guide you through the sand traps!" },
-      { speaker: 'Sand Cat King', portrait: '🐅', text: "The sands will swallow you, dogs! This is MY kingdom!" },
+      { speaker: 'Husky Rider',   portrait: '🐶', text: "Three days of desert and my paws are done. Someone tell me the fortress has shade." },
+      { speaker: 'Beagle Archer', portrait: '🐩', text: "Save it. There's a figure moving along that ridge — not one of ours." },
+      { speaker: 'Fox Scout',     portrait: '🦊', text: "Relax. That's me — or it was, before I decided your coin was better than the King's. I know every dune and trap out here. Hire me." },
+      { speaker: 'Lab Scout',     portrait: '🦮', text: "A mercenary? Now? We don't even know whose side you're really on." },
+      { speaker: 'Sand Cat King', portrait: '🐅', text: "It does not matter which side the fox chooses. The desert answers to me! You will be buried here, dogs — as all trespassers are!" },
+      { speaker: 'Fox Scout',     portrait: '🦊', text: "There's a path around his left flank — I know it cold. Your call, Knight. But make it fast." },
     ],
     victory: [
-      { speaker: 'Foxy Scout',   portrait: '🦊', text: "We did it! I know a shortcut to the Meow Fortress." },
-      { speaker: 'Corgi Healer', portrait: '🐕', text: "Rest at the oasis. The fortress battle will be our toughest yet." },
+      { speaker: 'Lab Scout',     portrait: '🦮', text: "I saw you hesitate back there, Fox. You had one paw pointed the other direction." },
+      { speaker: 'Fox Scout',     portrait: '🦊', text: "...Yeah. Old habit. I stayed. That's what matters." },
+      { speaker: 'Sand Cat King', portrait: '🐅', text: "Wait. Do not raise your weapons. This land is mine, yes — but the Empire forced my paw. I had no quarrel with you until they arrived." },
+      { speaker: 'Sand Cat King', portrait: '🐅', text: "Hear me: that thing around the Emperor's neck — the Claw of Discord — it will hollow out anyone who holds it. He was once a fair ruler. I traded with his caravans. The artifact ate him from the inside." },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "Where is it kept? The Claw — where?" },
+      { speaker: 'Sand Cat King', portrait: '🐅', text: "The throne room. The Queen knows where it rests. She has been trying to protect him from it — and failing." },
+      { speaker: 'Corgi Healer',  portrait: '🐕', text: "Then we go to the fortress. Not to conquer. To finish this." },
     ],
 
     // Improved Ch5: Desert Scratch
@@ -476,13 +508,22 @@ const CHAPTERS = [
     bgColor: 0x0a0a1a,
 
     intro: [
-      { speaker: 'Puppy Knight',  portrait: '🐶', text: "The Meow Fortress. This is their stronghold. We must break through!" },
-      { speaker: 'Terrier Thief', portrait: '🦊', text: "Leave the doors to me. I'll find a way in." },
-      { speaker: 'Persian Queen', portrait: '😺', text: "Impudent mutts! Your bones will decorate my throne room!" },
+      { speaker: 'Corgi Healer',  portrait: '🐕', text: "I've been with you every step. I'm not afraid of anything — I told myself that. But standing here... I'm afraid." },
+      { speaker: 'Bulldog Tank',  portrait: '🐕‍🦺', text: "Good. Fear means you understand what this is. Hold it close — it'll keep you sharp." },
+      { speaker: 'Terrier Thief', portrait: '🦊', text: "Gate's sealed with three bolts and an old chain lock. Give me four minutes. Maybe three." },
+      { speaker: 'Lab Scout',     portrait: '🦮', text: "You were paid to be here? By who?" },
+      { speaker: 'Terrier Thief', portrait: '🦊', text: "Does it matter? I'm here. Get moving." },
+      { speaker: 'Persian Queen', portrait: '😺', text: "You come this far only to fall at my gates. Impudent mutts — your bones will decorate this throne room before morning!" },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "We're not here to conquer. We're here to set something right. Open the gate, Terrier." },
     ],
     victory: [
-      { speaker: 'Puppy Knight',  portrait: '🐶', text: "The fortress falls! But the Emperor himself awaits..." },
-      { speaker: 'Persian Queen', portrait: '😺', text: "You... you cannot stop the Emperor. He will destroy you all!" },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "It's done. Sheathe your weapons — all of you." },
+      { speaker: 'Persian Queen', portrait: '😺', text: "Go ahead. Finish it. I won't beg." },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "We're not here to hurt you." },
+      { speaker: 'Persian Queen', portrait: '😺', text: "He used to walk the markets of Meow City before dawn — before anyone was awake — just to know his people. He remembered every name. He was... warm. Curious. Just." },
+      { speaker: 'Persian Queen', portrait: '😺', text: "I was there in the ruins when he found it. I begged him not to touch it. He laughed and said it was just a stone. And then his eyes changed, and he was never the same again." },
+      { speaker: 'Persian Queen', portrait: '😺', text: "Don't destroy him. Please. Destroy the Claw. What it's made him — that isn't him. That was never him." },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "We will. I promise you — we will." },
     ],
 
     // Improved Ch6: Meow Fortress
@@ -564,14 +605,25 @@ const CHAPTERS = [
     bgColor: 0x1a0a2a,
 
     intro: [
-      { speaker: 'Puppy Knight', portrait: '🐶', text: "This is it. The Cat Emperor's throne room. For Barkville!" },
-      { speaker: 'Otto Otter',   portrait: '🦦', text: "We've come so far together. For all animals, free and proud!" },
-      { speaker: 'Cat Emperor',  portrait: '👑', text: "You dare challenge ME?! I will end your pitiful rebellion HERE AND NOW!" },
+      { speaker: 'Husky Rider',   portrait: '🐶', text: "Hey. Before we go in. I just — thanks. All of you. I'm not good at saying that, so I'm only saying it once." },
+      { speaker: 'Beagle Archer', portrait: '🐩', text: "You saved me in the Howling Woods. I go where you go. No more words needed." },
+      { speaker: 'Bulldog Tank',  portrait: '🐕‍🦺', text: "I served that man for ten years. He was a good ruler. Whatever is in that throne room — it isn't him. Let's bring him back." },
+      { speaker: 'Corgi Healer',  portrait: '🐕', text: "May we come through this whole. All of us." },
+      { speaker: 'Otto Otter',    portrait: '🦦', text: "I have seen the shores of four seas. Nothing I have seen compares to what this team has done together. Let's finish it." },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "We're not fighting to conquer. We're fighting to free him. One last push — together." },
+      { speaker: 'Cat Emperor',   portrait: '👑', text: "You DARE come before me?! I will grind your bones to dust — the Claw DEMANDS it! You will NOT take it from me — I WON'T LET YOU!" },
     ],
     victory: [
-      { speaker: 'Cat Emperor',  portrait: '👑', text: "Im-possible... defeated by... dogs..." },
-      { speaker: 'Puppy Knight', portrait: '🐶', text: "It's over. The Cat Empire is finished. All animals are free!" },
-      { speaker: 'All',          portrait: '🐾', text: "PUPPY FORCE FOREVER! WOOF WOOF WOOF!" },
+      { speaker: 'Puppy Knight',  portrait: '🐶', text: "Now — the Claw!" },
+      { speaker: 'Cat Emperor',   portrait: '👑', text: "No — NO — it's MINE, you can't — aaagh—" },
+      { speaker: 'Cat Emperor',   portrait: '👑', text: "What... where am I? What... what have I done?" },
+      { speaker: 'Cat Emperor',   portrait: '👑', text: "I remember everything. Every order. Every life. I remember — and I cannot take any of it back." },
+      { speaker: 'Persian Queen', portrait: '😺', text: "I'm here. I'm here. It's over." },
+      { speaker: 'Cat Emperor',   portrait: '👑', text: "You came not to destroy me, but to save me. I did not deserve that mercy. I do not know if I ever will." },
+      { speaker: 'Bulldog Tank',  portrait: '🐕‍🦺', text: "..." },
+      { speaker: 'Otto Otter',    portrait: '🦦', text: "A new world starts from here. That's all any of us can do — start from where we are." },
+      { speaker: 'Corgi Healer',  portrait: '🐕', text: "And take care of each other along the way." },
+      { speaker: 'All',           portrait: '🐾', text: "Puppy Force... and friends. Together." },
     ],
 
     // Improved Ch7: Ultimate Woof — Final battle
