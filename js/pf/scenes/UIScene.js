@@ -613,14 +613,22 @@ class UIScene extends Phaser.Scene {
     // M3: Objective banner
     if (bn && this._objectiveLabel) {
       const chapter = typeof CHAPTERS !== 'undefined' ? CHAPTERS[bn.chapterId - 1] : null;
-      if (chapter?.preObjective === 'survive_turns' && bn.turnNumber <= chapter.surviveTurns) {
-        const remaining = chapter.surviveTurns - bn.turnNumber + 1;
-        const txt = `Survive ${remaining} more turn${remaining !== 1 ? 's' : ''}!`;
-        const col = remaining <= 2 ? '#ff6644' : '#ffcc44';
+      const obj = chapter?.objective;
+      if (obj === 'survive_turns') {
+        const remaining = Math.max(0, chapter.surviveTurns - (bn.turnNumber - 1));
+        const done = bn.turnNumber > chapter.surviveTurns;
+        const txt = done
+          ? 'Objective: Survived! 🐾'
+          : `Objective: Survive ${chapter.surviveTurns} turns  [${bn.turnNumber}/${chapter.surviveTurns}]`;
+        const col = done ? '#44ff88' : '#aaddff';
         this._objectiveLabel.setText(txt).setStyle({ color: col }).setVisible(true);
-      } else if (chapter?.objective === 'defeat_boss' || chapter?.bossId) {
-        const bossName = (chapter.bossId || '').replace(/_/g, ' ');
-        this._objectiveLabel.setText(`Objective: Defeat ${bossName || 'the boss'}`).setStyle({ color: '#ffcc44' }).setVisible(true);
+      } else if (obj === 'seize_tile') {
+        this._objectiveLabel.setText('Objective: Seize the throne! 👑').setStyle({ color: '#f8d030' }).setVisible(true);
+      } else if (obj === 'escort_vip') {
+        this._objectiveLabel.setText('Objective: Escort VIP to safety! 🐕').setStyle({ color: '#88eeaa' }).setVisible(true);
+      } else if (obj === 'defeat_boss' || chapter?.bossId) {
+        const bossName = chapter?.bossId || 'the boss';
+        this._objectiveLabel.setText(`Objective: Defeat ${bossName}`).setStyle({ color: '#ffcc44' }).setVisible(true);
       } else {
         this._objectiveLabel.setVisible(false);
       }

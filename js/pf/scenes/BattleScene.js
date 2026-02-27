@@ -1991,11 +1991,30 @@ class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // M3: Survive-turns pre-objective gate
-    const chapter2 = CHAPTERS[this.chapterId - 1];
-    if (chapter2?.preObjective === 'survive_turns' && this.turnNumber <= chapter2.surviveTurns) {
-      return; // Cannot win yet — must survive the required turns
+    // Objective-specific victory conditions
+    const obj = chapter.objective;
+    if (obj === 'survive_turns') {
+      if (this.turnNumber > chapter.surviveTurns) {
+        this._setState(BS.VICTORY);
+        this._celebrateVictory();
+        return;
+      }
+      // haven't survived long enough — don't fall through to boss check
+      return; // still alive = keep playing
     }
+    if (obj === 'seize_tile') {
+      const seizer = players.find(u => u.col === chapter.seizeTileCol && u.row === chapter.seizeTileRow);
+      if (seizer) { this._setState(BS.VICTORY); this._celebrateVictory(); return; }
+      return; // seize not complete
+    }
+    if (obj === 'escort_vip') {
+      const vip = players.find(u => u.id === chapter.vipId);
+      if (vip && vip.col === chapter.vipTargetCol && vip.row === chapter.vipTargetRow) {
+        this._setState(BS.VICTORY); this._celebrateVictory(); return;
+      }
+      return; // escort not done
+    }
+    // default: defeat_boss logic (existing code follows)
 
     // Victory: chapter's designated boss is dead (prefer bossId, fall back to any isBoss)
     const boss = chapter.bossId
