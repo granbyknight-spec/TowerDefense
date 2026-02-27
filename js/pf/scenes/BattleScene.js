@@ -2691,4 +2691,110 @@ class BattleScene extends Phaser.Scene {
       this._showAllEnemyRanges();
     }
   }
+
+  // ============================================================================
+  // PAIR-UP mechanic
+  // ============================================================================
+
+  onActionPairUp(ally) {
+    const carrier = this._selected;
+    if (!carrier || !ally || ally.isPaired) return;
+    if (carrier.team !== 'player' || ally.team !== 'player') return;
+
+    // Pair: ally rides on carrier
+    carrier.passenger = ally;
+    ally.isPaired     = true;
+    ally.hasActed     = true; // paired unit cannot act independently this turn
+
+    // Stat bonuses to carrier: +floor(ally.def/2) DEF, +1 MOV (capped at 8)
+    carrier._pairDefBonus = Math.floor((ally.def || 0) / 2);
+    carrier._pairMovBonus = 1;
+
+    // Visual: fade ally sprite to show it's mounted
+    if (ally.sprite)   this.tweens.add({ targets: ally.sprite,   alpha: 0.0, duration: 300 });
+    if (ally.spriteBg) this.tweens.add({ targets: ally.spriteBg, alpha: 0.0, duration: 300 });
+    // Move ally to same tile as carrier (visually paired)
+    ally.col = carrier.col;
+    ally.row = carrier.row;
+
+    // Show a small indicator on carrier
+    this._showPairBadge(carrier);
+
+    // End turn for the carrier too (pair-up counts as using the turn)
+    carrier.hasActed = true;
+    this._getUI()?.hideActionMenu();
+    this._getUI()?.updateUnitInfo(carrier);
+    this._clearHighlights();
+    this._setState(BS.IDLE);
+    this._dimActedUnits();
+  }
+
+  onActionSeparate(carrier) {
+    const passenger = carrier?.passenger;
+    if (!carrier || !passenger) return;
+
+    // Find an empty adjacent tile to place the passenger
+    const dirs = [{dc:0,dr:-1},{dc:1,dr:0},{dc:0,dr:1},{dc:-1,dr:0}];
+    let placed = false;
+    for (const {dc, dr} of dirs) {
+      const nc = carrier.col + dc, nr = carrier.row + dr;
+      if (nc < 0 || nr < 0) continue;
+      if (nr >= this.mapGrid.length || nc >= this.mapGrid[0].length) continue;
+      const tileVal = this.mapGrid[nr][nc];
+      if (tileVal === 10 || tileVal === 3) continue; // wall or water
+      const occupied = this.units.find(u => !u.dead && u.col === nc && u.row === nr && u !== passenger);
+      if (occupied) continue;
+      // Place passenger here
+      passenger.col = nc;
+      passenger.row = nr;
+      placed = true;
+      break;
+    }
+    if (!placed) {
+      // No adjacent tile — can't separate right now
+      this._getUI()?.showMessage('No room to separate!');
+      return;
+    }
+
+    // Remove pair bond
+    passenger.isPaired      = false;
+    passenger.hasActed      = false; // give passenger a chance to act after separating
+    carrier.passenger       = null;
+    carrier._pairDefBonus   = 0;
+    carrier._pairMovBonus   = 0;
+
+    // Restore passenger sprite
+    if (passenger.sprite) {
+      const { x, y } = this._tileCenter(passenger.col, passenger.row);
+      passenger.sprite.setAlpha(1).setPosition(x, y);
+    }
+    if (passenger.spriteBg) {
+      const { x: bx, y: by } = this._tileTL(passenger.col, passenger.row);
+      passenger.spriteBg.setAlpha(1).setPosition(bx, by);
+    }
+
+    // Remove pair badge
+    if (carrier._pairBadge) { carrier._pairBadge.destroy(); carrier._pairBadge = null; }
+
+    this._getUI()?.hideActionMenu();
+    this._getUI()?.updateUnitInfo(carrier);
+    this._setState(BS.IDLE);
+    this._dimActedUnits();
+  }
+
+  _showPairBadge(carrier) {
+    if (carrier._pairBadge) carrier._pairBadge.destroy();
+    const { x: cx, y: cy } = this._tileCenter(carrier.col, carrier.row);
+    carrier._pairBadge = this.add.text(cx + 10, cy - 14, '👫', {
+      fontSize: '10px',
+    }).setOrigin(0.5).setDepth(12);
+  }
+
+  _getPairDefBonus(unit) {
+    return unit._pairDefBonus || 0;
+  }
+
+  _getPairMovBonus(unit) {
+    return unit._pairMovBonus || 0;
+  }
 }
