@@ -4564,35 +4564,24 @@ class BattleScene extends Phaser.Scene {
     const effectiveness = this._weaponEffectiveness(this._selected, target);
     this._getUI()?.showDamagePreview(this._selected, target, terrainDef, effectiveness);
 
-    this._showAtkConfirm(() => {
-      // onConfirm: execute the combat
-      this._executeCombat(this._selected, target, () => {
-        const unit = this._selected;
-        if (!unit) return;
-        unit.hasActed = true;
-        this._checkEndCondition();
-        // If game ended, do nothing further
-        if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
-        if (!unit.hasMoved && !unit.dead) {
-          // Unit attacked before moving — still allow a move this turn
-          const tiles = getReachableTiles(unit, this.mapGrid, this.units);
-          this._moveTiles = tiles;
-          this._clearHighlights();
-          this._drawMoveHighlights(tiles);
-          this._drawSelHighlight(unit);
-          this._setState(BS.UNIT_SEL);
-          this._getUI()?.showActionMenu(unit, this);  // shows Wait/Item; Attack disabled
-        } else {
-          this._deselect();
-        }
-      });
-    }, () => {
-      // onCancel: hide damage preview and restore targeting state
-      this._getUI()?.hideDamagePreview?.();
-      if (typeof this._showAtkTiles === 'function') {
-        this._showAtkTiles(this._selected);
+    this._executeCombat(this._selected, target, () => {
+      const unit = this._selected;
+      if (!unit) return;
+      unit.hasActed = true;
+      this._checkEndCondition();
+      // If game ended, do nothing further
+      if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
+      if (!unit.hasMoved && !unit.dead) {
+        // Unit attacked before moving — still allow a move this turn
+        const tiles = getReachableTiles(unit, this.mapGrid, this.units);
+        this._moveTiles = tiles;
+        this._clearHighlights();
+        this._drawMoveHighlights(tiles);
+        this._drawSelHighlight(unit);
+        this._setState(BS.UNIT_SEL);
+        this._getUI()?.showActionMenu(unit, this);  // shows Wait/Item; Attack disabled
       } else {
-        this._setState(BS.TARGET_ATK);
+        this._deselect();
       }
     });
   }
@@ -4754,8 +4743,7 @@ class BattleScene extends Phaser.Scene {
     const badgeY = (col, row) => this._tileCenter(col, row).y + r + 10;
     let step = 0;
 
-    const baseDur = Math.max(70, 160 - unit.mov * 8);
-    const stepDur = this._enemyFast ? 20 : baseDur;
+    const stepDur = Math.max(70, 160 - unit.mov * 8);
 
     const doStep = () => {
       if (step >= path.length) {
@@ -5475,16 +5463,7 @@ class BattleScene extends Phaser.Scene {
   // ENEMY AI TURN
   // ==========================================================================
 
-  _onEnemyFastTap() {
-    if (this._state === BS.ENEMY_TURN || this._state === BS.ANIMATING) {
-      this._enemyFast = true;
-      this.input.off('pointerdown', this._onEnemyFastTap, this);
-    }
-  }
-
   _beginEnemyTurn() {
-    this._enemyFast = false;
-    this.input.on('pointerdown', this._onEnemyFastTap, this);
     this.playerTurn = false;
     this.turnNumber++;
     this._setState(BS.ENEMY_TURN);
@@ -5508,7 +5487,7 @@ class BattleScene extends Phaser.Scene {
     this._enemyQueue.forEach(u => u.resetTurn());
     this._enemyQueue.forEach(u => { u.guardActive = false; });
 
-    this.time.delayedCall(this._enemyFast ? 100 : 800, () => this._processNextEnemy());
+    this.time.delayedCall(800, () => this._processNextEnemy());
   }
 
   _processNextEnemy() {
@@ -5541,18 +5520,18 @@ class BattleScene extends Phaser.Scene {
           this._executeEnemyHeal(enemy, action.target, () => {
             if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
             enemy.hasActed = true;
-            this.time.delayedCall(this._enemyFast ? 50 : 200, () => this._processNextEnemy());
+            this.time.delayedCall(200, () => this._processNextEnemy());
           });
         } else {
           this._executeCombat(enemy, action.target, () => {
             if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
             enemy.hasActed = true;
-            this.time.delayedCall(this._enemyFast ? 50 : 200, () => this._processNextEnemy());
+            this.time.delayedCall(200, () => this._processNextEnemy());
           });
         }
       } else {
         enemy.hasActed = true;
-        this.time.delayedCall(this._enemyFast ? 30 : 150, () => this._processNextEnemy());
+        this.time.delayedCall(150, () => this._processNextEnemy());
       }
     });
   }
@@ -5621,7 +5600,17 @@ class BattleScene extends Phaser.Scene {
         // Add to roster
         this.saveData.roster.push(r.toSave());
         // m7: Start idle bob for newly recruited unit
-        this._startIdleBob(r);
+        if (typeof r._startIdleBob === 'function') r._startIdleBob();
+        else if (r.sprite) {
+          this.tweens.add({
+            targets: r.sprite,
+            y: r.sprite.y - 3,
+            duration: 700,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        }
         this._floatText(r.col, r.row, r.rescueMsg || 'Joins!', 0x44ff88);
         this._getUI()?.showMessage(r.rescueMsg || `${r.name} joined!`);
       }
@@ -5734,10 +5723,9 @@ class BattleScene extends Phaser.Scene {
           u.dead = false;
           u.hp = 1;
         } else {
-          // Living survivors get the inter-chapter training bonus
-          u.maxHp += 1;
+          // Living survivors get the inter-chapter training bonus (50% chance for +1 HP)
+          if (Math.random() < 0.5) u.maxHp += 1;
           u.hp = u.maxHp;
-          if (this.chapterId % 2 === 1) u.atk += 1;
         }
       });
       this.saveData.roster = SaveManager.serializeRoster(survivors);

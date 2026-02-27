@@ -131,6 +131,7 @@ class BattleScene extends Phaser.Scene {
     this._dangerZoneActive = false;
     this._dangerGfx = null;
     this.playerTurn = true;
+    this._enemyFast = false;
   }
 
   // --------------------------------------------------------------------------
@@ -2008,7 +2009,7 @@ class BattleScene extends Phaser.Scene {
     if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
 
     const chapter = CHAPTERS[this.chapterId - 1];
-    const players = this.units.filter(u => !u.dead && u.team === 'player' && !u.isPaired);
+    const players = this.units.filter(u => !u.dead && u.team === 'player');
     const enemies = this.units.filter(u => !u.dead && u.team === 'enemy');
 
     // Defeat: all player units dead
@@ -2106,10 +2107,9 @@ class BattleScene extends Phaser.Scene {
           u.dead = false;
           u.hp = 1;
         } else {
-          // Living survivors get the inter-chapter training bonus
-          u.maxHp += 1;
+          // Living survivors get the inter-chapter training bonus (50% chance for +1 HP)
+          if (Math.random() < 0.5) u.maxHp += 1;
           u.hp = u.maxHp;
-          if (this.chapterId % 2 === 1) u.atk += 1;
         }
       });
       this.saveData.roster = SaveManager.serializeRoster(survivors);
