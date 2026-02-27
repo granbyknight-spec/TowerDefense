@@ -615,11 +615,12 @@ class UIScene extends Phaser.Scene {
       const chapter = typeof CHAPTERS !== 'undefined' ? CHAPTERS[bn.chapterId - 1] : null;
       const obj = chapter?.objective;
       if (obj === 'survive_turns') {
-        const remaining = Math.max(0, chapter.surviveTurns - (bn.turnNumber - 1));
-        const done = bn.turnNumber > chapter.surviveTurns;
+        // MED-4: turnNumber is incremented during enemy turn — show the player-facing turn number
+        const playerTurnNum = bn.playerTurn ? bn.turnNumber : bn.turnNumber - 1;
+        const done = playerTurnNum >= chapter.surviveTurns;
         const txt = done
           ? 'Objective: Survived! 🐾'
-          : `Objective: Survive ${chapter.surviveTurns} turns  [${bn.turnNumber}/${chapter.surviveTurns}]`;
+          : `Objective: Survive ${chapter.surviveTurns} turns  [${playerTurnNum}/${chapter.surviveTurns}]`;
         const col = done ? '#44ff88' : '#aaddff';
         this._objectiveLabel.setText(txt).setStyle({ color: col }).setVisible(true);
       } else if (obj === 'seize_tile') {
@@ -627,7 +628,8 @@ class UIScene extends Phaser.Scene {
       } else if (obj === 'escort_vip') {
         this._objectiveLabel.setText('Objective: Escort VIP to safety! 🐕').setStyle({ color: '#88eeaa' }).setVisible(true);
       } else if (obj === 'defeat_boss' || chapter?.bossId) {
-        const bossName = chapter?.bossId || 'the boss';
+        // LOW-6: restore underscore-to-space for boss name display
+        const bossName = (chapter?.bossId || 'the boss').replace(/_/g, ' ');
         this._objectiveLabel.setText(`Objective: Defeat ${bossName}`).setStyle({ color: '#ffcc44' }).setVisible(true);
       } else {
         this._objectiveLabel.setVisible(false);

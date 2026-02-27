@@ -1994,6 +1994,9 @@ class BattleScene extends Phaser.Scene {
     // Objective-specific victory conditions
     const obj = chapter.objective;
     if (obj === 'survive_turns') {
+      // CRIT-2: only check survival win during player turn — turnNumber is incremented
+      // at the START of enemy turn, so checking during enemy actions would fire prematurely
+      if (!this.playerTurn) return;
       if (this.turnNumber > chapter.surviveTurns) {
         this._setState(BS.VICTORY);
         this._celebrateVictory();
@@ -2009,7 +2012,16 @@ class BattleScene extends Phaser.Scene {
     }
     if (obj === 'escort_vip') {
       const vip = players.find(u => u.id === chapter.vipId);
-      if (vip && vip.col === chapter.vipTargetCol && vip.row === chapter.vipTargetRow) {
+      if (!vip) {
+        // VIP has died — escort failed (can be triggered on any turn)
+        this._setState(BS.DEFEAT);
+        this._getUI()?.showMessage('VIP has fallen! Mission failed.');
+        this.time.delayedCall(1500, () => this._endBattle(false));
+        const gen = this._battleGen;
+        setTimeout(() => { if (this._battleGen === gen) this._endBattle(false); }, 2000);
+        return;
+      }
+      if (vip.col === chapter.vipTargetCol && vip.row === chapter.vipTargetRow) {
         this._setState(BS.VICTORY); this._celebrateVictory(); return;
       }
       return; // escort not done

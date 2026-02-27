@@ -469,7 +469,7 @@ const CHAPTERS = [
     title: 'Meow Fortress',
     subtitle: 'Storm the fortress and dethrone the Persian Queen!',
     objective: 'escort_vip',
-    vipId: 'MOCHI',
+    vipId: 'CORGI_HEALER',
     vipTargetCol: 12,
     vipTargetRow: 2,
     bossId: 'PERSIAN_QUEEN',
