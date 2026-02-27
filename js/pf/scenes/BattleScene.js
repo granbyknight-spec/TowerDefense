@@ -1445,11 +1445,11 @@ class BattleScene extends Phaser.Scene {
     const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
     // M4: Adjacency support bonus
     const atkSupportCount = Math.min(3, this.units.filter(u =>
-      !u.dead && u !== attacker && u.team === attacker.team &&
+      !u.dead && !u.isPaired && u !== attacker && u.team === attacker.team &&
       Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
     ).length);
     const defSupportCount = Math.min(3, this.units.filter(u =>
-      !u.dead && u !== defender && u.team === defender.team &&
+      !u.dead && !u.isPaired && u !== defender && u.team === defender.team &&
       Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
     ).length);
     const rawDmg = Math.max(1, (attacker.atk + atkSupportCount) - (defender.def + guardBonus + defSupportCount + terrainDef + this._getPairDefBonus(defender)));
@@ -1796,6 +1796,29 @@ class BattleScene extends Phaser.Scene {
         this._destroyUnitSprite(unit);
         unit.dead = true;
         unit.guardActive = false;
+        // Free any passenger riding this carrier when carrier dies
+        if (unit.passenger) {
+          const p = unit.passenger;
+          p.isPaired = false;
+          p.hasActed = false;
+          if (p.sprite)   p.sprite.setAlpha(1);
+          if (p.spriteBg) p.spriteBg.setAlpha(1);
+          unit.passenger       = null;
+          unit._pairDefBonus   = 0;
+          unit._pairMovBonus   = 0;
+          if (unit._pairBadge) { unit._pairBadge.destroy(); unit._pairBadge = null; }
+        }
+        // Clear pair bond if this dying unit is itself a passenger
+        if (unit.isPaired) {
+          const carrier = this.units.find(u => u.passenger === unit);
+          if (carrier) {
+            carrier.passenger     = null;
+            carrier._pairDefBonus = 0;
+            carrier._pairMovBonus = 0;
+            if (carrier._pairBadge) { carrier._pairBadge.destroy(); carrier._pairBadge = null; }
+          }
+          unit.isPaired = false;
+        }
         if (unit.team === 'player') this._unitsLost++;
         // M3: Boss death quote
         if ((unit.isBoss || unit.deathQuote) && !unit._quotePlayed) {
@@ -1866,7 +1889,7 @@ class BattleScene extends Phaser.Scene {
 
     // Move
     // action.moveTo is already validated by getReachableTiles; follow the full path
-    const path = findPath(enemy, action.moveTo.col, action.moveTo.row, this.mapGrid, this.units);
+    const path = findPath(enemy, action.moveTo.col, action.moveTo.row, this.mapGrid, unitsForAI);
 
     this._animateMove(enemy, path && path.length > 0 ? path : [action.moveTo], () => {
       enemy.col = action.moveTo.col;
@@ -2502,6 +2525,7 @@ class BattleScene extends Phaser.Scene {
   _dimActedUnits() {
     this.units.forEach(u => {
       if (!u.sprite) return;
+      if (u.isPaired) return; // passenger sprite is alpha=0 from pair-up tween — do not alter it
       const fullyDone = (u.team === 'player') && (u.hasMoved && u.hasActed);
       const movedOnly = (u.team === 'player') && (u.hasMoved && !u.hasActed);
       const alpha = fullyDone ? 0.45 : 1.0;
@@ -2529,7 +2553,7 @@ class BattleScene extends Phaser.Scene {
   _setState(state) { this._state = state; }
 
   _unitAt(col, row) {
-    return this.units.find(u => !u.dead && u.isOccupyingTile(col, row)) || null;
+    return this.units.find(u => !u.dead && !u.isPaired && u.isOccupyingTile(col, row)) || null;
   }
 
   _tileCenter(col, row) {
@@ -2730,6 +2754,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   onActionSeparate(carrier) {
+    if (this._state === BS.VICTORY || this._state === BS.DEFEAT || this._state === BS.ANIMATING) return;
     const passenger = carrier?.passenger;
     if (!carrier || !passenger) return;
 
