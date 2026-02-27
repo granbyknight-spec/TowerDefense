@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Bundles the Puppy Defender game into a single self-contained HTML file.
+Bundles Puppy Force (Phaser 3 tactics game) into a single self-contained HTML file.
 
 Reads index.html, replaces the CSS <link> with an inline <style> tag,
-and replaces all <script src="..."> tags with a single inline <script> tag
+and replaces all local <script src="js/pf/..."> tags with a single inline <script> tag
 containing all JS files concatenated in the correct order.
 """
 
@@ -14,32 +14,26 @@ BASE_DIR = "/home/user/TowerDefense"
 
 # JS files in dependency order (matches the script tag order in index.html)
 JS_FILES = [
-    "js/config.js",
-    "js/utils.js",
-    "js/audio.js",
-    "js/pathfinding.js",
-    "js/grid.js",
-    "js/enemy.js",
-    "js/tower.js",
-    "js/projectile.js",
-    "js/wave.js",
-    "js/renderer.js",
-    "js/ui.js",
-    "js/save.js",
-    "js/academy.js",
-    "js/episodes.js",
-    "js/story.js",
-    "js/village.js",
-    "js/villageMaps.js",
-    "js/hub.js",
-    "js/tacticsSprites.js",
-    "js/tacticsEngine.js",
-    "js/cutscene.js",
-    "js/tactics.js",
-    "js/game.js",
+    "js/pf/Config.js",
+    "js/pf/Unit.js",
+    "js/pf/Pathfinding.js",
+    "js/pf/EnemyAI.js",
+    "js/pf/ChapterData.js",
+    "js/pf/SaveManager.js",
+    "js/pf/SpriteSheet.js",
+    "js/pf/AudioManager.js",
+    "js/pf/scenes/TitleScene.js",
+    "js/pf/scenes/BattleScene.js",
+    "js/pf/scenes/UIScene.js",
+    "js/pf/scenes/VictoryScene.js",
+    "js/pf/scenes/CutsceneScene.js",
+    "js/pf/scenes/ComicScene.js",
+    "js/pf/scenes/PrepScene.js",
+    "js/pf/scenes/InnScene.js",
+    "js/pf/main.js",
 ]
 
-CSS_FILE = "css/style.css"
+CSS_FILE = "css/pf.css"
 OUTPUT_FILE = "index-bundle.html"
 
 
@@ -57,7 +51,7 @@ def main():
     css_content = read_file(CSS_FILE)
 
     # Replace the CSS <link> tag with an inline <style> block
-    css_link_pattern = r'<link\s+rel="stylesheet"\s+href="css/style\.css"\s*/?>'
+    css_link_pattern = r'<link\s+rel="stylesheet"\s+href="css/pf\.css"\s*/?>'
     inline_style = f"<style>\n{css_content}\n    </style>"
     html = re.sub(css_link_pattern, inline_style, html)
 

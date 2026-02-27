@@ -5,6 +5,29 @@ Branch: `claude/puppy-force-game-BhoEA`
 
 ---
 
+## Deploying the Game
+
+**ALWAYS rebuild the bundle before deploying.** The live game at
+`https://granbyknight-spec.github.io/TowerDefense/index-bundle.html`
+serves `index-bundle.html` from the `PuppyForce` branch. This file must be
+regenerated whenever any `js/pf/` file changes.
+
+```bash
+python3 bundle.py          # regenerates index-bundle.html from js/pf/ files
+git add index-bundle.html
+git commit -m "Rebuild bundle"
+git push -u origin claude/puppy-force-game-BhoEA
+# Then /deploy to merge into PuppyForce
+```
+
+**Deploy is blocked in this environment** — `gh` CLI is not installed and the
+git proxy only allows pushing to `claude/` branches. To deploy:
+1. Push the bundle to the feature branch (above)
+2. Open a PR on GitHub: `claude/puppy-force-game-BhoEA` → `PuppyForce`
+3. Merge it — GitHub Pages updates automatically
+
+---
+
 ## Token Budget — Stop and Rethink
 
 **Before starting any task that will produce long output, ask: is there a more compact approach?**

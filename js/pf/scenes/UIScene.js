@@ -46,6 +46,8 @@ class UIScene extends Phaser.Scene {
     // Initialize display
     this.clearUnitInfo();
     this.hideActionMenu();
+    // M2: Show objective HUD immediately at battle start (delay ensures BattleScene is ready)
+    this.time.delayedCall(200, () => this._updateObjective());
   }
 
   _rebuildUI() {
@@ -639,29 +641,34 @@ class UIScene extends Phaser.Scene {
     }
 
     // M3: Objective banner
-    if (bn && this._objectiveLabel) {
-      const chapter = typeof CHAPTERS !== 'undefined' ? CHAPTERS[bn.chapterId - 1] : null;
-      const obj = chapter?.objective;
-      if (obj === 'survive_turns') {
-        // MED-4: turnNumber is incremented during enemy turn — show the player-facing turn number
-        const playerTurnNum = bn.playerTurn ? bn.turnNumber : bn.turnNumber - 1;
-        const done = playerTurnNum >= chapter.surviveTurns;
-        const txt = done
-          ? 'Objective: Survived! 🐾'
-          : `Objective: Survive ${chapter.surviveTurns} turns  [${playerTurnNum}/${chapter.surviveTurns}]`;
-        const col = done ? '#44ff88' : '#aaddff';
-        this._objectiveLabel.setText(txt).setStyle({ color: col }).setVisible(true);
-      } else if (obj === 'seize_tile') {
-        this._objectiveLabel.setText('Objective: Seize the throne! 👑').setStyle({ color: '#f8d030' }).setVisible(true);
-      } else if (obj === 'escort_vip') {
-        this._objectiveLabel.setText('Objective: Escort VIP to safety! 🐕').setStyle({ color: '#88eeaa' }).setVisible(true);
-      } else if (obj === 'defeat_boss' || chapter?.bossId) {
-        // LOW-6: restore underscore-to-space for boss name display
-        const bossName = (chapter?.bossId || 'the boss').replace(/_/g, ' ');
-        this._objectiveLabel.setText(`Objective: Defeat ${bossName}`).setStyle({ color: '#ffcc44' }).setVisible(true);
-      } else {
-        this._objectiveLabel.setVisible(false);
-      }
+    this._updateObjective();
+  }
+
+  _updateObjective() {
+    if (!this._battle) return;
+    const bn = this._battle;
+    if (!this._objectiveLabel) return;
+    const chapter = typeof CHAPTERS !== 'undefined' ? CHAPTERS[bn.chapterId - 1] : null;
+    const obj = chapter?.objective;
+    if (obj === 'survive_turns') {
+      // MED-4: turnNumber is incremented during enemy turn — show the player-facing turn number
+      const playerTurnNum = bn.playerTurn ? bn.turnNumber : bn.turnNumber - 1;
+      const done = playerTurnNum >= chapter.surviveTurns;
+      const txt = done
+        ? 'Objective: Survived! 🐾'
+        : `Objective: Survive ${chapter.surviveTurns} turns  [${playerTurnNum}/${chapter.surviveTurns}]`;
+      const col = done ? '#44ff88' : '#aaddff';
+      this._objectiveLabel.setText(txt).setStyle({ color: col }).setVisible(true);
+    } else if (obj === 'seize_tile') {
+      this._objectiveLabel.setText('Objective: Seize the throne! 👑').setStyle({ color: '#f8d030' }).setVisible(true);
+    } else if (obj === 'escort_vip') {
+      this._objectiveLabel.setText('Objective: Escort VIP to safety! 🐕').setStyle({ color: '#88eeaa' }).setVisible(true);
+    } else if (obj === 'defeat_boss' || chapter?.bossId) {
+      // LOW-6: restore underscore-to-space for boss name display
+      const bossName = (chapter?.bossId || 'the boss').replace(/_/g, ' ');
+      this._objectiveLabel.setText(`Objective: Defeat ${bossName}`).setStyle({ color: '#ffcc44' }).setVisible(true);
+    } else {
+      this._objectiveLabel.setVisible(false);
     }
   }
 
