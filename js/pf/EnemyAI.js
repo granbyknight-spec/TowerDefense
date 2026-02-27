@@ -382,7 +382,14 @@ function _healer(unit, mapGrid, allUnits) {
     return { moveTo, target: null };
   }
 
-  // m6: No injured allies — fall back to defensive attack behavior
+  // No allies at all — fall back based on weapon type
+  if (unit.weapon === 'staff') {
+    // Staff healers cannot attack players; pre-position near weakest ally instead
+    // (allies array is empty here, so stay put)
+    return { moveTo: { col: unit.col, row: unit.row }, target: null };
+  }
+
+  // Non-staff healer: fall back to defensive attack behavior
   const players = allUnits.filter(u => !u.dead && u.team === 'player');
   if (players.length > 0) {
     // Move toward nearest player and attack if in range
@@ -391,14 +398,13 @@ function _healer(unit, mapGrid, allUnits) {
       const dP = Math.abs(p.col - unit.col) + Math.abs(p.row - unit.row);
       return dP < dN ? p : n;
     });
-    const reachable = getReachableTiles(unit, mapGrid, allUnits);
     // Check if any player in attack range from current or reachable position
-    const range = unit.range || 1;
+    const nonStaffRange = unit.range || 1;
     let attackMove = null, attackTarget = null;
     for (const pos of [{ col: unit.col, row: unit.row }, ...reachable]) {
       for (const player of players) {
         const dist = Math.abs(pos.col - player.col) + Math.abs(pos.row - player.row);
-        if (dist <= range) {
+        if (dist <= nonStaffRange) {
           attackMove = pos;
           attackTarget = player;
           break;
@@ -406,7 +412,7 @@ function _healer(unit, mapGrid, allUnits) {
       }
       if (attackTarget) break;
     }
-    if (attackMove && attackTarget && unit.weapon !== 'staff') {
+    if (attackMove && attackTarget) {
       return { moveTo: attackMove, target: attackTarget, isHeal: false };
     }
     // Move toward nearest player without attacking
