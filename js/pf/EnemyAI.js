@@ -382,7 +382,7 @@ function _healer(unit, mapGrid, allUnits) {
     return { moveTo, target: null };
   }
 
-  // No allies at all — fall back based on weapon type
+  // m6: No allies at all — fall back based on weapon type
   if (unit.weapon === 'staff') {
     // Staff healers cannot attack players; pre-position near weakest ally instead
     // (allies array is empty here, so stay put)
