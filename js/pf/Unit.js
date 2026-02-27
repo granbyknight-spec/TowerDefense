@@ -226,7 +226,7 @@ class Unit {
   // Turn management
   resetTurn() {
     this.hasMoved = false;
-    this.hasActed = false;
+    if (!this.isPaired) this.hasActed = false; // paired passengers stay unable to act until freed
     this.skipTurn = false;
     this.tickBuffs();
   }

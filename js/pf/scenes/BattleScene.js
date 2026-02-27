@@ -1010,7 +1010,10 @@ class BattleScene extends Phaser.Scene {
       this._setState(BS.UNIT_MOVED);
     } else {
       // Unit has not moved yet — show movement + attack-range highlights
+      const origMov = unit.mov;
+      unit.mov = origMov + this._getPairMovBonus(unit);
       const tiles = getReachableTiles(unit, this.mapGrid, this.units);
+      unit.mov = origMov;
       this._moveTiles = tiles;
       this._drawMoveHighlights(tiles);
       // Show attack-range preview from current position (red overlay)
@@ -1058,7 +1061,10 @@ class BattleScene extends Phaser.Scene {
       this._setState(BS.UNIT_MOVED);
     } else {
       // Was in UNIT_SEL — restore move + attack range highlights
+      const origMov2 = unit.mov;
+      unit.mov = origMov2 + this._getPairMovBonus(unit);
       const movTiles = getReachableTiles(unit, this.mapGrid, this.units);
+      unit.mov = origMov2;
       this._moveTiles = movTiles;
       this._drawMoveHighlights(movTiles);
       if (!unit.hasActed) {
@@ -1439,14 +1445,14 @@ class BattleScene extends Phaser.Scene {
     const guardBonus = defender.guardActive ? Math.floor(defender.def * 0.5) : 0;
     // M4: Adjacency support bonus
     const atkSupportCount = Math.min(3, this.units.filter(u =>
-      !u.dead && u !== attacker && u.team === attacker.team &&
+      !u.dead && !u.isPaired && u !== attacker && u.team === attacker.team &&
       Math.abs(u.col - attacker.col) + Math.abs(u.row - attacker.row) === 1
     ).length);
     const defSupportCount = Math.min(3, this.units.filter(u =>
-      !u.dead && u !== defender && u.team === defender.team &&
+      !u.dead && !u.isPaired && u !== defender && u.team === defender.team &&
       Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
     ).length);
-    const rawDmg = Math.max(1, (attacker.atk + atkSupportCount) - (defender.def + guardBonus + defSupportCount + terrainDef));
+    const rawDmg = Math.max(1, (attacker.atk + atkSupportCount) - (defender.def + guardBonus + defSupportCount + terrainDef + this._getPairDefBonus(defender)));
     const variance = Phaser.Math.Between(0, Math.floor(attacker.atk * 0.15));
     // Apply Math.max(1) after atkBonus and variance so skills with power < 1 can't produce 0 damage
     let baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
@@ -1790,6 +1796,29 @@ class BattleScene extends Phaser.Scene {
         this._destroyUnitSprite(unit);
         unit.dead = true;
         unit.guardActive = false;
+        // Free any passenger riding this carrier when carrier dies
+        if (unit.passenger) {
+          const p = unit.passenger;
+          p.isPaired = false;
+          p.hasActed = false;
+          if (p.sprite)   p.sprite.setAlpha(1);
+          if (p.spriteBg) p.spriteBg.setAlpha(1);
+          unit.passenger       = null;
+          unit._pairDefBonus   = 0;
+          unit._pairMovBonus   = 0;
+          if (unit._pairBadge) { unit._pairBadge.destroy(); unit._pairBadge = null; }
+        }
+        // Clear pair bond if this dying unit is itself a passenger
+        if (unit.isPaired) {
+          const carrier = this.units.find(u => u.passenger === unit);
+          if (carrier) {
+            carrier.passenger     = null;
+            carrier._pairDefBonus = 0;
+            carrier._pairMovBonus = 0;
+            if (carrier._pairBadge) { carrier._pairBadge.destroy(); carrier._pairBadge = null; }
+          }
+          unit.isPaired = false;
+        }
         if (unit.team === 'player') this._unitsLost++;
         // M3: Boss death quote
         if ((unit.isBoss || unit.deathQuote) && !unit._quotePlayed) {
@@ -1855,11 +1884,12 @@ class BattleScene extends Phaser.Scene {
     }
 
     const enemy = this._enemyQueue.shift();
-    const action = computeEnemyAction(enemy, this.mapGrid, this.units);
+    const unitsForAI = this.units.filter(u => !u.isPaired);
+    const action = computeEnemyAction(enemy, this.mapGrid, unitsForAI);
 
     // Move
     // action.moveTo is already validated by getReachableTiles; follow the full path
-    const path = findPath(enemy, action.moveTo.col, action.moveTo.row, this.mapGrid, this.units);
+    const path = findPath(enemy, action.moveTo.col, action.moveTo.row, this.mapGrid, unitsForAI);
 
     this._animateMove(enemy, path && path.length > 0 ? path : [action.moveTo], () => {
       enemy.col = action.moveTo.col;
@@ -1978,7 +2008,7 @@ class BattleScene extends Phaser.Scene {
     if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
 
     const chapter = CHAPTERS[this.chapterId - 1];
-    const players = this.units.filter(u => !u.dead && u.team === 'player');
+    const players = this.units.filter(u => !u.dead && u.team === 'player' && !u.isPaired);
     const enemies = this.units.filter(u => !u.dead && u.team === 'enemy');
 
     // Defeat: all player units dead
@@ -1991,11 +2021,42 @@ class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // M3: Survive-turns pre-objective gate
-    const chapter2 = CHAPTERS[this.chapterId - 1];
-    if (chapter2?.preObjective === 'survive_turns' && this.turnNumber <= chapter2.surviveTurns) {
-      return; // Cannot win yet — must survive the required turns
+    // Objective-specific victory conditions
+    const obj = chapter.objective;
+    if (obj === 'survive_turns') {
+      // CRIT-2: only check survival win during player turn — turnNumber is incremented
+      // at the START of enemy turn, so checking during enemy actions would fire prematurely
+      if (!this.playerTurn) return;
+      if (this.turnNumber > chapter.surviveTurns) {
+        this._setState(BS.VICTORY);
+        this._celebrateVictory();
+        return;
+      }
+      // haven't survived long enough — don't fall through to boss check
+      return; // still alive = keep playing
     }
+    if (obj === 'seize_tile') {
+      const seizer = players.find(u => u.col === chapter.seizeTileCol && u.row === chapter.seizeTileRow);
+      if (seizer) { this._setState(BS.VICTORY); this._celebrateVictory(); return; }
+      return; // seize not complete
+    }
+    if (obj === 'escort_vip') {
+      const vip = players.find(u => u.id === chapter.vipId);
+      if (!vip) {
+        // VIP has died — escort failed (can be triggered on any turn)
+        this._setState(BS.DEFEAT);
+        this._getUI()?.showMessage('VIP has fallen! Mission failed.');
+        this.time.delayedCall(1500, () => this._endBattle(false));
+        const gen = this._battleGen;
+        setTimeout(() => { if (this._battleGen === gen) this._endBattle(false); }, 2000);
+        return;
+      }
+      if (vip.col === chapter.vipTargetCol && vip.row === chapter.vipTargetRow) {
+        this._setState(BS.VICTORY); this._celebrateVictory(); return;
+      }
+      return; // escort not done
+    }
+    // default: defeat_boss logic (existing code follows)
 
     // Victory: chapter's designated boss is dead (prefer bossId, fall back to any isBoss)
     const boss = chapter.bossId
@@ -2464,6 +2525,7 @@ class BattleScene extends Phaser.Scene {
   _dimActedUnits() {
     this.units.forEach(u => {
       if (!u.sprite) return;
+      if (u.isPaired) return; // passenger sprite is alpha=0 from pair-up tween — do not alter it
       const fullyDone = (u.team === 'player') && (u.hasMoved && u.hasActed);
       const movedOnly = (u.team === 'player') && (u.hasMoved && !u.hasActed);
       const alpha = fullyDone ? 0.45 : 1.0;
@@ -2491,7 +2553,7 @@ class BattleScene extends Phaser.Scene {
   _setState(state) { this._state = state; }
 
   _unitAt(col, row) {
-    return this.units.find(u => !u.dead && u.isOccupyingTile(col, row)) || null;
+    return this.units.find(u => !u.dead && !u.isPaired && u.isOccupyingTile(col, row)) || null;
   }
 
   _tileCenter(col, row) {
@@ -2652,5 +2714,112 @@ class BattleScene extends Phaser.Scene {
     } else {
       this._showAllEnemyRanges();
     }
+  }
+
+  // ============================================================================
+  // PAIR-UP mechanic
+  // ============================================================================
+
+  onActionPairUp(ally) {
+    const carrier = this._selected;
+    if (!carrier || !ally || ally.isPaired) return;
+    if (carrier.team !== 'player' || ally.team !== 'player') return;
+
+    // Pair: ally rides on carrier
+    carrier.passenger = ally;
+    ally.isPaired     = true;
+    ally.hasActed     = true; // paired unit cannot act independently this turn
+
+    // Stat bonuses to carrier: +floor(ally.def/2) DEF, +1 MOV (capped at 8)
+    carrier._pairDefBonus = Math.floor((ally.def || 0) / 2);
+    carrier._pairMovBonus = 1;
+
+    // Visual: fade ally sprite to show it's mounted
+    if (ally.sprite)   this.tweens.add({ targets: ally.sprite,   alpha: 0.0, duration: 300 });
+    if (ally.spriteBg) this.tweens.add({ targets: ally.spriteBg, alpha: 0.0, duration: 300 });
+    // Move ally to same tile as carrier (visually paired)
+    ally.col = carrier.col;
+    ally.row = carrier.row;
+
+    // Show a small indicator on carrier
+    this._showPairBadge(carrier);
+
+    // End turn for the carrier too (pair-up counts as using the turn)
+    carrier.hasActed = true;
+    this._getUI()?.hideActionMenu();
+    this._getUI()?.updateUnitInfo(carrier);
+    this._clearHighlights();
+    this._setState(BS.IDLE);
+    this._dimActedUnits();
+  }
+
+  onActionSeparate(carrier) {
+    if (this._state === BS.VICTORY || this._state === BS.DEFEAT || this._state === BS.ANIMATING) return;
+    const passenger = carrier?.passenger;
+    if (!carrier || !passenger) return;
+
+    // Find an empty adjacent tile to place the passenger
+    const dirs = [{dc:0,dr:-1},{dc:1,dr:0},{dc:0,dr:1},{dc:-1,dr:0}];
+    let placed = false;
+    for (const {dc, dr} of dirs) {
+      const nc = carrier.col + dc, nr = carrier.row + dr;
+      if (nc < 0 || nr < 0) continue;
+      if (nr >= this.mapGrid.length || nc >= this.mapGrid[0].length) continue;
+      const tileVal = this.mapGrid[nr][nc];
+      if (tileVal === 10 || tileVal === 3) continue; // wall or water
+      const occupied = this.units.find(u => !u.dead && u.col === nc && u.row === nr && u !== passenger);
+      if (occupied) continue;
+      // Place passenger here
+      passenger.col = nc;
+      passenger.row = nr;
+      placed = true;
+      break;
+    }
+    if (!placed) {
+      // No adjacent tile — can't separate right now
+      this._getUI()?.showMessage('No room to separate!');
+      return;
+    }
+
+    // Remove pair bond
+    passenger.isPaired      = false;
+    passenger.hasActed      = false; // give passenger a chance to act after separating
+    carrier.passenger       = null;
+    carrier._pairDefBonus   = 0;
+    carrier._pairMovBonus   = 0;
+
+    // Restore passenger sprite
+    if (passenger.sprite) {
+      const { x, y } = this._tileCenter(passenger.col, passenger.row);
+      passenger.sprite.setAlpha(1).setPosition(x, y);
+    }
+    if (passenger.spriteBg) {
+      const { x: bx, y: by } = this._tileTL(passenger.col, passenger.row);
+      passenger.spriteBg.setAlpha(1).setPosition(bx, by);
+    }
+
+    // Remove pair badge
+    if (carrier._pairBadge) { carrier._pairBadge.destroy(); carrier._pairBadge = null; }
+
+    this._getUI()?.hideActionMenu();
+    this._getUI()?.updateUnitInfo(carrier);
+    this._setState(BS.IDLE);
+    this._dimActedUnits();
+  }
+
+  _showPairBadge(carrier) {
+    if (carrier._pairBadge) carrier._pairBadge.destroy();
+    const { x: cx, y: cy } = this._tileCenter(carrier.col, carrier.row);
+    carrier._pairBadge = this.add.text(cx + 10, cy - 14, '👫', {
+      fontSize: '10px',
+    }).setOrigin(0.5).setDepth(12);
+  }
+
+  _getPairDefBonus(unit) {
+    return unit._pairDefBonus || 0;
+  }
+
+  _getPairMovBonus(unit) {
+    return unit._pairMovBonus || 0;
   }
 }

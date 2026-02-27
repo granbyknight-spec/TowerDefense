@@ -318,16 +318,18 @@ class UIScene extends Phaser.Scene {
     const btnY = BAR_Y;
 
     const btnData = [
-      { key: 'atk',  label: 'Attack', color: 0x223355, hi: 0x335588 },
-      { key: 'mag',  label: 'Skill',  color: 0x223355, hi: 0x335588 },
-      { key: 'item', label: 'Item',   color: 0x223355, hi: 0x335588 },
-      { key: 'wait', label: 'Wait',   color: 0x223355, hi: 0x335588 },
-      { key: 'undo', label: '↩ Undo', color: 0x336688, hi: 0x4488aa },
+      { key: 'atk',    label: 'Attack',   color: 0x223355, hi: 0x335588 },
+      { key: 'mag',    label: 'Skill',    color: 0x223355, hi: 0x335588 },
+      { key: 'item',   label: 'Item',     color: 0x223355, hi: 0x335588 },
+      { key: 'wait',   label: 'Wait',     color: 0x223355, hi: 0x335588 },
+      { key: 'undo',   label: '↩ Undo',  color: 0x336688, hi: 0x4488aa },
+      { key: 'pairup', label: 'Pair Up',  color: 0x1a3344, hi: 0x2a5566, slot: 0 },
+      { key: 'sep',    label: 'Separate', color: 0x2a1a44, hi: 0x4a2a66, slot: 1 },
     ];
 
     this._actionBtns = {};
     btnData.forEach((b, i) => {
-      const x = i * btnW;
+      const x = (b.slot !== undefined ? b.slot : i) * btnW;
 
       const bg = this.add.graphics();
       // Draw normal state
@@ -368,6 +370,14 @@ class UIScene extends Phaser.Scene {
         this._onActionBtn(b.key);
       });
 
+      // pairup and sep start hidden; shown only when applicable
+      const startsHidden = b.key === 'pairup' || b.key === 'sep';
+      if (startsHidden) {
+        bg.setVisible(false);
+        txt.setVisible(false);
+        zone.disableInteractive();
+      }
+
       this._actionMenu.add([bg, txt, zone]);
       this._actionBtns[b.key] = { bg, txt, zone, bData: b, x, y: btnY, w: btnW, h: btnH, drawNormal, drawHover };
     });
@@ -390,10 +400,28 @@ class UIScene extends Phaser.Scene {
       }
       case 'wait': bs.onActionWait();   break;
       case 'undo': bs.onActionCancel?.();  break;
+      case 'pairup': {
+        const adj = this._getAdjacentAlly(bs);
+        if (adj) bs.onActionPairUp(adj);
+        break;
+      }
+      case 'sep':
+        bs.onActionSeparate(this._selectedUnit);
+        break;
     }
     // Menu visibility is managed entirely by BattleScene action methods —
     // do NOT auto-hide here, so a failed action (e.g. no targets) keeps the
     // menu open and the player isn't left with no way to act.
+  }
+
+  _getAdjacentAlly(bs) {
+    const unit = this._selectedUnit;
+    if (!unit || !bs) return null;
+    const dirs = [{dc:0,dr:-1},{dc:1,dr:0},{dc:0,dr:1},{dc:-1,dr:0}];
+    return bs.units.find(u =>
+      !u.dead && !u.isPaired && u.team === 'player' && u !== unit &&
+      dirs.some(({dc, dr}) => u.col === unit.col + dc && u.row === unit.row + dr)
+    ) || null;
   }
 
   // ==========================================================================
@@ -613,14 +641,24 @@ class UIScene extends Phaser.Scene {
     // M3: Objective banner
     if (bn && this._objectiveLabel) {
       const chapter = typeof CHAPTERS !== 'undefined' ? CHAPTERS[bn.chapterId - 1] : null;
-      if (chapter?.preObjective === 'survive_turns' && bn.turnNumber <= chapter.surviveTurns) {
-        const remaining = chapter.surviveTurns - bn.turnNumber + 1;
-        const txt = `Survive ${remaining} more turn${remaining !== 1 ? 's' : ''}!`;
-        const col = remaining <= 2 ? '#ff6644' : '#ffcc44';
+      const obj = chapter?.objective;
+      if (obj === 'survive_turns') {
+        // MED-4: turnNumber is incremented during enemy turn — show the player-facing turn number
+        const playerTurnNum = bn.playerTurn ? bn.turnNumber : bn.turnNumber - 1;
+        const done = playerTurnNum >= chapter.surviveTurns;
+        const txt = done
+          ? 'Objective: Survived! 🐾'
+          : `Objective: Survive ${chapter.surviveTurns} turns  [${playerTurnNum}/${chapter.surviveTurns}]`;
+        const col = done ? '#44ff88' : '#aaddff';
         this._objectiveLabel.setText(txt).setStyle({ color: col }).setVisible(true);
-      } else if (chapter?.objective === 'defeat_boss' || chapter?.bossId) {
-        const bossName = (chapter.bossId || '').replace(/_/g, ' ');
-        this._objectiveLabel.setText(`Objective: Defeat ${bossName || 'the boss'}`).setStyle({ color: '#ffcc44' }).setVisible(true);
+      } else if (obj === 'seize_tile') {
+        this._objectiveLabel.setText('Objective: Seize the throne! 👑').setStyle({ color: '#f8d030' }).setVisible(true);
+      } else if (obj === 'escort_vip') {
+        this._objectiveLabel.setText('Objective: Escort VIP to safety! 🐕').setStyle({ color: '#88eeaa' }).setVisible(true);
+      } else if (obj === 'defeat_boss' || chapter?.bossId) {
+        // LOW-6: restore underscore-to-space for boss name display
+        const bossName = (chapter?.bossId || 'the boss').replace(/_/g, ' ');
+        this._objectiveLabel.setText(`Objective: Defeat ${bossName}`).setStyle({ color: '#ffcc44' }).setVisible(true);
       } else {
         this._objectiveLabel.setVisible(false);
       }
@@ -893,23 +931,48 @@ class UIScene extends Phaser.Scene {
     this._battle = battleScene;
     this._actionMenu.setVisible(true);
 
-    const canAttack = !unit.hasActed;
-    const hasMagic  = canAttack && unit.skills.length > 0;
-    const hasItem   = unit.items.length > 0;
+    const canAttack  = !unit.hasActed;
+    const hasMagic   = canAttack && unit.skills.length > 0;
+    const hasItem    = unit.items.length > 0;
+    const hasPairUp  = !unit.hasActed && !unit.passenger && !!this._getAdjacentAlly(battleScene);
+    const hasSep     = !!unit.passenger;
 
-    const atkBtn = this._actionBtns['atk'];
-    const magBtn = this._actionBtns['mag'];
-    const itmBtn = this._actionBtns['item'];
+    const atkBtn    = this._actionBtns['atk'];
+    const magBtn    = this._actionBtns['mag'];
+    const itmBtn    = this._actionBtns['item'];
+    const pairupBtn = this._actionBtns['pairup'];
+    const sepBtn    = this._actionBtns['sep'];
+
+    // pairup occupies slot 0 (same position as atk); sep occupies slot 1 (same as mag).
+    // Show pairup/sep in place of atk/mag when applicable.
+    if (pairupBtn) {
+      pairupBtn.bg.setVisible(hasPairUp);
+      pairupBtn.txt.setVisible(hasPairUp);
+      if (hasPairUp) pairupBtn.zone.setInteractive({ useHandCursor: true });
+      else pairupBtn.zone.disableInteractive();
+    }
+    if (sepBtn) {
+      sepBtn.bg.setVisible(hasSep);
+      sepBtn.txt.setVisible(hasSep);
+      if (hasSep) sepBtn.zone.setInteractive({ useHandCursor: true });
+      else sepBtn.zone.disableInteractive();
+    }
 
     if (atkBtn) {
-      atkBtn.txt.setAlpha(canAttack ? 1 : 0.4);
-      if (canAttack) atkBtn.zone.setInteractive({ useHandCursor: true });
+      const showAtk = !hasPairUp;
+      atkBtn.bg.setVisible(showAtk);
+      atkBtn.txt.setVisible(showAtk);
+      if (showAtk && canAttack) atkBtn.zone.setInteractive({ useHandCursor: true });
       else atkBtn.zone.disableInteractive();
+      if (showAtk) atkBtn.txt.setAlpha(canAttack ? 1 : 0.4);
     }
     if (magBtn) {
-      magBtn.txt.setAlpha(hasMagic ? 1 : 0.4);
-      if (hasMagic) magBtn.zone.setInteractive({ useHandCursor: true });
+      const showMag = !hasSep;
+      magBtn.bg.setVisible(showMag);
+      magBtn.txt.setVisible(showMag);
+      if (showMag && hasMagic) magBtn.zone.setInteractive({ useHandCursor: true });
       else magBtn.zone.disableInteractive();
+      if (showMag) magBtn.txt.setAlpha(hasMagic ? 1 : 0.4);
     }
     if (itmBtn) {
       itmBtn.txt.setAlpha(hasItem ? 1 : 0.4);

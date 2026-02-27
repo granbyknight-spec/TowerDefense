@@ -242,19 +242,71 @@ class TitleScene extends Phaser.Scene {
       });
     });
 
-    // ── Chapter-select panel — always visible TODO: remove before release ─────
-    this.add.text(W / 2, 496, '── DEV: JUMP TO CHAPTER ──', {
-      fontSize: '11px', color: '#ccaa22',
-      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+    // ── Chapter select / replay ───────────────────────────────────────────────
+    // Load save data to know which chapters are completed
+    const saveData = SaveManager.load();
+    const completed = saveData?.completedChapters || [];
+    const currentCh = saveData?.currentChapter || 1;
+
+    // Panel header
+    this.add.text(W / 2, 544, 'CHAPTERS', {
+      fontSize: '13px', color: '#aabbcc',
+      fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5);
 
-    const chapBtnX = [28, 92, 156, 220, 284, 348, 412];
+    // 7 chapter boxes in a row — each box: 54px wide, 36px tall, gap 4px
+    // Total row width: 7 * 54 + 6 * 4 = 402px → centered at W/2 = 240 → startX = 240 - 201 = 39
+    const boxW = 54, boxH = 36, gap = 4;
+    const totalW = 7 * boxW + 6 * gap;
+    const startX = (W - totalW) / 2;
+    const rowY = 568;
+
     for (let ch = 1; ch <= 7; ch++) {
-      this._makeChapterDebugBtn(chapBtnX[ch - 1], 526, ch, () => {
-        const data = _buildDebugSaveData(ch);
-        SaveManager.save(data);
-        this.scene.start('BattleScene', { chapter: ch, saveData: data });
-      });
+      const bx = startX + (ch - 1) * (boxW + gap);
+      const isUnlocked = ch <= currentCh || completed.includes(ch) || ch === 1;
+      const isDone     = completed.includes(ch);
+
+      // Box background
+      const gfx = this.add.graphics();
+      const drawBox = (hover) => {
+        gfx.clear();
+        const fillColor = !isUnlocked ? 0x111122 : (hover ? 0x335599 : 0x1a2a44);
+        const borderColor = isDone ? 0x44cc88 : (isUnlocked ? 0x4488cc : 0x223355);
+        gfx.fillStyle(fillColor, isUnlocked ? 1 : 0.6);
+        gfx.fillRoundedRect(bx, rowY - boxH / 2, boxW, boxH, 5);
+        gfx.lineStyle(2, borderColor, isUnlocked ? 1 : 0.4);
+        gfx.strokeRoundedRect(bx, rowY - boxH / 2, boxW, boxH, 5);
+      };
+      drawBox(false);
+
+      // Chapter number
+      this.add.text(bx + boxW / 2, rowY - 8, `Ch ${ch}`, {
+        fontSize: '11px',
+        color: isUnlocked ? '#ccddff' : '#445566',
+        fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+      }).setOrigin(0.5);
+
+      // Status: lock emoji or checkmark
+      const statusStr = !isUnlocked ? '🔒' : (isDone ? '✓' : '▷');
+      const statusColor = isDone ? '#44cc88' : (isUnlocked ? '#f8d030' : '#445566');
+      this.add.text(bx + boxW / 2, rowY + 8, statusStr, {
+        fontSize: '13px', color: statusColor,
+        fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold',
+      }).setOrigin(0.5);
+
+      // Clickable zone (only if unlocked)
+      if (isUnlocked) {
+        const zone = this.add.zone(bx + boxW / 2, rowY, boxW, boxH).setInteractive({ useHandCursor: true });
+        zone.on('pointerover',  () => drawBox(true));
+        zone.on('pointerout',   () => drawBox(false));
+        zone.on('pointerdown',  () => {
+          // Use real save data but ensure chapter is accessible
+          const data = SaveManager.load() || SaveManager.newGame();
+          data.currentChapter = ch;
+          SaveManager.save(data);
+          this.scene.start('BattleScene', { chapter: ch, saveData: data });
+        });
+      }
     }
 
 
