@@ -54,7 +54,7 @@ class CutsceneScene extends Phaser.Scene {
     const PLAYER_PNG_IDS = [
       'PUPPY_KNIGHT', 'CORGI_HEALER', 'LABRADOR_SCOUT', 'BEAGLE_ARCHER',
       'BULLDOG_TANK', 'POODLE_MAGE', 'HUSKY_RIDER', 'TERRIER_THIEF',
-      'DOG_PALADIN', 'OTTER_ALLY',
+      'FOX_SCOUT', 'DOG_PALADIN', 'OTTER_ALLY',
     ];
     PLAYER_PNG_IDS.forEach(id => {
       const pngKey = `player_png_${id}`;
