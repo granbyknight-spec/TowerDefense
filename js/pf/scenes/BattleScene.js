@@ -948,24 +948,35 @@ class BattleScene extends Phaser.Scene {
     const effectiveness = this._weaponEffectiveness(this._selected, target);
     this._getUI()?.showDamagePreview(this._selected, target, terrainDef, effectiveness);
 
-    this._executeCombat(this._selected, target, () => {
-      const unit = this._selected;
-      if (!unit) return;
-      unit.hasActed = true;
-      this._checkEndCondition();
-      // If game ended, do nothing further
-      if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
-      if (!unit.hasMoved && !unit.dead) {
-        // Unit attacked before moving — still allow a move this turn
-        const tiles = getReachableTiles(unit, this.mapGrid, this.units);
-        this._moveTiles = tiles;
-        this._clearHighlights();
-        this._drawMoveHighlights(tiles);
-        this._drawSelHighlight(unit);
-        this._setState(BS.UNIT_SEL);
-        this._getUI()?.showActionMenu(unit, this);  // shows Wait/Item; Attack disabled
+    this._showAtkConfirm(() => {
+      // onConfirm: execute the combat
+      this._executeCombat(this._selected, target, () => {
+        const unit = this._selected;
+        if (!unit) return;
+        unit.hasActed = true;
+        this._checkEndCondition();
+        // If game ended, do nothing further
+        if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
+        if (!unit.hasMoved && !unit.dead) {
+          // Unit attacked before moving — still allow a move this turn
+          const tiles = getReachableTiles(unit, this.mapGrid, this.units);
+          this._moveTiles = tiles;
+          this._clearHighlights();
+          this._drawMoveHighlights(tiles);
+          this._drawSelHighlight(unit);
+          this._setState(BS.UNIT_SEL);
+          this._getUI()?.showActionMenu(unit, this);  // shows Wait/Item; Attack disabled
+        } else {
+          this._deselect();
+        }
+      });
+    }, () => {
+      // onCancel: hide damage preview and restore targeting state
+      this._getUI()?.hideDamagePreview?.();
+      if (typeof this._showAtkTiles === 'function') {
+        this._showAtkTiles(this._selected);
       } else {
-        this._deselect();
+        this._setState(BS.TARGET_ATK);
       }
     });
   }
@@ -1127,7 +1138,8 @@ class BattleScene extends Phaser.Scene {
     const badgeY = (col, row) => this._tileCenter(col, row).y + r + 10;
     let step = 0;
 
-    const stepDur = Math.max(70, 160 - unit.mov * 8);
+    const baseDur = Math.max(70, 160 - unit.mov * 8);
+    const stepDur = this._enemyFast ? 20 : baseDur;
 
     const doStep = () => {
       if (step >= path.length) {
@@ -1847,7 +1859,16 @@ class BattleScene extends Phaser.Scene {
   // ENEMY AI TURN
   // ==========================================================================
 
+  _onEnemyFastTap() {
+    if (this._state === BS.ENEMY_TURN || this._state === BS.ANIMATING) {
+      this._enemyFast = true;
+      this.input.off('pointerdown', this._onEnemyFastTap, this);
+    }
+  }
+
   _beginEnemyTurn() {
+    this._enemyFast = false;
+    this.input.on('pointerdown', this._onEnemyFastTap, this);
     this.playerTurn = false;
     this.turnNumber++;
     this._setState(BS.ENEMY_TURN);
@@ -1871,7 +1892,7 @@ class BattleScene extends Phaser.Scene {
     this._enemyQueue.forEach(u => u.resetTurn());
     this._enemyQueue.forEach(u => { u.guardActive = false; });
 
-    this.time.delayedCall(800, () => this._processNextEnemy());
+    this.time.delayedCall(this._enemyFast ? 100 : 800, () => this._processNextEnemy());
   }
 
   _processNextEnemy() {
@@ -1904,23 +1925,24 @@ class BattleScene extends Phaser.Scene {
           this._executeEnemyHeal(enemy, action.target, () => {
             if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
             enemy.hasActed = true;
-            this.time.delayedCall(200, () => this._processNextEnemy());
+            this.time.delayedCall(this._enemyFast ? 50 : 200, () => this._processNextEnemy());
           });
         } else {
           this._executeCombat(enemy, action.target, () => {
             if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
             enemy.hasActed = true;
-            this.time.delayedCall(200, () => this._processNextEnemy());
+            this.time.delayedCall(this._enemyFast ? 50 : 200, () => this._processNextEnemy());
           });
         }
       } else {
         enemy.hasActed = true;
-        this.time.delayedCall(150, () => this._processNextEnemy());
+        this.time.delayedCall(this._enemyFast ? 30 : 150, () => this._processNextEnemy());
       }
     });
   }
 
   _beginPlayerTurn() {
+    this.input.off('pointerdown', this._onEnemyFastTap, this);
     this.playerTurn = true;
     this.units.filter(u => !u.dead && u.team === 'player').forEach(u => u.resetTurn());
 
@@ -1984,17 +2006,7 @@ class BattleScene extends Phaser.Scene {
         // Add to roster
         this.saveData.roster.push(r.toSave());
         // m7: Start idle bob for newly recruited unit
-        if (typeof r._startIdleBob === 'function') r._startIdleBob();
-        else if (r.sprite) {
-          this.tweens.add({
-            targets: r.sprite,
-            y: r.sprite.y - 3,
-            duration: 700,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-          });
-        }
+        this._startIdleBob(r);
         this._floatText(r.col, r.row, r.rescueMsg || 'Joins!', 0x44ff88);
         this._getUI()?.showMessage(r.rescueMsg || `${r.name} joined!`);
       }
@@ -2292,9 +2304,74 @@ class BattleScene extends Phaser.Scene {
       duration: 600,
     });
 
-    if (unit.canPromote()) {
-      this._floatText(unit.col, unit.row, 'Can Promote!', 0xff88ff);
-    }
+    this._showLevelGainCard(unit, () => {
+      if (unit.canPromote && unit.canPromote()) {
+        this._floatText(unit.col, unit.row, 'Can Promote!', 0xff88ff);
+      }
+    });
+  }
+
+  _showLevelGainCard(unit, onDone) {
+    const W = GAME_W, H = GAME_H;
+    const cardW = 200, cardH = 160;
+    const cardX = (W - cardW) / 2, cardY = (H - cardH) / 2;
+    const cardObjs = [];
+    let dismissed = false;
+
+    // Dark semi-transparent card background
+    const cardBg = this.add.graphics().setDepth(55);
+    cardObjs.push(cardBg);
+    cardBg.fillStyle(0x050d1a, 0.92);
+    cardBg.fillRoundedRect(cardX, cardY, cardW, cardH, 8);
+    cardBg.lineStyle(2, PAL.GOLD, 0.85);
+    cardBg.strokeRoundedRect(cardX, cardY, cardW, cardH, 8);
+
+    // Interactive zone for tap-to-dismiss
+    const tapZone = this.add.zone(cardX, cardY, cardW, cardH).setOrigin(0).setDepth(58).setInteractive();
+    cardObjs.push(tapZone);
+
+    const cx = cardX + cardW / 2;
+
+    // Header: unit name + new level
+    cardObjs.push(this.add.text(cx, cardY + 14, `${unit.name}  Lv${unit.level}`, {
+      fontSize: '13px', color: '#ffd700', fontStyle: 'bold',
+      fontFamily: 'Nunito, Courier New, monospace',
+      stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(56));
+
+    // Stat gains
+    const gains = unit.lastLevelGains || {};
+    const statLines = [
+      { key: 'hp',  label: 'HP'  },
+      { key: 'atk', label: 'ATK' },
+      { key: 'def', label: 'DEF' },
+      { key: 'agi', label: 'AGI' },
+    ];
+    // Add MP if it exists in gains
+    if ('mp' in gains) statLines.push({ key: 'mp', label: 'MP' });
+
+    let lineY = cardY + 38;
+    statLines.forEach(({ key, label }) => {
+      const gain = gains[key] || 0;
+      const text  = gain > 0 ? `${label} +${gain}` : `${label} --`;
+      const color = gain > 0 ? '#44ff88' : '#888888';
+      cardObjs.push(this.add.text(cx, lineY, text, {
+        fontSize: '13px', color, fontStyle: 'bold',
+        fontFamily: 'Nunito, Courier New, monospace',
+        stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(56));
+      lineY += 18;
+    });
+
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      cardObjs.forEach(o => o.destroy());
+      onDone && onDone();
+    };
+
+    tapZone.on('pointerdown', dismiss);
+    this.time.delayedCall(2500, dismiss);
   }
 
   // ==========================================================================
@@ -2503,6 +2580,48 @@ class BattleScene extends Phaser.Scene {
     const tapZone = this.add.zone(W/2, H/2, W, H).setInteractive().setDepth(44);
     tapZone.on('pointerdown', dismiss);
     this.time.delayedCall(2500, () => { if (tapZone.active) dismiss(); });
+  }
+
+  // ==========================================================================
+  // M3: ATTACK CONFIRMATION DIALOG
+  // ==========================================================================
+
+  _showAtkConfirm(onConfirm, onCancel) {
+    const W = GAME_W, H = GAME_H;
+
+    // Semi-transparent black backdrop covering the full screen
+    const backdrop = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55)
+      .setDepth(45)
+      .setInteractive(new Phaser.Geom.Rectangle(0, 0, W, H), Phaser.Geom.Rectangle.Contains);
+
+    // OK button (green) and Cancel button (grey)
+    const okX = W / 2 - 50, cancelX = W / 2 + 50, btnY = 450;
+    const okBtn = this.add.rectangle(okX, btnY, 80, 32, 0x228833, 1)
+      .setDepth(46).setInteractive();
+    const cancelBtn = this.add.rectangle(cancelX, btnY, 80, 32, 0x666666, 1)
+      .setDepth(46).setInteractive();
+
+    // Labels
+    const okLabel     = this.add.text(okX, btnY, 'OK',     { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47);
+    const cancelLabel = this.add.text(cancelX, btnY, 'Cancel', { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47);
+
+    const destroyAll = () => {
+      backdrop.destroy();
+      okBtn.destroy();
+      cancelBtn.destroy();
+      okLabel.destroy();
+      cancelLabel.destroy();
+    };
+
+    okBtn.on('pointerdown', () => {
+      destroyAll();
+      onConfirm();
+    });
+
+    cancelBtn.on('pointerdown', () => {
+      destroyAll();
+      onCancel();
+    });
   }
 
   _healEffect(col, row) {
