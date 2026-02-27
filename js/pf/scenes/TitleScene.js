@@ -249,7 +249,7 @@ class TitleScene extends Phaser.Scene {
     const currentCh = saveData?.currentChapter || 1;
 
     // Panel header
-    this.add.text(W / 2, 492, 'CHAPTERS', {
+    this.add.text(W / 2, 544, 'CHAPTERS', {
       fontSize: '13px', color: '#aabbcc',
       fontFamily: 'Nunito, Courier New, monospace', fontStyle: 'bold', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5);
@@ -259,7 +259,7 @@ class TitleScene extends Phaser.Scene {
     const boxW = 54, boxH = 36, gap = 4;
     const totalW = 7 * boxW + 6 * gap;
     const startX = (W - totalW) / 2;
-    const rowY = 524;
+    const rowY = 568;
 
     for (let ch = 1; ch <= 7; ch++) {
       const bx = startX + (ch - 1) * (boxW + gap);

@@ -934,7 +934,7 @@ class UIScene extends Phaser.Scene {
     const canAttack  = !unit.hasActed;
     const hasMagic   = canAttack && unit.skills.length > 0;
     const hasItem    = unit.items.length > 0;
-    const hasPairUp  = !unit.passenger && !!this._getAdjacentAlly(battleScene);
+    const hasPairUp  = !unit.hasActed && !unit.passenger && !!this._getAdjacentAlly(battleScene);
     const hasSep     = !!unit.passenger;
 
     const atkBtn    = this._actionBtns['atk'];
