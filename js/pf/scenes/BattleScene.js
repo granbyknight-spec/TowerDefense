@@ -1010,7 +1010,10 @@ class BattleScene extends Phaser.Scene {
       this._setState(BS.UNIT_MOVED);
     } else {
       // Unit has not moved yet — show movement + attack-range highlights
+      const origMov = unit.mov;
+      unit.mov = origMov + this._getPairMovBonus(unit);
       const tiles = getReachableTiles(unit, this.mapGrid, this.units);
+      unit.mov = origMov;
       this._moveTiles = tiles;
       this._drawMoveHighlights(tiles);
       // Show attack-range preview from current position (red overlay)
@@ -1058,7 +1061,10 @@ class BattleScene extends Phaser.Scene {
       this._setState(BS.UNIT_MOVED);
     } else {
       // Was in UNIT_SEL — restore move + attack range highlights
+      const origMov2 = unit.mov;
+      unit.mov = origMov2 + this._getPairMovBonus(unit);
       const movTiles = getReachableTiles(unit, this.mapGrid, this.units);
+      unit.mov = origMov2;
       this._moveTiles = movTiles;
       this._drawMoveHighlights(movTiles);
       if (!unit.hasActed) {
@@ -1446,7 +1452,7 @@ class BattleScene extends Phaser.Scene {
       !u.dead && u !== defender && u.team === defender.team &&
       Math.abs(u.col - defender.col) + Math.abs(u.row - defender.row) === 1
     ).length);
-    const rawDmg = Math.max(1, (attacker.atk + atkSupportCount) - (defender.def + guardBonus + defSupportCount + terrainDef));
+    const rawDmg = Math.max(1, (attacker.atk + atkSupportCount) - (defender.def + guardBonus + defSupportCount + terrainDef + this._getPairDefBonus(defender)));
     const variance = Phaser.Math.Between(0, Math.floor(attacker.atk * 0.15));
     // Apply Math.max(1) after atkBonus and variance so skills with power < 1 can't produce 0 damage
     let baseDmg = Math.max(1, Math.floor(rawDmg * atkBonus) + variance);
@@ -1855,7 +1861,8 @@ class BattleScene extends Phaser.Scene {
     }
 
     const enemy = this._enemyQueue.shift();
-    const action = computeEnemyAction(enemy, this.mapGrid, this.units);
+    const unitsForAI = this.units.filter(u => !u.isPaired);
+    const action = computeEnemyAction(enemy, this.mapGrid, unitsForAI);
 
     // Move
     // action.moveTo is already validated by getReachableTiles; follow the full path
@@ -1978,7 +1985,7 @@ class BattleScene extends Phaser.Scene {
     if (this._state === BS.VICTORY || this._state === BS.DEFEAT) return;
 
     const chapter = CHAPTERS[this.chapterId - 1];
-    const players = this.units.filter(u => !u.dead && u.team === 'player');
+    const players = this.units.filter(u => !u.dead && u.team === 'player' && !u.isPaired);
     const enemies = this.units.filter(u => !u.dead && u.team === 'enemy');
 
     // Defeat: all player units dead
