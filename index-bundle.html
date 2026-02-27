@@ -5558,6 +5558,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   _beginPlayerTurn() {
+    this.input.off('pointerdown', this._onEnemyFastTap, this);
     this.playerTurn = true;
     this.units.filter(u => !u.dead && u.team === 'player').forEach(u => u.resetTurn());
 
@@ -5734,10 +5735,9 @@ class BattleScene extends Phaser.Scene {
           u.dead = false;
           u.hp = 1;
         } else {
-          // Living survivors get the inter-chapter training bonus
-          u.maxHp += 1;
+          // Living survivors get the inter-chapter training bonus (50% chance for +1 HP)
+          if (Math.random() < 0.5) u.maxHp += 1;
           u.hp = u.maxHp;
-          if (this.chapterId % 2 === 1) u.atk += 1;
         }
       });
       this.saveData.roster = SaveManager.serializeRoster(survivors);
@@ -5920,9 +5920,74 @@ class BattleScene extends Phaser.Scene {
       duration: 600,
     });
 
-    if (unit.canPromote()) {
-      this._floatText(unit.col, unit.row, 'Can Promote!', 0xff88ff);
-    }
+    this._showLevelGainCard(unit, () => {
+      if (unit.canPromote && unit.canPromote()) {
+        this._floatText(unit.col, unit.row, 'Can Promote!', 0xff88ff);
+      }
+    });
+  }
+
+  _showLevelGainCard(unit, onDone) {
+    const W = GAME_W, H = GAME_H;
+    const cardW = 200, cardH = 160;
+    const cardX = (W - cardW) / 2, cardY = (H - cardH) / 2;
+    const cardObjs = [];
+    let dismissed = false;
+
+    // Dark semi-transparent card background
+    const cardBg = this.add.graphics().setDepth(55);
+    cardObjs.push(cardBg);
+    cardBg.fillStyle(0x050d1a, 0.92);
+    cardBg.fillRoundedRect(cardX, cardY, cardW, cardH, 8);
+    cardBg.lineStyle(2, PAL.GOLD, 0.85);
+    cardBg.strokeRoundedRect(cardX, cardY, cardW, cardH, 8);
+
+    // Interactive zone for tap-to-dismiss
+    const tapZone = this.add.zone(cardX, cardY, cardW, cardH).setOrigin(0).setDepth(58).setInteractive();
+    cardObjs.push(tapZone);
+
+    const cx = cardX + cardW / 2;
+
+    // Header: unit name + new level
+    cardObjs.push(this.add.text(cx, cardY + 14, `${unit.name}  Lv${unit.level}`, {
+      fontSize: '13px', color: '#ffd700', fontStyle: 'bold',
+      fontFamily: 'Nunito, Courier New, monospace',
+      stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(56));
+
+    // Stat gains
+    const gains = unit.lastLevelGains || {};
+    const statLines = [
+      { key: 'hp',  label: 'HP'  },
+      { key: 'atk', label: 'ATK' },
+      { key: 'def', label: 'DEF' },
+      { key: 'agi', label: 'AGI' },
+    ];
+    // Add MP if it exists in gains
+    if ('mp' in gains) statLines.push({ key: 'mp', label: 'MP' });
+
+    let lineY = cardY + 38;
+    statLines.forEach(({ key, label }) => {
+      const gain = gains[key] || 0;
+      const text  = gain > 0 ? `${label} +${gain}` : `${label} --`;
+      const color = gain > 0 ? '#44ff88' : '#888888';
+      cardObjs.push(this.add.text(cx, lineY, text, {
+        fontSize: '13px', color, fontStyle: 'bold',
+        fontFamily: 'Nunito, Courier New, monospace',
+        stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(56));
+      lineY += 18;
+    });
+
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      cardObjs.forEach(o => o.destroy());
+      onDone && onDone();
+    };
+
+    tapZone.on('pointerdown', dismiss);
+    this.time.delayedCall(2500, dismiss);
   }
 
   // ==========================================================================
@@ -6131,6 +6196,48 @@ class BattleScene extends Phaser.Scene {
     const tapZone = this.add.zone(W/2, H/2, W, H).setInteractive().setDepth(44);
     tapZone.on('pointerdown', dismiss);
     this.time.delayedCall(2500, () => { if (tapZone.active) dismiss(); });
+  }
+
+  // ==========================================================================
+  // M3: ATTACK CONFIRMATION DIALOG
+  // ==========================================================================
+
+  _showAtkConfirm(onConfirm, onCancel) {
+    const W = GAME_W, H = GAME_H;
+
+    // Semi-transparent black backdrop covering the full screen (fixed to camera)
+    const backdrop = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55)
+      .setDepth(45).setScrollFactor(0)
+      .setInteractive(new Phaser.Geom.Rectangle(0, 0, W, H), Phaser.Geom.Rectangle.Contains);
+
+    // OK button (green) and Cancel button (grey) — fixed to camera
+    const okX = W / 2 - 50, cancelX = W / 2 + 50, btnY = H / 2 + 40;
+    const okBtn = this.add.rectangle(okX, btnY, 80, 32, 0x228833, 1)
+      .setDepth(46).setScrollFactor(0).setInteractive();
+    const cancelBtn = this.add.rectangle(cancelX, btnY, 80, 32, 0x666666, 1)
+      .setDepth(46).setScrollFactor(0).setInteractive();
+
+    // Labels
+    const okLabel     = this.add.text(okX, btnY, 'OK',     { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47).setScrollFactor(0);
+    const cancelLabel = this.add.text(cancelX, btnY, 'Cancel', { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47).setScrollFactor(0);
+
+    const destroyAll = () => {
+      backdrop.destroy();
+      okBtn.destroy();
+      cancelBtn.destroy();
+      okLabel.destroy();
+      cancelLabel.destroy();
+    };
+
+    okBtn.on('pointerdown', () => {
+      destroyAll();
+      onConfirm();
+    });
+
+    cancelBtn.on('pointerdown', () => {
+      destroyAll();
+      onCancel();
+    });
   }
 
   _healEffect(col, row) {
