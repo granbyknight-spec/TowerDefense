@@ -855,6 +855,7 @@ class BattleScene extends Phaser.Scene {
   _onTap(ptr) {
     if (this._pinchActive) return;          // don't select during two-finger pinch
     if (this._panning)     return;          // don't select when finger was dragging
+    if (this._atkConfirmActive) return;     // atk confirm overlay is open — only buttons/backdrop handle this
     if (this._state === BS.DIALOGUE)  { this._advanceDialogue(); return; }
     if (this._state === BS.ANIMATING) return;
     if (this._state === BS.ENEMY_TURN)return;
@@ -2589,6 +2590,9 @@ class BattleScene extends Phaser.Scene {
   _showAtkConfirm(onConfirm, onCancel) {
     const W = GAME_W, H = GAME_H;
 
+    // Block _onTap while this overlay is active to prevent duplicate confirms
+    this._atkConfirmActive = true;
+
     // Semi-transparent black backdrop covering the full screen (fixed to camera)
     const backdrop = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55)
       .setDepth(45).setScrollFactor(0)
@@ -2606,12 +2610,19 @@ class BattleScene extends Phaser.Scene {
     const cancelLabel = this.add.text(cancelX, btnY, 'Cancel', { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47).setScrollFactor(0);
 
     const destroyAll = () => {
+      this._atkConfirmActive = false;
       backdrop.destroy();
       okBtn.destroy();
       cancelBtn.destroy();
       okLabel.destroy();
       cancelLabel.destroy();
     };
+
+    // Tapping anywhere outside OK/Cancel dismisses as cancel
+    backdrop.on('pointerdown', () => {
+      destroyAll();
+      onCancel();
+    });
 
     okBtn.on('pointerdown', () => {
       destroyAll();
