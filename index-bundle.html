@@ -3189,10 +3189,12 @@ class TitleScene extends Phaser.Scene {
     this.load.image('title_bg', 'assets/backgrounds/chapter_1_v1.png');
     // Title key art banner (generated via AI Horde — may not exist yet)
     this.load.image('title_art', 'assets/backgrounds/title_v1.png');
-    // Available portrait PNGs (graceful)
-    ['CORGI_HEALER', 'HUSKY_RIDER', 'PUPPY_KNIGHT', 'LABRADOR_SCOUT',
-     'BEAGLE_ARCHER', 'POODLE_MAGE', 'BULLDOG_TANK', 'TERRIER_THIEF', 'DOG_PALADIN'].forEach(id => {
-      this.load.image('player_png_' + id, 'assets/characters/' + id + '_portrait.png');
+    // Chibi sprites for hero showcase (graceful — falls back to emoji if missing)
+    this.load.on('loaderror', () => {});
+    ['PUPPY_KNIGHT', 'CORGI_HEALER', 'LABRADOR_SCOUT', 'BEAGLE_ARCHER',
+     'POODLE_MAGE', 'BULLDOG_TANK', 'HUSKY_RIDER', 'TERRIER_THIEF',
+     'FOX_SCOUT', 'OTTER_ALLY', 'DOG_PALADIN'].forEach(id => {
+      this.load.image('player_png_' + id, 'assets/characters/' + id.toLowerCase() + '_chibi_v1.png');
     });
   }
 
@@ -3303,14 +3305,16 @@ class TitleScene extends Phaser.Scene {
       color: '#d4a820', stroke: '#1a0800', strokeThickness: 4,
     }).setOrigin(0.5);
 
-    // ── Portrait showcase ─────────────────────────────────────────────────────
-    // Show whichever hero portrait PNGs are actually loaded, up to 9 slots
-    const portraitIds = ['CORGI_HEALER','HUSKY_RIDER','PUPPY_KNIGHT','LABRADOR_SCOUT',
-                         'BEAGLE_ARCHER','POODLE_MAGE','BULLDOG_TANK','TERRIER_THIEF','DOG_PALADIN'];
+    // ── Chibi showcase ────────────────────────────────────────────────────────
+    // Show whichever hero chibi PNGs are actually loaded, up to 11 slots
+    const portraitIds = ['PUPPY_KNIGHT','CORGI_HEALER','LABRADOR_SCOUT','BEAGLE_ARCHER',
+                         'POODLE_MAGE','BULLDOG_TANK','HUSKY_RIDER','TERRIER_THIEF',
+                         'FOX_SCOUT','OTTER_ALLY','DOG_PALADIN'];
     const portraitColors = {
-      CORGI_HEALER:   0x33bb55, HUSKY_RIDER:    0x4488ff, PUPPY_KNIGHT:   0xf8d030,
-      LABRADOR_SCOUT: 0xff8800, BEAGLE_ARCHER:  0x44ccaa, POODLE_MAGE:    0xaa44ff,
-      BULLDOG_TANK:   0xcc4444, TERRIER_THIEF:  0x888800, DOG_PALADIN:    0xffffff,
+      PUPPY_KNIGHT:   0xf8d030, CORGI_HEALER:   0x33bb55, LABRADOR_SCOUT: 0xff8800,
+      BEAGLE_ARCHER:  0x44ccaa, POODLE_MAGE:    0xaa44ff, BULLDOG_TANK:   0xcc4444,
+      HUSKY_RIDER:    0x4488ff, TERRIER_THIEF:  0x888800, FOX_SCOUT:      0xff6622,
+      OTTER_ALLY:     0x22aacc, DOG_PALADIN:    0xffffff,
     };
     const availIds = portraitIds.filter(id =>
       this.textures.exists('player_png_' + id) &&
