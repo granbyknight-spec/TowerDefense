@@ -49,8 +49,8 @@ class CutsceneScene extends Phaser.Scene {
       }
     });
 
-    // Player portrait PNGs
-    // File naming: assets/characters/<ID>_portrait.png
+    // Player chibi PNGs
+    // File naming: assets/characters/<id>_chibi_v1.png
     const PLAYER_PNG_IDS = [
       'PUPPY_KNIGHT', 'CORGI_HEALER', 'LABRADOR_SCOUT', 'BEAGLE_ARCHER',
       'BULLDOG_TANK', 'POODLE_MAGE', 'HUSKY_RIDER', 'TERRIER_THIEF',
@@ -60,7 +60,7 @@ class CutsceneScene extends Phaser.Scene {
       const pngKey = `player_png_${id}`;
       if (!this.textures.exists(pngKey)) {
         try {
-          this.load.image(pngKey, `assets/characters/${id}_portrait.png`);
+          this.load.image(pngKey, `assets/characters/${id.toLowerCase()}_chibi_v1.png`);
         } catch (e) {
           // silently skip — emoji fallback will be used
         }
