@@ -17,6 +17,7 @@ const NEG = 'blurry, low quality, realistic, photorealistic, 3d render, human, d
 
 const ENEMIES = [
   { id: 'SCOUT_CAT',        n: 4, prompt: 'anthropomorphic orange tabby cat scout warrior, light leather armor, dagger on belt, tabby stripes on fur, green slit eyes, alert expression, red bandana around neck, standing pose, ' + STYLE_SUFFIX },
+  { id: 'HEALER_CAT',       n: 4, prompt: 'anthropomorphic white cat cleric healer, white and cream fur, gentle kind expression, small wooden staff with glowing pink healing orb, white robe with pink cross emblem, carrying herb pouch, healing sparkles in hands, ' + STYLE_SUFFIX },
   { id: 'ALLEY_CAT',        n: 4, prompt: 'anthropomorphic grey alley cat boss fighter, boss character imposing detailed armor, dark grey fur, red scar across left eye, red crown on head, sharp claw weapons, torn battle cloak, fierce menacing expression, powerful stance, ' + STYLE_SUFFIX },
   { id: 'SIAMESE_ASSASSIN', n: 4, prompt: 'anthropomorphic Siamese cat assassin, cream and dark brown fur, blue eyes, black ninja mask covering lower face, dark leather armor, hidden blade at side, stealthy crouching pose, shadow cloak, ' + STYLE_SUFFIX },
   { id: 'PERSIAN_SORCERER', n: 4, prompt: 'anthropomorphic Persian cat sorcerer mage, wizard robes, magical staff, glowing purple eyes, grey and white fluffy fur, jewel gem on forehead, magical sparkles around hands, robe with arcane symbols, standing casting pose, ' + STYLE_SUFFIX },
