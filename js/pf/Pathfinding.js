@@ -37,12 +37,22 @@ class MinHeap {
   get size() { return this._d.length; }
 }
 
+// Per-class terrain movement cost overrides
+// Terrain IDs: GRASS=0, FOREST=1, MOUNTAIN=2, WATER=3, ROAD=4, SAND=5, CASTLE=6, VILLAGE=7, SNOW=8, BRIDGE=9, WALL=10, OASIS=11
+const CLASS_MOV_OVERRIDES = {
+  Knight:   { 5: 3 },            // sand cost 3 (armored)
+  General:  { 5: 3 },            // same as Knight
+  Cavalry:  { 2: 99 },           // mountains impassable
+  Champion: { 2: 99 },           // same as Cavalry
+  Thief:    { 1: 1, 2: 2 },     // agile: forest cost 1, mountain cost 2
+  Ninja:    { 1: 1, 2: 2 },     // same as Thief
+};
+
 // Returns terrain movement cost, with optional per-unit-class overrides
 function getMovCost(terrainId, unitClass) {
-  const base = (TERRAIN[terrainId] || TERRAIN[0]).movCost;
-  // Cavalry (HUSKY_RIDER class) moves through forest at cost 1 instead of 2
-  if ((unitClass === 'Cavalry' || unitClass === 'Champion') && terrainId === 1 /* FOREST */) return 1;
-  return base;
+  const override = unitClass && CLASS_MOV_OVERRIDES[unitClass]?.[terrainId];
+  if (override !== undefined) return override;
+  return (TERRAIN[terrainId] || TERRAIN[0]).movCost;
 }
 
 /**
@@ -121,7 +131,7 @@ function getReachableTiles(unit, mapGrid, allUnits) {
       if (!_footprintClear(unit, nc, nr, mapGrid, occupied)) continue;
 
       const terrainId = mapGrid[nr][nc];
-      const movCost   = getMovCost(terrainId, unit && unit.unitClass);
+      const movCost   = unit && unit.moveCostFor ? unit.moveCostFor(terrainId) : getMovCost(terrainId, unit && unit.unitClass);
 
       const newCost = cur.cost + movCost;
       if (newCost > unit.mov) continue;
@@ -190,7 +200,7 @@ function findPath(unit, targetCol, targetRow, mapGrid, allUnits, ignoreOccupancy
       if (closed.has(nk)) continue;
 
       const terrainId = mapGrid[nr][nc];
-      const movCost   = getMovCost(terrainId, unit && unit.unitClass);
+      const movCost   = unit && unit.moveCostFor ? unit.moveCostFor(terrainId) : getMovCost(terrainId, unit && unit.unitClass);
       const isTarget  = nc === targetCol && nr === targetRow;
 
       // Allow stepping onto target even if impassable terrain (e.g. attack from side)
