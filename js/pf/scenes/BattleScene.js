@@ -2589,21 +2589,21 @@ class BattleScene extends Phaser.Scene {
   _showAtkConfirm(onConfirm, onCancel) {
     const W = GAME_W, H = GAME_H;
 
-    // Semi-transparent black backdrop covering the full screen
+    // Semi-transparent black backdrop covering the full screen (fixed to camera)
     const backdrop = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55)
-      .setDepth(45)
+      .setDepth(45).setScrollFactor(0)
       .setInteractive(new Phaser.Geom.Rectangle(0, 0, W, H), Phaser.Geom.Rectangle.Contains);
 
-    // OK button (green) and Cancel button (grey)
-    const okX = W / 2 - 50, cancelX = W / 2 + 50, btnY = 450;
+    // OK button (green) and Cancel button (grey) — fixed to camera
+    const okX = W / 2 - 50, cancelX = W / 2 + 50, btnY = H / 2 + 40;
     const okBtn = this.add.rectangle(okX, btnY, 80, 32, 0x228833, 1)
-      .setDepth(46).setInteractive();
+      .setDepth(46).setScrollFactor(0).setInteractive();
     const cancelBtn = this.add.rectangle(cancelX, btnY, 80, 32, 0x666666, 1)
-      .setDepth(46).setInteractive();
+      .setDepth(46).setScrollFactor(0).setInteractive();
 
     // Labels
-    const okLabel     = this.add.text(okX, btnY, 'OK',     { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47);
-    const cancelLabel = this.add.text(cancelX, btnY, 'Cancel', { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47);
+    const okLabel     = this.add.text(okX, btnY, 'OK',     { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47).setScrollFactor(0);
+    const cancelLabel = this.add.text(cancelX, btnY, 'Cancel', { fontSize: '14px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'Nunito, Courier New, monospace' }).setOrigin(0.5).setDepth(47).setScrollFactor(0);
 
     const destroyAll = () => {
       backdrop.destroy();
